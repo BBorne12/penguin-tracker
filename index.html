@@ -1,0 +1,35 @@
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    // Initialize Supabase with your project details
+    const SUPABASE_URL = "https://your-project-id.supabase.co"; 
+    const SUPABASE_ANON_KEY = "your-actual-anon-public-key-here";
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Update your previous submitDiscovery() function to look like this:
+    async function submitDiscovery() {
+        const currentPos = marker.getLatLng();
+        const notes = document.getElementById('finder-notes').value;
+
+        // Prepare data matching your Supabase column names
+        const submissionData = {
+            penguin_id: penguinId,
+            latitude: currentPos.lat,
+            longitude: currentPos.lng,
+            finder_note: notes
+        };
+
+        // Send data directly to Supabase from the browser safely!
+        const { data, error } = await supabase
+            .from('penguin_logs')
+            .insert([submissionData]);
+
+        if (error) {
+            alert("Oops! Something went wrong saving the location. Try again.");
+            console.error("Supabase Error:", error.message);
+        } else {
+            alert(`Awesome! You successfully logged ${penguinId}.\nThank you for updating the map!`);
+            document.getElementById('finder-notes').value = ""; // Clear notes text
+        }
+    }
+</script>
