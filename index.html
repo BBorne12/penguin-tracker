@@ -41,7 +41,7 @@
             margin-top: 5px;
         }
         #map {
-            height: 300px;
+            height: 350px;
             width: 100%;
             border-radius: 12px;
             margin: 15px 0;
@@ -91,7 +91,7 @@
         <div class="penguin-badge" id="penguin-id">Detecting Tag...</div>
     </div>
     
-    <p style="text-align: center; font-size: 14px; margin: 0;">Help track its journey! Drag the marker or tap the map to point out exactly where you spotted it.</p>
+    <p style="text-align: center; font-size: 14px; margin: 0;">Help track its journey! Drag the marker to where you found it. Previous discovery spots are linked on the map!</p>
     
     <div id="map"></div>
     <div class="coords" id="coord-display">Latitude: -- | Longitude: --</div>
@@ -119,7 +119,7 @@
     const penguinId = urlParams.get('id') || "Mystery Penguin";
     document.getElementById('penguin-id').innerText = `ID: ${penguinId}`;
 
-    // Setup Map
+    // Setup Map (Default zoomed out standard view)
     let defaultLat = 39.8283; 
     let defaultLng = -98.5795;
     const map = L.map('map').setView([defaultLat, defaultLng], 4);
@@ -128,18 +128,19 @@
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
+    // This is the active user marker (the one they drag)
     let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
 
     function updateCoordsText(lat, lng) {
         document.getElementById('coord-display').innerText = `Lat: ${lat.toFixed(5)} | Lng: ${lng.toFixed(5)}`;
     }
 
-    // Auto-detect phone GPS location
+    // Auto-detect phone GPS location for the active placement marker
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
             const uLat = position.coords.latitude;
             const uLng = position.coords.longitude;
-            map.setView([uLat, uLng], 15);
+            map.setView([uLat, uLng], 14);
             marker.setLatLng([uLat, uLng]);
             updateCoordsText(uLat, uLng);
         });
@@ -154,6 +155,63 @@
         marker.setLatLng(e.latlng);
         updateCoordsText(e.latlng.lat, e.latlng.lng);
     });
+
+    // --- FETCH HISTORY & DRAW LINES ---
+    async function loadPenguinHistory() {
+        if (penguinId === "Mystery Penguin") return; // Don't look up if no real ID
+
+        // Grab historical rows from database ordered oldest to newest
+        const { data: logs, error } = await supabaseClient
+            .from('penguin_logs')
+            .select('latitude, longitude, finder_note, created_at')
+            .eq('penguin_id', penguinId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("Error loading path history:", error.message);
+            return;
+        }
+
+        if (logs && logs.length > 0) {
+            const pathCoordinates = [];
+
+            // Define a gray/muted styling icon for historical milestones
+            const historicalIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:#95a5a6; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.4);'></div>",
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+
+            logs.forEach((log, index) => {
+                const latLng = [log.latitude, log.longitude];
+                pathCoordinates.push(latLng);
+
+                // Add a static circle pin for past locations
+                const dateObj = new Date(log.created_at).toLocaleDateString();
+                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
+                
+                L.marker(latLng, { icon: historicalIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>Stop #${index + 1}</b><br>Spotted: ${dateObj}${noteSnippet}`);
+            });
+
+            // Draw a dashed blue line connecting the dots chronologically
+            const journeyLine = L.polyline(pathCoordinates, {
+                color: '#3498db',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '5, 10'
+            }).addTo(map);
+
+            // Dynamically snap the initial map view frame so it neatly contains the whole history path!
+            map.fitBounds(journeyLine.getBounds(), { padding: [40, 40] });
+        }
+    }
+
+    // Run the history loader immediately as soon as the page fires up
+    loadPenguinHistory();
+
 
     // Handle form submission to Supabase
     async function submitDiscovery() {
@@ -177,6 +235,7 @@
         } else {
             alert(`Awesome! You successfully logged ${penguinId}.\nThank you for updating the map!`);
             document.getElementById('finder-notes').value = ""; 
+            location.reload(); // Refresh the page so the newly added point gets integrated cleanly into the drawn line history
         }
     }
 </script>
