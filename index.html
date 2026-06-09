@@ -91,7 +91,12 @@
         <div class="penguin-badge" id="penguin-id">Detecting Tag...</div>
     </div>
     
-    <p style="text-align: center; font-size: 14px; margin: 0;">Help track its journey! Drag the marker to where you found it. Previous discovery spots are linked on the map! Please hide it again for someone else to find. Try and take it far from where you found it. Thanks for playing!</p>
+    <p style="text-align: center; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; color: #34495e;">
+    Help track its journey! Drag the marker to where you found it. Previous discovery spots are linked on the map!
+</p>
+<p style="text-align: center; font-size: 14px; margin: 0; color: #e67e22; font-weight: bold;">
+    🔄 Please hide it again for someone else to find. Try and take it far from where you found it. Thanks for playing!
+</p>
     
     <div id="map"></div>
     <div class="coords" id="coord-display">Latitude: -- | Longitude: --</div>
@@ -213,10 +218,13 @@
     loadPenguinHistory();
 
 
-    // Handle form submission to Supabase
+    // Handle form submission to Supabase AND Discord Notifications
     async function submitDiscovery() {
         const currentPos = marker.getLatLng();
         const notes = document.getElementById('finder-notes').value;
+
+        // 1. YOUR DISCORD WEBHOOK URL (Paste yours between the quotes)
+        const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
 
         const submissionData = {
             penguin_id: penguinId,
@@ -225,6 +233,7 @@
             finder_note: notes
         };
 
+        // 2. Save data to Supabase Database
         const { data, error } = await supabaseClient
             .from('penguin_logs')
             .insert([submissionData]);
@@ -232,11 +241,30 @@
         if (error) {
             alert("Oops! Something went wrong saving the location. Try again.");
             console.error("Supabase Error:", error.message);
-        } else {
-            alert(`Awesome! You successfully logged ${penguinId}.\nThank you for updating the map! Now find a new place to hide it so someone else can find it.`);
-            document.getElementById('finder-notes').value = ""; 
-            location.reload(); // Refresh the page so the newly added point gets integrated cleanly into the drawn line history
+            return; // Stop here if the database save fails
         }
+
+        // 3. Send the notification to your phone/Discord instantly!
+        try {
+            const discordMessage = {
+                username: "Penguin Scout",
+                avatar_url: "https://bborne12.github.io/penguin-tracker/favicon.ico",
+                content: `🐧 **A Penguin Has Been Found!**\n**ID:** ${penguinId}\n**Location:** https://www.google.com/maps?q=${currentPos.lat},${currentPos.lng}\n**Finder Note:** *"${notes || 'No note left.'}"*`
+            };
+
+            await fetch(DISCORD_WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(discordMessage)
+            });
+        } catch (discordError) {
+            console.error("Discord Notification failed, but data was saved:", discordError);
+        }
+
+        // 4. Success alerts and page reload
+        alert(`Awesome! You successfully logged ${penguinId}.\nThank you for updating the map! Now find a new place to hide it so someone else can find it.`);
+        document.getElementById('finder-notes').value = ""; 
+        location.reload(); 
     }
 </script>
 
