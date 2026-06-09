@@ -91,7 +91,7 @@
         <div class="penguin-badge" id="penguin-id">Detecting Tag...</div>
     </div>
     
-    <p style="text-align: center; font-size: 14px; margin: 0;">Help track its journey! Drag the marker to where you found it. Previous discovery spots are linked on the map!</p>
+    <p style="text-align: center; font-size: 14px; margin: 0;">Help track its journey! Drag the marker to where you found it. Previous discovery spots are linked on the map! Please hide it again for someone else to find. Try and take it far from where you found it. Thanks for playing!</p>
     
     <div id="map"></div>
     <div class="coords" id="coord-display">Latitude: -- | Longitude: --</div>
@@ -233,7 +233,7 @@
             alert("Oops! Something went wrong saving the location. Try again.");
             console.error("Supabase Error:", error.message);
         } else {
-            alert(`Awesome! You successfully logged ${penguinId}.\nThank you for updating the map!`);
+            alert(`Awesome! You successfully logged ${penguinId}.\nThank you for updating the map! Now find a new place to hide it so someone else can find it.`);
             document.getElementById('finder-notes').value = ""; 
             location.reload(); // Refresh the page so the newly added point gets integrated cleanly into the drawn line history
         }
