@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Adventure Mode</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
         /* Base Setup & CSS Resets */
         *, *::before, *::after {
@@ -228,34 +231,28 @@
             text-align: right;
         }
 
-        /* Map Accent Component */
-        .mock-map {
-            height: 120px;
+        /* Live Interactive Map Box Styling */
+        #live-map {
+            height: 180px;
             background: #030712;
             border: 1px solid rgba(56, 189, 248, 0.2);
             border-radius: 8px;
-            position: relative;
-            overflow: hidden;
             margin: 12px 0;
+            z-index: 1; /* Keep leaflet controls clean under shadows */
         }
-
-        .map-grid {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
-            background-size: 16px 16px;
+        
+        /* Chilly theme overlay styling rules for Leaflet map elements */
+        .leaflet-tile {
+            filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
-
-        .map-ping {
-            position: absolute;
-            top: 45%;
-            left: 55%;
-            width: 10px;
-            height: 10px;
-            background: #00e5ff;
-            border-radius: 50%;
-            box-shadow: 0 0 15px #00e5ff;
+        .leaflet-bar {
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            box-shadow: none !important;
+        }
+        .leaflet-bar a {
+            background-color: rgba(7, 17, 30, 0.8) !important;
+            color: #00e5ff !important;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.1) !important;
         }
 
         /* Header Layout */
@@ -274,14 +271,13 @@
         }
     </style>
 
-    <!-- Load Supabase CDN Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
 <div class="app-container">
     
-    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -292,10 +288,8 @@
         </div>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section">
         
-        <!-- CARD 1: TRACKING BUDDY PROFILE -->
         <div class="glass-card">
             <h2>Current Guest</h2>
             
@@ -312,12 +306,11 @@
                 </li>
                 <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                     <div><span class="label">Total Stops So Far</span></div>
-                    <div><span class="value ice-glow">🍁 3 Passports Stamped</span></div>
+                    <div><span class="value ice-glow" id="total-stops-counter">3 Passports Stamped</span></div>
                 </li>
             </ul>
         </div>
 
-        <!-- CARD 2: JOURNEY DATA & LOGGING BOX -->
         <div class="glass-card">
             <h2>Log Your Visit</h2>
             
@@ -335,14 +328,8 @@
                 </li>
             </ul>
 
-            <!-- Friendly Expedition Map Area -->
-            <div class="mock-map">
-                <div class="map-grid"></div>
-                <div class="map-ping"></div>
-                <div style="position: absolute; bottom: 6px; left: 8px; font-size: 7.5pt; font-family: monospace; color: rgba(56, 189, 248, 0.5);">ADVENTURE MAP REGION</div>
-            </div>
+            <div id="live-map"></div>
 
-            <!-- LOG A NOTE INPUT INTERFACE -->
             <div style="margin-top: 10px;">
                 <label class="label" for="finder-note">Leave a Note</label>
                 <textarea id="finder-note" class="note-textarea" placeholder="Write a message in the guestbook, share a story, or tell us where they are heading next..."></textarea>
@@ -353,45 +340,14 @@
             </div>
         </div>
 
-        <!-- CARD 3: LEADERBOARD -->
         <div class="glass-card">
             <h2>Top Hosts</h2>
             
-            <div style="margin-top: 4px;">
-                <div class="leaderboard-row">
-                    <div>
-                        <span class="rank-badge">🥇</span>
-                        <span class="value">TrackerBen</span>
-                    </div>
-                    <div>
-                        <span class="value ice-glow">1,420 miles</span>
-                        <span class="stat-subtext">42 Logs</span>
-                    </div>
-                </div>
-                <div class="leaderboard-row">
-                    <div>
-                        <span class="rank-badge">🥈</span>
-                        <span class="value">ExplorerEmily</span>
-                    </div>
-                    <div>
-                        <span class="value" style="color: #cbd5e1;">980 miles</span>
-                        <span class="stat-subtext">38 Logs</span>
-                    </div>
-                </div>
-                <div class="leaderboard-row">
-                    <div>
-                        <span class="rank-badge">🥉</span>
-                        <span class="value">ArcticSam</span>
-                    </div>
-                    <div>
-                        <span class="value" style="color: #cbd5e1;">640 miles</span>
-                        <span class="stat-subtext">29 Logs</span>
-                    </div>
-                </div>
+            <div id="leaderboard-container" style="margin-top: 4px;">
+                <div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">Connecting to leaderboard feed...</div>
             </div>
         </div>
 
-        <!-- PRIVACY SAFETY NOTICE -->
         <div class="warning-badge">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you find them in public spaces!
         </div>
@@ -400,69 +356,160 @@
 
 </div>
 
-<!-- DATA PIPELINE SCRIPTS -->
 <script>
-    // 1. CONFIGURATION PLACEHOLDERS
-    // Replace these placeholder strings with your actual database and pipeline paths.
+    // ==========================================
+    // 1. DATABASE CONFIGURATION KEYS SETUP
+    // ==========================================
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
 
-    // Initialize Supabase Client
+    // Initialize Database SDK Connection instance
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Global variable state to track user position data
-    let userLatitude = null;
-    let userLongitude = null;
+    // Coordinate state parameters
+    let userLatitude = 0;
+    let userLongitude = 0;
+    let leafletMap = null;
+    let mapMarker = null;
 
-    // DOM Elements
+    // DOM Target hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const logStopBtn = document.getElementById("log-stop-btn");
     const finderNoteInput = document.getElementById("finder-note");
-    const networkStatus = document.getElementById("network-status");
+    const leaderboardContainer = document.getElementById("leaderboard-container");
+    const totalStopsCounter = document.getElementById("total-stops-counter");
 
-    // 2. AUTOMATIC LOCATION DETECTION
-    // Runs when the phone screen mounts to verify actual location presence
+    // ==========================================
+    // 2. LIVE DATA FEED LOADER (ON PAGE LOAD)
+    // ==========================================
+    window.addEventListener("DOMContentLoaded", () => {
+        initializeLiveMap();
+        fetchLiveDatabaseContent();
+    });
+
+    // Initializes a default centered global map view canvas block
+    function initializeLiveMap() {
+        // Set fallback center coordinates to international waters / null view grid
+        leafletMap = L.map('live-map').setView([0, 0], 1);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(leafletMap);
+    }
+
+    // Fetches fresh stats from Supabase tables to replace mock layout items
+    async function fetchLiveDatabaseContent() {
+        try {
+            // A. Fetch total check-in stops logged to update profile counter
+            const { count, error: countErr } = await supabase
+                .from('penguin_logs')
+                .select('*', { count: 'exact', head: true });
+
+            if (!countErr && count !== null) {
+                totalStopsCounter.innerText = `🍁 ${count} Passport Stops Logged`;
+            }
+
+            // B. Fetch leaderboard table rows sorted by distance or logs criteria
+            // Adjust table query target ('profiles') or column handles to match your database schema
+            const { data: leaderboardData, error: dbErr } = await supabase
+                .from('profiles')
+                .select('username, distance_traveled, total_logs')
+                .order('distance_traveled', { ascending: false })
+                .limit(3);
+
+            if (dbErr) throw dbErr;
+
+            // Clear loading layout blocks cleanly
+            leaderboardContainer.innerHTML = "";
+
+            if (!leaderboardData || leaderboardData.length === 0) {
+                leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet!</div>`;
+                return;
+            }
+
+            // Loop and build fresh elements natively matching the glass panel styling rules
+            const rankMedals = ["🥇", "🥈", "🥉"];
+            leaderboardData.forEach((row, index) => {
+                const medal = rankMedals[index] || ` ${index + 1} `;
+                const miles = row.distance_traveled ? row.distance_traveled.toLocaleString() : "0";
+                const logCount = row.total_logs || 0;
+
+                const elementHTML = `
+                    <div class="leaderboard-row">
+                        <div>
+                            <span class="rank-badge">${medal}</span>
+                            <span class="value">${row.username || "Anonymous Explorer"}</span>
+                        </div>
+                        <div>
+                            <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${miles} miles</span>
+                            <span class="stat-subtext">${logCount} Logs</span>
+                        </div>
+                    </div>
+                `;
+                leaderboardContainer.innerHTML += elementHTML;
+            });
+
+        } catch (err) {
+            console.warn("Live database pipeline sync idle. Displaying offline view rules:", err);
+            // Fallback framework state indicator if setup string paths are blank
+            leaderboardContainer.innerHTML = `<div style="font-size:9pt; color:#ef4444; text-align:center; padding:5px;">Setup connection configuration keys to populate scoreboard.</div>`;
+        }
+    }
+
+    // ==========================================
+    // 3. DEVICE GPS LOCATION CAPTURE
+    // ==========================================
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 userLatitude = position.coords.latitude;
                 userLongitude = position.coords.longitude;
 
-                // Format coordinates visually onto the interface
-                coordinatesDisplay.innerText = `${userLatitude.toFixed(4)}°S, ${userLongitude.toFixed(4)}°W`;
-                
-                // Alert the user that the checkpoint location check passed
+                // Bind location strings visually
+                coordinatesDisplay.innerText = `${userLatitude.toFixed(4)}°N, ${userLongitude.toFixed(4)}°W`;
                 lockBadge.innerText = "✓ LOCATION DETECTED";
                 lockBadge.style.color = "#39ff14";
                 
-                // Allow user to submit log data now that positions exist
+                // Unfreeze action click handle parameters
                 logStopBtn.disabled = false;
+
+                // Center real tile interactive map cleanly over phone coordinate focus lock point
+                if (leafletMap) {
+                    leafletMap.setView([userLatitude, userLongitude], 13);
+                    
+                    // Drop a pin icon graphic onto user spot
+                    if (mapMarker) leafletMap.removeLayer(mapMarker);
+                    mapMarker = L.marker([userLatitude, userLongitude]).addTo(leafletMap)
+                        .bindPopup("Your Check-In Point")
+                        .openPopup();
+                }
             },
             (error) => {
-                console.error("Location access error:", error);
-                coordinatesDisplay.innerText = "Location access denied.";
-                lockBadge.innerText = "ERROR";
+                console.error("GPS Verification failed:", error);
+                coordinatesDisplay.innerText = "Location permission required.";
+                lockBadge.innerText = "LOCKED";
                 lockBadge.style.color = "#ef4444";
             },
-            { enableHighAccuracy: true, timeout: 10000 }
+            { enableHighAccuracy: true, timeout: 12000 }
         );
     } else {
-        coordinatesDisplay.innerText = "Geolocation not supported.";
+        coordinatesDisplay.innerText = "Browser doesn't support tracking mechanics.";
     }
 
-    // 3. ACTION HANDLER FOR SUBMISSION
+    // ==========================================
+    // 4. TRANSACTION PIPELINE HANDLER (CLICK BUTTON)
+    // ==========================================
     logStopBtn.addEventListener("click", async () => {
         const noteText = finderNoteInput.value.trim();
 
-        // Prevent layout spam or click hammering
         logStopBtn.disabled = true;
-        logStopBtn.innerText = "Saving Journey...";
+        logStopBtn.innerText = "Logging Stop...";
 
         try {
-            // STEP A: Insert the log entry row directly into your Supabase data table
-            // Ensure your Supabase database table matches columns or configure names to fit.
+            // STEP A: Insert log record directly into database row entries
             const { data, error } = await supabase
                 .from('penguin_logs') 
                 .insert([
@@ -476,36 +523,36 @@
 
             if (error) throw error;
 
-            // STEP B: Dispatch a payload broadcast out to your serverless webhook pipeline
-            // Helpful for sending real-time automation streams (like Discord notices) instantly
-            const webhookPayload = {
-                event: "penguin_spotted",
+            // STEP B: POST broadcast transaction out via webhook
+            const payload = {
+                event: "penguin_checked_in",
                 penguin_name: "Captain Waddles",
                 latitude: userLatitude,
                 longitude: userLongitude,
                 note: noteText,
-                logged_at: new Date().toLocaleString()
+                timestamp: new Date().toLocaleString()
             };
 
-            const webhookResponse = await fetch(WEBHOOK_URL, {
+            await fetch(WEBHOOK_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(webhookPayload)
+                body: JSON.stringify(payload)
             });
 
-            // STEP C: Visual Success Adjustments
+            // STEP C: Dynamic complete UI update loops
             logStopBtn.innerText = "✓ Stop Logged!";
             logStopBtn.style.background = "linear-gradient(135deg, rgba(57, 255, 20, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%)";
             logStopBtn.style.borderColor = "#39ff14";
-            finderNoteInput.value = ""; // Clear out text field area cleanly
+            finderNoteInput.value = "";
 
-            alert("Success! Your companion's progress has been logged and shared!");
+            alert("Awesome! The penguin's stop was successfully saved and shared with the group!");
+            
+            // Reload scoreboard counts to instantly incorporate the new log point
+            fetchLiveDatabaseContent();
 
         } catch (err) {
-            console.error("Pipeline Sync Error:", err);
-            alert("Database Connection Failed: Check your configuration key setup parameters.");
-            
-            // Return button control back to player state for retry attempts
+            console.error("Data tracking crash:", err);
+            alert("Pipeline Blocked: Ensure your Supabase / Webhook URL keys are valid and table columns match.");
             logStopBtn.disabled = false;
             logStopBtn.innerText = "Log This Stop";
         }
