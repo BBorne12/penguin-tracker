@@ -3,145 +3,477 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penguin Tracker - Game Center</title>
+    <title>Penguin Tracker - Arctic Adventure Mode</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 15px;
-            background-color: #eef2f7;
-            color: #2c3e50;
+        /* Base Setup & CSS Resets */
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 500px;
-            margin: 0 auto 30px auto;
-            background: white;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-        }
-        .header { text-align: center; margin-bottom: 15px; }
-        h1 { margin: 5px 0; color: #1a252f; font-size: 24px; }
-        .penguin-badge {
-            background: #3498db;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            display: inline-block;
-            font-weight: bold;
-            font-size: 14px;
-            margin-top: 5px;
-        }
-        #map {
-            height: 350px;
-            width: 100%;
-            border-radius: 12px;
-            margin: 15px 0;
-            border: 1px solid #dcdde1;
-        }
-        .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #7f8c8d; }
-        textarea, input[type="text"], input[type="file"] {
-            width: 100%; padding: 12px; border: 1px solid #cccccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px;
-        }
-        .gps-btn {
-            background-color: #34495e; color: white; padding: 12px; border: none; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-bottom: 15px; font-size: 14px;
-        }
-        .submit-btn {
-            display: block; width: 100%; padding: 16px; background-color: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s;
-        }
-        .submit-btn:disabled { background-color: #bdc3c7; cursor: not-allowed; opacity: 0.6; }
-        .coords { text-align: center; color: #7f8c8d; font-size: 13px; margin-top: -5px; font-weight: bold; }
-        .status-msg { text-align: center; font-size: 13px; margin-bottom: 15px; color: #e74c3c; font-weight: bold; }
         
-        /* Leaderboard Styling */
-        .leaderboard-card {
-            background: #ffffff; border-radius: 14px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #02060d;
+            color: #ffffff;
+            font-size: 11pt;
+            line-height: 1.5;
         }
-        .leaderboard-title { text-align: center; font-size: 18px; margin-top: 0; color: #2c3e50; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .leaderboard-list { list-style: none; padding: 0; margin: 0; }
-        .leaderboard-item {
-            display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid #f1f2f6; cursor: pointer; transition: background 0.2s; border-radius: 6px;
+
+        /* Container & Mobile-first Responsive Canvas */
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+            background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
+            min-height: 100vh;
         }
-        .leaderboard-item:hover { background: #f1f2f6; }
-        .rank { font-weight: bold; color: #7f8c8d; width: 25px; }
-        .p-name { font-weight: bold; color: #2c3e50; flex-grow: 1; }
-        .p-dist { font-weight: bold; color: #3498db; font-size: 14px; }
-        .viewing-only-alert {
-            background: #e74c3c; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; display: none;
+
+        /* Typography & Headings */
+        h1, h2, h3, h4 {
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+        
+        h1 {
+            font-size: 18pt;
+            color: #e0f2fe;
+            text-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+        }
+
+        h2 {
+            font-size: 12pt;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: #7dd3fc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+            opacity: 0.8;
+        }
+
+        /* Layout Blocks */
+        .layout-section {
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-bottom: 16px;
+        }
+
+        .glass-card-inner {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+
+        /* Glowing & Status Elements */
+        .aurora-glow {
+            color: #39ff14;
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
+            font-weight: bold;
+        }
+
+        .ice-glow {
+            color: #00e5ff;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(57, 255, 20, 0.1);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            color: #39ff14;
+            border-radius: 20px;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.4);
+            white-space: nowrap;
+        }
+
+        .warning-badge {
+            display: block;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.07);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border-radius: 8px;
+            font-size: 9pt;
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+
+        /* Styled Input Form Elements */
+        .note-textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 10pt;
+            outline: none;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+            resize: none;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+
+        .note-textarea:focus {
+            border-color: rgba(0, 229, 255, 0.5);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+        }
+
+        /* Hidden standard file inputs */
+        .hidden-file-input {
+            display: none !important;
+        }
+
+        /* Action Control Buttons */
+        .btn-glow {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            border-radius: 8px;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+            text-decoration: none;
+            font-size: 10pt;
+            -webkit-tap-highlight-color: transparent;
+            transition: opacity 0.2s ease, border-color 0.2s ease;
+        }
+
+        .btn-glow:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Style modifier for Camera interaction capture button */
+        .btn-camera {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            margin-top: 6px;
+            margin-bottom: 12px;
+        }
+        
+        .btn-camera.photo-attached {
+            border-color: #39ff14;
+            color: #39ff14;
+            text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
+        }
+
+        /* Data List & Leaderboard Row Styles */
+        .data-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .data-item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .leaderboard-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .leaderboard-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .leaderboard-row:last-child {
+            border-bottom: none;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 28px;
+            font-weight: bold;
+            color: #7dd3fc;
+        }
+
+        .p-name {
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .p-dist {
+            font-weight: bold;
+            color: #00e5ff;
+            font-size: 10.5pt;
+        }
+
+        .label {
+            font-size: 8.5pt;
+            color: #94a3b8;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        .value {
+            font-size: 10.5pt;
+            color: #f8fafc;
+        }
+
+        .stat-subtext {
+            display: block;
+            font-size: 8pt;
+            color: #94a3b8;
+            text-align: right;
+        }
+
+        /* Interactive Map Container */
+        #map {
+            width: 100% !important;
+            height: 220px !important;
+            background: #030712 !important;
+            border: 1px solid rgba(56, 189, 248, 0.2) !important;
+            border-radius: 8px !important;
+            margin: 12px 0 !important;
+            z-index: 5;
+        }
+        
+        .leaflet-tile {
+            filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
+        }
+        .leaflet-bar {
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            box-shadow: none !important;
+        }
+        .leaflet-bar a {
+            background-color: rgba(7, 17, 30, 0.8) !important;
+            color: #00e5ff !important;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.1) !important;
+        }
+
+        /* Frosted Glass Overlay Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 13, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            font-size: 11pt;
+            margin: 16px 0;
+            outline: none;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            border-color: #00e5ff;
+        }
+
+        /* Header Layout */
+        .app-header {
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            padding-bottom: 14px;
+            margin-bottom: 8px;
+        }
+
+        @media(min-width: 480px) {
+            .app-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
         }
     </style>
 </head>
 <body>
 
-<div id="first-find-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
-    <div style="background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out;">
-        <span style="font-size: 50px;">🥚 ➔ 🐧</span>
-        <h2 style="color: #27ae60; margin: 15px 0 10px 0;">First Discovery!</h2>
-        <p style="font-size: 15px; color: #34495e; line-height: 1.5; margin-bottom: 20px;">
+<div class="modal-overlay" id="first-find-modal">
+    <div class="modal-card">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
+        <h2 style="color: #39ff14; font-size: 14pt; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">First Discovery!</h2>
+        <p style="font-size: 9.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 0 0;">
             You found a completely new penguin that has never been logged before! Give it a custom name below to officially launch its adventure.
         </p>
-        <div style="margin-bottom: 20px; text-align: left;">
-            <label for="modal-custom-name" style="font-weight: bold; color: #7f8c8d; font-size: 13px; display: block; margin-bottom: 5px;">Give this penguin a name:</label>
-            <input type="text" id="modal-custom-name" placeholder="e.g., Captain Waddles, Sir Flappy...">
+        
+        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles, Sir Flappy...">
+        
+        <button onclick="saveCustomNameFromModal()" class="btn-glow">Save Name & Start Journey!</button>
+    </div>
+</div>
+
+<div class="app-container">
+    
+    <div class="app-header">
+        <div>
+            <div class="subtitle">The Traveling Penguin Game</div>
+            <h1>PENGUIN TRACKER</h1>
         </div>
-        <button onclick="saveCustomNameFromModal()" style="background: #2ecc71; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%;">
-            Save Name & Start Journey!
-        </button>
-    </div>
-</div>
-
-<div class="container" id="game-panel">
-    <div class="header">
-        <h1>🐧 You Found a Penguin!</h1>
-        <div class="penguin-badge" id="penguin-id">Detecting Tag...</div>
-    </div>
-    
-    <div id="view-mode-banner" class="viewing-only-alert">⚠️ VIEW-ONLY MODE: Logging Disabled</div>
-
-    <p id="game-instructions-1" style="text-align: center; font-size: 15px; margin: 0 0 12px 0; font-weight: bold; color: #2c3e50; line-height: 1.4;">
-        🎒 Your New Travel Buddy! Take this penguin on fun adventures, snap photos, and pass it along to friends!
-    </p>
-    <p id="game-instructions-2" style="text-align: center; font-size: 14px; margin: 0 0 15px 0; color: #e67e22; font-weight: bold; line-height: 1.4;">
-        🚀 **Can you top the leaderboard?** Take it as far as possible to stack up miles! When you're done, hide it in the wild for the next explorer.
-    </p>
-
-    <button class="gps-btn" id="gps-lock-btn" onclick="verifyCurrentGPS()">📍 Click to Verify Your Location</button>
-    <div class="status-msg" id="status-text">❌ Location Not Verified Yet</div>
-
-    <div id="map"></div>
-    <div class="coords" id="coord-display">Latitude: -- | Longitude: --</div>
-    
-    <div class="input-group" id="photo-input-group">
-        <label for="penguin-photo">Snap a Photo of its Journey (Optional):</label>
-        <input type="file" id="penguin-photo" accept="image/*" capture="environment">
+        <div style="margin-top: 8px;">
+            <span class="status-badge" id="penguin-id">Detecting Tag...</span>
+        </div>
     </div>
 
-    <div class="input-group" id="notes-input-group">
-        <label for="finder-notes">Leave an adventure note (Optional):</label>
-        <textarea id="finder-notes" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
-    </div>
-    
-    <button class="submit-btn" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
-</div>
+    <div class="layout-section" id="game-panel">
+        
+        <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
+            ⚠️ VIEW-ONLY MODE: Logging Disabled
+        </div>
 
-<div class="container leaderboard-card">
-    <h2 class="leaderboard-title">🏆 Top 10 Most Traveled Penguins</h2>
-    <ul class="leaderboard-list" id="leaderboard-output">
-        <li style="text-align:center; color:#7f8c8d; padding:15px;">Calculating distances...</li>
-    </ul>
+        <div class="glass-card" id="profile-card-block">
+            <h2>Current Guest</h2>
+            
+            <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
+                <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
+                <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Detecting...</div>
+                <div style="font-size: 8.5pt; color: #94a3b8;">Passed from host to host</div>
+            </div>
+
+            <ul class="data-list">
+                <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><span class="label">Current Status</span></div>
+                    <div><span class="value aurora-glow" id="current-status-display">On an Adventure / Active</span></div>
+                </li>
+                <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><span class="label">Total Stops So Far</span></div>
+                    <div><span class="value ice-glow" id="total-stops-counter">0 Passport Stops Logged</span></div>
+                </li>
+            </ul>
+        </div>
+
+        <p id="game-instructions-1" style="text-align: center; font-size: 10.5pt; margin: 0 0 12px 0; font-weight: 500; color: #cbd5e1; line-height: 1.4;">
+            🎒 Your New Travel Buddy! Take this penguin on fun adventures, snap photos, and pass it along to friends!
+        </p>
+        <p id="game-instructions-2" style="text-align: center; font-size: 10pt; margin: 0 0 15px 0; color: #f59e0b; font-weight: 600; line-height: 1.4;">
+            🚀 **Can you top the leaderboard?** Take it as far as possible to stack up miles! When you're done, hide it in the wild for the next explorer.
+        </p>
+
+        <div class="glass-card">
+            <h2>Log Your Visit</h2>
+            <ul class="data-list">
+                <li class="data-item">
+                    <span class="label">Where did you find them?</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                        <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt;">Detecting Location...</span>
+                        <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 10pt;">WAITING</span>
+                    </div>
+                </li>
+                <li class="data-item">
+                    <span class="label">Community Journey</span>
+                    <span class="value" style="font-size: 9.5pt; display: block; color: #cbd5e1; margin-top: 2px;">Log your penguin's progress to reach the top of the leaderboard!</span>
+                </li>
+            </ul>
+
+            <div id="map"></div>
+            <div class="coords" id="coord-display" style="font-family: monospace; color: #94a3b8; font-size: 8.5pt; text-align:center; display:none;">Latitude: -- | Longitude: --</div>
+        </div>
+        
+        <div class="glass-card" id="input-fields-card">
+            <h2>Log New Stop</h2>
+            
+            <div class="input-group" id="photo-input-group">
+                <label class="label">Snap a Photo of its Journey (Optional):</label>
+                <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
+                <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()">📷 Take a Picture</button>
+            </div>
+
+            <div class="input-group" id="notes-input-group">
+                <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
+                <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
+            </div>
+            
+            <div class="glass-card-inner">
+                <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2>🏆 Top 10 Most Traveled Penguins</h2>
+            <ul class="leaderboard-list" id="leaderboard-output" style="margin-top: 8px;">
+                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Calculating distances...</li>
+            </ul>
+        </div>
+
+        <div class="warning-badge" id="safety-disclaimer-notice">
+            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you find them in public spaces!
+        </div>
+        
+    </div>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
     // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
@@ -155,60 +487,129 @@
 
     document.getElementById('penguin-id').innerText = `ID: ${penguinId}`;
 
-    // Initialize map
-    let map = L.map('map').setView([39.8283, -98.5795], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-    let marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
-
-    let verifiedLat = null; let verifiedLng = null;
-    let historyLayerGroup = L.layerGroup().addTo(map);
+    // Map Global Scope Pointers
+    let map = null;
+    let marker = null;
+    let verifiedLat = null; 
+    let verifiedLng = null;
+    let historyLayerGroup = null;
     let currentJourneyLine = null;
 
-    if (isViewOnlyMode) { activateViewOnlyUI(); }
+    // DOM layout elements hooks
+    const coordinatesDisplay = document.getElementById("coordinates-display");
+    const lockBadge = document.getElementById("lock-badge");
+    const customCameraBtn = document.getElementById("custom-camera-btn");
+    const penguinNameDisplay = document.getElementById("penguin-name-display");
+    const totalStopsCounter = document.getElementById("total-stops-counter");
 
-    function activateViewOnlyUI() {
-        document.getElementById('view-mode-banner').style.display = "block";
-        document.getElementById('gps-lock-btn').style.display = "none";
-        document.getElementById('status-text').style.display = "none";
-        document.getElementById('photo-input-group').style.display = "none";
-        document.getElementById('notes-input-group').style.display = "none";
-        document.getElementById('submit-btn').style.display = "none";
-        document.getElementById('game-instructions-1').style.display = "none";
-        document.getElementById('game-instructions-2').style.display = "none";
-        marker.remove(); 
-    }
+    penguinNameDisplay.innerText = penguinId;
 
-    function verifyCurrentGPS() {
-        const statusText = document.getElementById('status-text');
-        statusText.innerText = "🔄 Accessing Phone Hardware GPS..."; statusText.style.color = "#3498db";
+    // ===================================================
+    // SAFE STRUCTURAL BOOTSTRAPPED INITIALIZATION
+    // ===================================================
+    window.addEventListener("DOMContentLoaded", function() {
+        initializeLiveMap();
+        verifyCurrentGPS(); // Triggers phone location scans silently and seamlessly on load
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
-                map.setView([verifiedLat, verifiedLng], 15);
-                marker.setLatLng([verifiedLat, verifiedLng]);
-                document.getElementById('coord-display').innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
-                statusText.innerText = "✅ Location Verified!"; statusText.style.color = "#2ecc71";
-                document.getElementById('submit-btn').disabled = false;
-            }, () => { alert("GPS lock failed. Please enable location permissions."); }, { enableHighAccuracy: true });
+        if (isViewOnlyMode) { 
+            activateViewOnlyUI(); 
+        }
+
+        setTimeout(function() {
+            loadPenguinHistory(penguinId);
+            buildLeaderboard();
+        }, 150);
+    });
+
+    function initializeLiveMap() {
+        try {
+            map = L.map('map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                attribution: '© OpenStreetMap contributors' 
+            }).addTo(map);
+            
+            historyLayerGroup = L.layerGroup().addTo(map);
+            
+            if (!isViewOnlyMode) {
+                marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
+            }
+        } catch (mapError) {
+            console.error("Leaflet instantiation fault intercepted safely: ", mapError);
         }
     }
 
-    // Capture custom name from first-find modal pop-up
+    function activateViewOnlyUI() {
+        document.getElementById('view-mode-banner').style.display = "block";
+        document.getElementById('profile-card-block').style.display = "none";
+        document.getElementById('input-fields-card').style.display = "none";
+        document.getElementById('game-instructions-1').style.display = "none";
+        document.getElementById('game-instructions-2').style.display = "none";
+        document.getElementById('safety-disclaimer-notice').style.display = "none";
+        if (marker) { marker.remove(); }
+    }
+
+    // Seamless automated background GPS sensing execution sequence 
+    function verifyCurrentGPS() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                verifiedLat = position.coords.latitude; 
+                verifiedLng = position.coords.longitude;
+                
+                if (map) map.setView([verifiedLat, verifiedLng], 15);
+                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
+                
+                // Binds location coordinates metrics seamlessly straight into text fields
+                coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
+                document.getElementById('coord-display').innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
+                
+                lockBadge.innerText = "✓ LOCATION DETECTED";
+                lockBadge.style.color = "#39ff14";
+                
+                document.getElementById('submit-btn').disabled = false;
+            }, (err) => { 
+                console.warn("GPS focus skipped: ", err);
+                coordinatesDisplay.innerText = "Location permission required.";
+                lockBadge.innerText = "LOCKED";
+                lockBadge.style.color = "#ef4444";
+            }, { enableHighAccuracy: true });
+        } else {
+            coordinatesDisplay.innerText = "GPS locator missing.";
+        }
+    }
+
+    function triggerHardwareCameraCapture() {
+        document.getElementById('penguin-photo').click();
+    }
+
+    function handleFileSelectionChange() {
+        const fileHolder = document.getElementById('penguin-photo').files[0];
+        if (fileHolder) {
+            customCameraBtn.innerText = "📸 Photo Attached!";
+            customCameraBtn.classList.add("photo-attached");
+        } else {
+            customCameraBtn.innerText = "📷 Take a Picture";
+            customCameraBtn.classList.remove("photo-attached");
+        }
+    }
+
     function saveCustomNameFromModal() {
         const nameInput = document.getElementById('modal-custom-name').value.trim();
         if (nameInput) {
             activeCustomName = nameInput;
             document.getElementById('penguin-id').innerText = `ID: ${penguinId} (${activeCustomName})`;
+            penguinNameDisplay.innerText = activeCustomName;
         }
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
-    // --- RENDER TRACKS AND CHECK NAMES ---
+    // ===================================================
+    // DATA ENGINES (MAPPED TO EXACT BACKEND SCHEMAS)
+    // ===================================================
     async function loadPenguinHistory(targetId) {
-        historyLayerGroup.clearLayers();
+        if (targetId === "Mystery Penguin" || !map) return;
+        
+        if (historyLayerGroup) historyLayerGroup.clearLayers();
         if (currentJourneyLine) { currentJourneyLine.remove(); }
-        if (targetId === "Mystery Penguin") return;
 
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
@@ -218,7 +619,6 @@
 
         if (error) return;
 
-        // First find loop check
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
@@ -226,19 +626,23 @@
             return;
         }
 
-        // Search the records to see if a nickname already exists
+        document.getElementById('first-find-modal').style.display = 'none';
+
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
         if (namedEntry) {
             activeCustomName = namedEntry.custom_name;
             if (targetId === penguinId) {
                 document.getElementById('penguin-id').innerText = `ID: ${penguinId} (${activeCustomName})`;
+                penguinNameDisplay.innerText = activeCustomName;
             }
         }
+
+        totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
-            html: "<div style='background-color:#95a5a6; width:12px; height:12px; border-radius:50%; border:2px solid white;'></div>",
+            html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>",
             iconSize: [12, 12], iconAnchor: [6, 6]
         });
 
@@ -256,11 +660,12 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        currentJourneyLine = L.polyline(pathCoordinates, { color: '#3498db', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
-        map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (pathCoordinates.length > 0) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        }
     }
 
-    // --- MILEAGE AND RANKING COMPUTATION ---
     async function buildLeaderboard() {
         const { data: allLogs, error } = await supabaseClient
             .from('penguin_logs')
@@ -271,12 +676,18 @@
 
         const tracks = {};
         const namesMap = {};
+        const logsCountMap = {}; // Tracks raw check-in row entry sizes
 
         allLogs.forEach(log => {
-            if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
-            tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
-            if (log.custom_name && log.custom_name.trim() !== "") {
-                namesMap[log.penguin_id] = log.custom_name;
+            if (log.penguin_id) {
+                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
+                tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
+                
+                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
+                
+                if (log.custom_name && log.custom_name.trim() !== "") {
+                    namesMap[log.penguin_id] = log.custom_name;
+                }
             }
         });
 
@@ -288,7 +699,12 @@
                 totalDistanceMeters += points[i].distanceTo(points[i+1]);
             }
             const totalMiles = totalDistanceMeters * 0.000621371; 
-            leaderboardData.push({ id: id, displayName: namesMap[id] ? `${id} (${namesMap[id]})` : id, miles: totalMiles });
+            leaderboardData.push({ 
+                id: id, 
+                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
+                miles: totalMiles,
+                stopsCount: logsCountMap[id] || 1
+            });
         });
 
         leaderboardData.sort((a, b) => b.miles - a.miles);
@@ -297,14 +713,30 @@
         listOutput.innerHTML = "";
 
         if (top10.length === 0) {
-            listOutput.innerHTML = `<li style="text-align:center;color:#7f8c8d;padding:15px;">No logs logged yet!</li>`;
+            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:10pt;">No logs logged yet!</li>`;
             return;
         }
 
         top10.forEach((item, index) => {
             const li = document.createElement('li');
-            li.className = 'leaderboard-item';
-            li.innerHTML = `<span class="rank">#${index + 1}</span><span class="p-name">🐧 ${item.displayName}</span><span class="p-dist">${item.miles.toFixed(1)} miles</span>`;
+            li.className = 'leaderboard-row';
+            
+            let rankClass = "";
+            let medal = `#${index + 1}`;
+            if (index === 0) { medal = "🥇"; rankClass = "ice-glow"; }
+            else if (index === 1) { medal = "🥈"; }
+            else if (index === 2) { medal = "🥉"; }
+
+            // UPDATED: Appended total stops counter variables neatly under subtext rules layout matching design guidelines
+            li.innerHTML = `
+                <div>
+                    <span class="rank-badge">${medal}</span>
+                    <span class="p-name">🐧 ${item.displayName}</span>
+                </div>
+                <div>
+                    <span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span>
+                    <span class="stat-subtext">${item.stopsCount} Logs</span>
+                </div>`;
             
             li.onclick = () => {
                 penguinId = item.id;
@@ -318,10 +750,7 @@
         });
     }
 
-    loadPenguinHistory(penguinId);
-    buildLeaderboard();
-
-    // --- HARDWARE COMPRESSION ENGINE (APPROACH A) ---
+    // --- HARDWARE COMPRESSION ENGINE ---
     async function compressImage(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -388,7 +817,7 @@
             const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
             const message = {
                 username: "Penguin Scout",
-                content: `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** http://googleusercontent.com/maps.google.com/4{verifiedLat},${verifiedLng}\n**Adventure Notes:** *"${notes || 'No note left.'}"*`
+                content: `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n**Adventure Notes:** *"${notes || 'No note left.'}"*`
             };
             if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
 
