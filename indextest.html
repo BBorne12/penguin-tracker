@@ -231,7 +231,7 @@
             text-align: right;
         }
 
-        /* Interactive Map Container Sizing Dimensions */
+        /* Interactive Map Container */
         #live-map {
             width: 100% !important;
             height: 200px !important;
@@ -362,14 +362,14 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
 
-    // Application state variables
+    // App state variables
     let supabaseClient = null;
     let userLatitude = 0;
     let userLongitude = 0;
     let leafletMap = null;
     let mapMarker = null;
 
-    // DOM Element handles
+    // DOM Element hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const logStopBtn = document.getElementById("log-stop-btn");
@@ -379,7 +379,7 @@
     const penguinNameDisplay = document.getElementById("penguin-name-display");
 
     // ==========================================
-    // 2. TIMED INITIALIZATION BOOTSTRAPPER
+    // 2. STABLE SYSTEM BOOTSTRAPPER
     // ==========================================
     window.addEventListener("load", () => {
         initializeLiveMap();
@@ -389,7 +389,7 @@
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 fetchLiveDatabaseContent();
             } catch (initError) {
-                console.error("Supabase failed initialization:", initError);
+                console.error("Initialization error:", initError);
                 showFallbackLeaderboard();
             }
         } else {
@@ -414,74 +414,73 @@
             
             setTimeout(() => { leafletMap.invalidateSize(); }, 400);
         } catch (e) {
-            console.error("Leaflet rendering error:", e);
+            console.error("Map loading error:", e);
         }
     }
 
     // ==========================================
-    // 3. SECURE SUPABASE DATA FETCH ENGINE
+    // 3. CLEAN SUPABASE RETRIEVAL (MATCHES OLD SETUP)
     // ==========================================
     async function fetchLiveDatabaseContent() {
         if (!supabaseClient) return;
 
         try {
-            // A. Dynamic total passport logs counter
-            const { count, error: countErr } = await supabaseClient
+            // A. Fetch log rows directly (exactly like the old script did)
+            const { data: logsData, error: logsErr } = await supabaseClient
                 .from('penguin_logs')
-                .select('*', { count: 'exact', head: true });
+                .select('*');
 
-            if (!countErr && count !== null && count > 0) {
-                totalStopsCounter.innerText = `🍁 ${count} Passport Stops Logged`;
+            if (logsErr) throw logsErr;
+
+            // Update Total Check-In Count dynamically from the records array length
+            if (logsData && logsData.length > 0) {
+                totalStopsCounter.innerText = `🍁 ${logsData.length} Passport Stops Logged`;
+                
+                // Set name display to the most recent entry if a custom name column exists
+                const latestEntry = logsData[logsData.length - 1];
+                if (latestEntry && latestEntry.name) {
+                    penguinNameDisplay.innerText = latestEntry.name;
+                }
             }
 
-            // B. Fetch last active named companion entry
-            const { data: nameData, error: nameErr } = await supabaseClient
-                .from('penguin_logs')
-                .select('name')
-                .order('timestamp', { ascending: false })
-                .limit(1);
-
-            if (!nameErr && nameData && nameData.length > 0 && nameData[0].name) {
-                penguinNameDisplay.innerText = nameData[0].name;
-            }
-
-            // C. Host Distance Metrics Leaderboard Engine
+            // B. Fetch host rows from profile rankings table
             const { data: leaderboardData, error: dbErr } = await supabaseClient
                 .from('profiles')
-                .select('username, distance_traveled, total_logs')
-                .order('distance_traveled', { ascending: false })
-                .limit(3);
+                .select('*');
 
             if (dbErr) throw dbErr;
 
-            if (!leaderboardData || leaderboardData.length === 0) {
+            // Sort rows in Javascript by distance_traveled descending to protect query compatibility
+            if (leaderboardData && leaderboardData.length > 0) {
+                leaderboardData.sort((a, b) => (b.distance_traveled || 0) - (a.distance_traveled || 0));
+                
+                leaderboardContainer.innerHTML = "";
+                const rankMedals = ["🥇", "🥈", "🥉"];
+                
+                leaderboardData.slice(0, 3).forEach((row, index) => {
+                    const medal = rankMedals[index] || ` ${index + 1} `;
+                    const miles = row.distance_traveled ? row.distance_traveled.toLocaleString() : "0";
+                    const logCount = row.total_logs || 0;
+
+                    leaderboardContainer.innerHTML += `
+                        <div class="leaderboard-row">
+                            <div>
+                                <span class="rank-badge">${medal}</span>
+                                <span class="value">${row.username || "Anonymous Host"}</span>
+                            </div>
+                            <div>
+                                <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${miles} miles</span>
+                                <span class="stat-subtext">${logCount} Logs</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
                 showFallbackLeaderboard();
-                return;
             }
 
-            leaderboardContainer.innerHTML = "";
-            const rankMedals = ["🥇", "🥈", "🥉"];
-            leaderboardData.forEach((row, index) => {
-                const medal = rankMedals[index] || ` ${index + 1} `;
-                const miles = row.distance_traveled ? row.distance_traveled.toLocaleString() : "0";
-                const logCount = row.total_logs || 0;
-
-                leaderboardContainer.innerHTML += `
-                    <div class="leaderboard-row">
-                        <div>
-                            <span class="rank-badge">${medal}</span>
-                            <span class="value">${row.username || "Anonymous Explorer"}</span>
-                        </div>
-                        <div>
-                            <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${miles} miles</span>
-                            <span class="stat-subtext">${logCount} Logs</span>
-                        </div>
-                    </div>
-                `;
-            });
-
         } catch (err) {
-            console.error("Supabase extraction offline. Rendering default lists:", err);
+            console.error("Data load interrupted, displaying local values:", err);
             showFallbackLeaderboard();
         }
     }
@@ -503,7 +502,7 @@
     }
 
     // ==========================================
-    // 4. SMART GEOLOCATION INTERCEPT LOGIC
+    // 4. DEVICE GEOLOCATION SENSORS
     // ==========================================
     function verifyDeviceGeolocation() {
         if (navigator.geolocation) {
@@ -525,7 +524,7 @@
                     }
                 },
                 (error) => {
-                    console.warn("GPS lock bypassed / denied access coordinates:", error);
+                    console.warn("GPS focus skipped:", error);
                     coordinatesDisplay.innerText = "Location permission required.";
                     lockBadge.innerText = "LOCKED";
                     lockBadge.style.color = "#ef4444";
@@ -533,12 +532,12 @@
                 { enableHighAccuracy: true, timeout: 12000 }
             );
         } else {
-            coordinatesDisplay.innerText = "GPS interface missing.";
+            coordinatesDisplay.innerText = "GPS unavailable.";
         }
     }
 
     // ==========================================
-    // 5. TRANSACTION INGESTION FORWARDER
+    // 5. DATA LOG DISPATCH TRANSMITTER
     // ==========================================
     logStopBtn.addEventListener("click", async () => {
         const noteText = finderNoteInput.value.trim();
@@ -546,17 +545,16 @@
         logStopBtn.innerText = "Logging Stop...";
 
         try {
-            if (!supabaseClient) throw new Error("Database client not initialized.");
+            if (!supabaseClient) throw new Error("Database client not ready.");
 
-            // Insert into Supabase table structure securely
+            // Insert matching the clean old format rules
             const { error } = await supabaseClient
                 .from('penguin_logs') 
-                .insert([{ latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }])
-                .select();
+                .insert([{ latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }]);
 
             if (error) throw error;
 
-            // Compile payload template arrays mapping to the active destination Webhook parameter rules
+            // Dispatch Discord Webhook Payload
             const payload = {
                 content: `🐧 **New Companion Stop Logged!**\\n• **Pal Name:** ${penguinNameDisplay.innerText}\\n• **Coordinates:** \`${userLatitude.toFixed(4)}°, ${userLongitude.toFixed(4)}°\`\\n• **Notes:** *"${noteText || "No note left."}"*\\n• **Timestamp:** \`${new Date().toLocaleString()}\``
             };
@@ -576,8 +574,8 @@
             fetchLiveDatabaseContent();
 
         } catch (err) {
-            console.error("Data tracking pipeline crash:", err);
-            alert("Submission error: Double-check that your Supabase tables match 'penguin_logs' and RLS insert policies are active.");
+            console.error("Submission catch:", err);
+            alert("Submission error. Please ensure table schemas are synced.");
             logStopBtn.disabled = false;
             logStopBtn.innerText = "Log This Stop";
         }
