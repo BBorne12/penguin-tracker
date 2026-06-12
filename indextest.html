@@ -125,9 +125,8 @@
         }
 
         /* Styled Input Form Elements */
-        .note-textarea {
+        .note-textarea, .select-poi {
             width: 100%;
-            height: 80px;
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(56, 189, 248, 0.2);
             border-radius: 8px;
@@ -138,12 +137,27 @@
             outline: none;
             transition: border-color 0.2s ease;
             box-sizing: border-box;
+        }
+
+        .note-textarea {
+            height: 80px;
             resize: none;
             margin-top: 4px;
             margin-bottom: 8px;
         }
 
-        .note-textarea:focus {
+        .select-poi {
+            margin-top: 6px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        
+        .select-poi option {
+            background: #07111e;
+            color: #ffffff;
+        }
+
+        .note-textarea:focus, .select-poi:focus {
             border-color: rgba(0, 229, 255, 0.5);
             box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
         }
@@ -180,7 +194,6 @@
             box-shadow: none;
         }
 
-        /* Style modifier for Camera interaction capture button */
         .btn-camera {
             background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
             border: 1px solid rgba(56, 189, 248, 0.25);
@@ -193,6 +206,37 @@
             color: #39ff14;
             text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
             background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
+        }
+
+        /* Leaderboard Segment Toggles */
+        .tab-bar {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 12px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 8.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: #00e5ff;
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
         /* Data List & Leaderboard Row Styles */
@@ -289,72 +333,6 @@
         .leaflet-tile {
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
-        .leaflet-bar {
-            border: 1px solid rgba(56, 189, 248, 0.3) !important;
-            box-shadow: none !important;
-        }
-        .leaflet-bar a {
-            background-color: rgba(7, 17, 30, 0.8) !important;
-            color: #00e5ff !important;
-            border-bottom: 1px solid rgba(56, 189, 248, 0.1) !important;
-        }
-
-        /* Frosted Glass Overlay Popup Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 13, 0.85);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            z-index: 9999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal-card {
-            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            border-radius: 16px;
-            padding: 24px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-            text-align: center;
-        }
-
-        .modal-input {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px;
-            padding: 12px;
-            color: #ffffff;
-            font-size: 11pt;
-            margin: 16px 0;
-            outline: none;
-            text-align: center;
-        }
-
-        .modal-input:focus {
-            border-color: #00e5ff;
-        }
-
-        /* Header Layout */
-        .app-header {
-            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
-            padding-bottom: 14px;
-            margin-bottom: 8px;
-        }
-
-        @media(min-width: 480px) {
-            .app-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-            }
-        }
     </style>
 </head>
 <body>
@@ -366,9 +344,7 @@
         <p style="font-size: 9.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 0 0;">
             You found a completely new penguin that has never been logged before! Give it a custom name below to officially launch its adventure.
         </p>
-        
-        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles, Sir Flappy...">
-        
+        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles...">
         <button onclick="saveCustomNameFromModal()" class="btn-glow">Save Name & Start Journey!</button>
     </div>
 </div>
@@ -393,13 +369,11 @@
 
         <div class="glass-card" id="profile-card-block">
             <h2>Penguin</h2>
-            
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                 <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
                 <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Detecting...</div>
                 <div style="font-size: 8.5pt; color: #94a3b8;">Passed from host to host</div>
             </div>
-
             <ul class="data-list">
                 <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                     <div><span class="label">Current Status</span></div>
@@ -414,14 +388,14 @@
 
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <span style="font-size: 16pt; filter: drop-shadow(0 0 5px rgba(56,189,248,0.3));">🎒</span>
+                <span style="font-size: 16pt;">🎒</span>
                 <p style="margin: 0; font-size: 9.5pt; color: #cbd5e1; line-height: 1.4;">
                     <strong style="color: #e0f2fe; display: block; margin-bottom: 2px;">Your New Travel Buddy!</strong>
                     Take this penguin on fun adventures, snap photos, and pass it along to friends!
                 </p>
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; display: flex; align-items: flex-start; gap: 12px;">
-                <span style="font-size: 16pt; filter: drop-shadow(0 0 5px rgba(245,158,11,0.3));">🚀</span>
+                <span style="font-size: 16pt;">🚀</span>
                 <p style="margin: 0; font-size: 9.5pt; color: #cbd5e1; line-height: 1.4;">
                     <strong style="color: #f59e0b; display: block; margin-bottom: 2px;">Can you top the leaderboard?</strong>
                     Take it as far as possible to stack up miles! When you're done, hide it in the wild for the next explorer.
@@ -444,14 +418,20 @@
                     <span class="value" style="font-size: 9.5pt; display: block; color: #cbd5e1; margin-top: 2px;">Log your penguin's progress to reach the top of the leaderboard!</span>
                 </li>
             </ul>
-
             <div id="map"></div>
-            <div class="coords" id="coord-display" style="font-family: monospace; color: #94a3b8; font-size: 8.5pt; text-align:center; display:none;">Latitude: -- | Longitude: --</div>
+            <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
+            <div class="input-group" id="poi-input-group" style="display: none;">
+                <label class="label" style="color: #39ff14; text-shadow: 0 0 5px rgba(57, 255, 20, 0.2);">🏛️ Nearby Historic Monument or Marker Found!</label>
+                <select id="poi-selector" class="select-poi">
+                    <option value="">-- Optional: Tag this Monument --</option>
+                </select>
+            </div>
+
             <div class="input-group" id="photo-input-group">
                 <label class="label">Snap a Photo of its Journey (Optional):</label>
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
@@ -469,8 +449,14 @@
         </div>
 
         <div class="glass-card">
-            <h2>🏆 Top 10 Most Traveled Penguins</h2>
-            <ul class="leaderboard-list" id="leaderboard-output" style="margin-top: 8px;">
+            <h2>🏆 Game Center Standings</h2>
+            
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
+                <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Monuments</button>
+            </div>
+
+            <ul class="leaderboard-list" id="leaderboard-output">
                 <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Calculating distances...</li>
             </ul>
         </div>
@@ -494,6 +480,7 @@
     let penguinId = urlParams.get('id') || "Mystery Penguin";
     let isViewOnlyMode = (penguinId === "Mystery Penguin");
     let activeCustomName = "";
+    let activeTab = "distance"; // Tracks current leaderboard segment layout
 
     document.getElementById('penguin-id').innerText = `ID: ${penguinId}`;
 
@@ -503,9 +490,10 @@
     let verifiedLat = null; 
     let verifiedLng = null;
     let historyLayerGroup = null;
+    let poiLayerGroup = null; // Layer specialized strictly for POI pins
     let currentJourneyLine = null;
 
-    // DOM layout elements hooks
+    // DOM hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const customCameraBtn = document.getElementById("custom-camera-btn");
@@ -514,9 +502,6 @@
 
     penguinNameDisplay.innerText = penguinId;
 
-    // ===================================================
-    // SAFE STRUCTURAL BOOTSTRAPPED INITIALIZATION
-    // ===================================================
     window.addEventListener("DOMContentLoaded", function() {
         initializeLiveMap();
         
@@ -540,12 +525,13 @@
             }).addTo(map);
             
             historyLayerGroup = L.layerGroup().addTo(map);
+            poiLayerGroup = L.layerGroup().addTo(map);
             
             if (!isViewOnlyMode) {
                 marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
             }
         } catch (mapError) {
-            console.error("Leaflet instantiation fault intercepted safely: ", mapError);
+            console.error("Leaflet instantiation error: ", mapError);
         }
     }
 
@@ -556,10 +542,8 @@
         document.getElementById('input-fields-card').style.display = "none";
         document.getElementById('safety-disclaimer-notice').style.display = "none";
         
-        // FIXED OVERRIDE: Keep the map visible, but clean out the user's location log input blocks
         document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
         document.getElementById('location-text-elements').style.display = "none"; 
-        
         if (marker) { marker.remove(); }
     }
 
@@ -579,14 +563,75 @@
                 lockBadge.style.color = "#39ff14";
                 
                 document.getElementById('submit-btn').disabled = false;
+
+                // Fire the dynamic Overpass API Monument Scanner
+                lookupNearbyMonuments(verifiedLat, verifiedLng);
+
             }, (err) => { 
                 console.warn("GPS focus skipped: ", err);
                 coordinatesDisplay.innerText = "Location permission required.";
                 lockBadge.innerText = "LOCKED";
                 lockBadge.style.color = "#ef4444";
             }, { enableHighAccuracy: true });
-        } else {
-            coordinatesDisplay.innerText = "GPS locator missing.";
+        }
+    }
+
+    // ===================================================
+    // ENHANCEMENT 1: LIVE MAP POI DISCOVERY PLOTTER
+    // ===================================================
+    async function lookupNearbyMonuments(lat, lng) {
+        if (!poiLayerGroup) return;
+        poiLayerGroup.clearLayers();
+
+        const poiGroup = document.getElementById('poi-input-group');
+        const poiSelector = document.getElementById('poi-selector');
+        
+        const offset = 0.009; 
+        const minLat = lat - offset; const maxLat = lat + offset;
+        const minLng = lng - offset; const maxLng = lng + offset;
+
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:15];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
+
+        try {
+            const fetchRes = await fetch(overpassUrl);
+            const resJson = await fetchRes.json();
+            
+            if (resJson && resJson.elements && resJson.elements.length > 0) {
+                poiSelector.innerHTML = '<option value="">-- Optional: Tag this Monument --</option>';
+                let landmarksFoundCount = 0;
+
+                // Neon-Purple custom marker stylings for POI items map pins
+                const poiIcon = L.divIcon({
+                    className: 'poi-div-icon',
+                    html: "<div style='background-color:#cc00ff; width:14px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #cc00ff;'></div>",
+                    iconSize: [14, 12], iconAnchor: [7, 6]
+                });
+
+                resJson.elements.forEach(element => {
+                    if (element.tags && element.tags.name) {
+                        landmarksFoundCount++;
+                        
+                        // A. Push entry token option node right into dropdown menu selector card
+                        const optionNode = document.createElement('option');
+                        optionNode.value = element.tags.name;
+                        optionNode.innerText = `🏛️ ${element.tags.name}`;
+                        poiSelector.appendChild(optionNode);
+
+                        // B. Drop dynamic glowing neon-purple POI pin directly onto Leaflet canvas
+                        if (element.lat && element.lon) {
+                            L.marker([element.lat, element.lon], { icon: poiIcon })
+                             .addTo(poiLayerGroup)
+                             .bindPopup(`<b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
+                        }
+                    }
+                });
+
+                if (landmarksFoundCount > 0) {
+                    poiGroup.style.display = "block"; 
+                }
+            }
+        } catch (poiErr) {
+            console.warn("POI dynamic landmark engine lookup bypassed safely: ", poiErr);
         }
     }
 
@@ -613,6 +658,16 @@
             penguinNameDisplay.innerText = activeCustomName;
         }
         document.getElementById('first-find-modal').style.display = 'none';
+    }
+
+    function switchLeaderboardTab(tabName) {
+        if (activeTab === tabName) return;
+        activeTab = tabName;
+        
+        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        
+        buildLeaderboard();
     }
 
     // ===================================================
@@ -652,6 +707,9 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
+        var targetMapContainer = isViewOnlyMode ? window.map : map;
+        if (!targetMapContainer) return;
+
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -665,6 +723,7 @@
 
             const dateObj = new Date(log.created_at).toLocaleDateString();
             let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px;">` : "";
+            
             const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
             const stopLabel = log.custom_name ? `🐧 ${log.custom_name}` : `Stop #${index + 1}`;
             
@@ -673,16 +732,19 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        if (pathCoordinates.length > 0 && map) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
-            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (pathCoordinates.length > 0) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
+            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
         }
     }
 
+    // ===================================================
+    // ENHANCEMENT 2: DUAL TAB CALCULATION ENGINE 
+    // ===================================================
     async function buildLeaderboard() {
         const { data: allLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
             .order('created_at', { ascending: true });
 
         if (error || !allLogs) return;
@@ -690,6 +752,7 @@
         const tracks = {};
         const namesMap = {};
         const logsCountMap = {}; 
+        const monumentTagsCountMap = {}; // Tracks monument occurrences inside string properties
 
         allLogs.forEach(log => {
             if (log.penguin_id) {
@@ -697,6 +760,11 @@
                 tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
                 
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
+                
+                // Inspects log parameter texts for pre-pended monument tokens strings to process ranking points
+                if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) {
+                    monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
+                }
                 
                 if (log.custom_name && log.custom_name.trim() !== "") {
                     namesMap[log.penguin_id] = log.custom_name;
@@ -716,11 +784,18 @@
                 id: id, 
                 displayName: namesMap[id] ? `${namesMap[id]}` : id, 
                 miles: totalMiles,
-                stopsCount: logsCountMap[id] || 1
+                stopsCount: logsCountMap[id] || 1,
+                monumentsCount: monumentTagsCountMap[id] || 0
             });
         });
 
-        leaderboardData.sort((a, b) => b.miles - a.miles);
+        // Toggle array sort parameters rules depending on which tab selector layer is loaded
+        if (activeTab === "distance") {
+            leaderboardData.sort((a, b) => b.miles - a.miles);
+        } else {
+            leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles);
+        }
+
         const top10 = leaderboardData.slice(0, 10);
         const listOutput = document.getElementById('leaderboard-output');
         listOutput.innerHTML = "";
@@ -734,21 +809,29 @@
             const li = document.createElement('li');
             li.className = 'leaderboard-row';
             
-            let rankClass = "";
-            let medal = `#${index + 1}`;
+            let rankClass = ""; let medal = `#${index + 1}`;
             if (index === 0) { medal = "🥇"; rankClass = "ice-glow"; }
             else if (index === 1) { medal = "🥈"; }
             else if (index === 2) { medal = "🥉"; }
+
+            // Dynamic presentation layer toggle
+            let rightSideValueMetricsHTML = "";
+            if (activeTab === "distance") {
+                rightSideValueMetricsHTML = `
+                    <span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span>
+                    <span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            } else {
+                rightSideValueMetricsHTML = `
+                    <span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span>
+                    <span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
+            }
 
             li.innerHTML = `
                 <div>
                     <span class="rank-badge">${medal}</span>
                     <span class="p-name">🐧 ${item.displayName}</span>
                 </div>
-                <div>
-                    <span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span>
-                    <span class="stat-subtext">${item.stopsCount} Logs</span>
-                </div>`;
+                <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
                 penguinId = item.id;
@@ -756,11 +839,8 @@
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
                 
-                // FIXED: Keep the card block visible so layout dimensions calculate accurately
                 document.getElementById('tracking-card-block').style.display = "block";
-                if (map) {
-                    map.invalidateSize();
-                }
+                if (map) { map.invalidateSize(); }
                 
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
@@ -775,18 +855,13 @@
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
+                const img = new Image(); img.src = event.target.result;
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; 
+                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; 
                     let width = img.width; let height = img.height;
-
                     if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                     canvas.width = width; canvas.height = height;
-                    
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                     canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
                 };
             };
@@ -799,27 +874,26 @@
         document.getElementById('submit-btn').disabled = true;
         document.getElementById('submit-btn').innerText = "Uploading tracking logs...";
 
-        const notes = document.getElementById('finder-notes').value;
+        let notes = document.getElementById('finder-notes').value.trim();
+        const selectedPoi = document.getElementById('poi-selector').value;
         const photoFile = document.getElementById('penguin-photo').files[0];
         let uploadedPhotoUrl = null;
+
+        if (selectedPoi) {
+            notes = `[Tagged at Monument: ${selectedPoi}] ${notes}`.trim();
+        }
 
         if (photoFile) {
             try {
                 const compressedBlob = await compressImage(photoFile);
                 const fileName = `${penguinId}_${Date.now()}.jpg`;
-                
-                const { data: storageData, error: storageError } = await supabaseClient
-                    .storage
-                    .from('penguin_photos')
-                    .upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
-
+                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
                 if (storageError) throw storageError;
-
                 const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
                 uploadedPhotoUrl = publicUrlData.publicUrl;
             } catch (err) {
                 console.error(err.message);
-                alert("Photo connection bottleneck hit. Progressing with coordinate submission.");
+                alert("Photo submission bypassed safely.");
             }
         }
 
@@ -827,22 +901,22 @@
             penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, photo_url: uploadedPhotoUrl, custom_name: activeCustomName
         };
 
-        const { data, error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
-        if (error) { alert("Database entry rejected. Try again."); document.getElementById('submit-btn').disabled = false; return; }
+        const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
+        if (error) { alert("Database entry rejected."); document.getElementById('submit-btn').disabled = false; return; }
 
         try {
             const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
             const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
-            const message = {
-                username: "Penguin Scout",
-                content: `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n**Adventure Notes:** *"${notes || 'No note left.'}"*`
-            };
+            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
+            if (selectedPoi) discordMsg += `🏛️ **Monument Tagged:** \`${selectedPoi}\`\n`;
+            discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
+            
+            const message = { username: "Penguin Scout", content: discordMsg };
             if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
-
             await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
         } catch(e) {}
 
-        alert(`Success! Adventure logged for ${activeCustomName || penguinId}.\n\nKeep taking it to cool spots and uploading photos! When you are ready, pass it to a friend or hide it for a new explorer to discover.`);
+        alert(`Success! Adventure logged for ${activeCustomName || penguinId}.`);
         location.reload(); 
     }
 </script>
