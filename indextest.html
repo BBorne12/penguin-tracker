@@ -231,14 +231,15 @@
             text-align: right;
         }
 
-        /* Live Interactive Map Box Styling */
+        /* Interactive Map Container Sizing Dimensions */
         #live-map {
-            height: 180px;
-            background: #030712;
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px;
-            margin: 12px 0;
-            z-index: 1;
+            width: 100% !important;
+            height: 200px !important;
+            background: #030712 !important;
+            border: 1px solid rgba(56, 189, 248, 0.2) !important;
+            border-radius: 8px !important;
+            margin: 12px 0 !important;
+            z-index: 5;
         }
         
         .leaflet-tile {
@@ -294,7 +295,7 @@
             
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                 <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
-                <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Loading...</div>
+                <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Captain Waddles</div>
                 <div style="font-size: 8.5pt; color: #94a3b8;">Passed from host to host</div>
             </div>
 
@@ -305,7 +306,7 @@
                 </li>
                 <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                     <div><span class="label">Total Stops So Far</span></div>
-                    <div><span class="value ice-glow" id="total-stops-counter">... Passport Stops</span></div>
+                    <div><span class="value ice-glow" id="total-stops-counter">3 Passport Stops Logged</span></div>
                 </li>
             </ul>
         </div>
@@ -342,8 +343,7 @@
         <div class="glass-card">
             <h2>Top Hosts</h2>
             <div id="leaderboard-container" style="margin-top: 4px;">
-                <div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">Connecting to leaderboard feed...</div>
-            </div>
+                </div>
         </div>
 
         <div class="warning-badge">
@@ -356,20 +356,20 @@
 
 <script>
     // ==========================================
-    // 1. DATABASE CONFIGURATION KEYS SETUP
+    // 1. HARDCODED LIVE API CONFIGURATION KEYS
     // ==========================================
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
 
-    // Application state global objects
-    let supabase = null;
+    // Application state variables
+    let supabaseClient = null;
     let userLatitude = 0;
     let userLongitude = 0;
     let leafletMap = null;
     let mapMarker = null;
 
-    // DOM layout elements hooks
+    // DOM Element handles
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const logStopBtn = document.getElementById("log-stop-btn");
@@ -379,62 +379,63 @@
     const penguinNameDisplay = document.getElementById("penguin-name-display");
 
     // ==========================================
-    // 2. SAFETY INITIALIZATION BOOTSTRAP
+    // 2. TIMED INITIALIZATION BOOTSTRAPPER
     // ==========================================
     window.addEventListener("load", () => {
-        // Enforce safety delay checking to confirm CDNs exist on window global level
-        if (typeof window.supabase === "undefined" || typeof L === "undefined") {
-            console.error("SDK scripts failed loading from CDN.");
-            leaderboardContainer.innerHTML = `<div style="font-size:9pt; color:#ef4444; text-align:center;">Script libraries failed to initialize. Reload page.</div>`;
-            return;
+        initializeLiveMap();
+
+        if (typeof window.supabase !== "undefined") {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                fetchLiveDatabaseContent();
+            } catch (initError) {
+                console.error("Supabase failed initialization:", initError);
+                showFallbackLeaderboard();
+            }
+        } else {
+            showFallbackLeaderboard();
         }
 
-        // Initialize Supabase client inside window context safely
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // Core system startup functions
-        initializeLiveMap();
-        fetchLiveDatabaseContent();
         verifyDeviceGeolocation();
     });
 
-    // Renders the geographic map view coordinate tile base
     function initializeLiveMap() {
         try {
-            leafletMap = L.map('live-map').setView([0, 0], 1);
+            leafletMap = L.map('live-map', {
+                center: [20, 0],
+                zoom: 1,
+                zoomControl: true
+            });
+            
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 18,
                 attribution: '© OpenStreetMap'
             }).addTo(leafletMap);
+            
+            setTimeout(() => { leafletMap.invalidateSize(); }, 400);
         } catch (e) {
-            console.error("Map rendering error: ", e);
+            console.error("Leaflet rendering error:", e);
         }
     }
 
     // ==========================================
-    // 3. LIVE CONTENT ENGINE (PULLS STRAIGHT FROM DATABASE)
+    // 3. SECURE SUPABASE DATA FETCH ENGINE
     // ==========================================
     async function fetchLiveDatabaseContent() {
-        if (!supabase || SUPABASE_URL.includes("YOUR_PROJECT_ID")) {
-            // Set friendly defaults if keys are unpopulated
-            penguinNameDisplay.innerText = "Captain Waddles";
-            totalStopsCounter.innerText = "3 Passport Stops Logged";
-            showFallbackLeaderboard();
-            return;
-        }
+        if (!supabaseClient) return;
 
         try {
-            // A. Fetch total check-in record counts
-            const { count, error: countErr } = await supabase
+            // A. Dynamic total passport logs counter
+            const { count, error: countErr } = await supabaseClient
                 .from('penguin_logs')
                 .select('*', { count: 'exact', head: true });
 
-            if (!countErr && count !== null) {
+            if (!countErr && count !== null && count > 0) {
                 totalStopsCounter.innerText = `🍁 ${count} Passport Stops Logged`;
             }
 
-            // B. Fetch last known name from log registry entry
-            const { data: nameData, error: nameErr } = await supabase
+            // B. Fetch last active named companion entry
+            const { data: nameData, error: nameErr } = await supabaseClient
                 .from('penguin_logs')
                 .select('name')
                 .order('timestamp', { ascending: false })
@@ -442,12 +443,10 @@
 
             if (!nameErr && nameData && nameData.length > 0 && nameData[0].name) {
                 penguinNameDisplay.innerText = nameData[0].name;
-            } else {
-                penguinNameDisplay.innerText = "Captain Waddles"; // Standard fallback
             }
 
-            // C. Fetch leaderboard values sorted by travel length criteria
-            const { data: leaderboardData, error: dbErr } = await supabase
+            // C. Host Distance Metrics Leaderboard Engine
+            const { data: leaderboardData, error: dbErr } = await supabaseClient
                 .from('profiles')
                 .select('username, distance_traveled, total_logs')
                 .order('distance_traveled', { ascending: false })
@@ -455,14 +454,12 @@
 
             if (dbErr) throw dbErr;
 
-            leaderboardContainer.innerHTML = "";
-
             if (!leaderboardData || leaderboardData.length === 0) {
-                leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet!</div>`;
+                showFallbackLeaderboard();
                 return;
             }
 
-            // Write matching UI row blocks
+            leaderboardContainer.innerHTML = "";
             const rankMedals = ["🥇", "🥈", "🥉"];
             leaderboardData.forEach((row, index) => {
                 const medal = rankMedals[index] || ` ${index + 1} `;
@@ -484,7 +481,7 @@
             });
 
         } catch (err) {
-            console.error("Supabase request error:", err);
+            console.error("Supabase extraction offline. Rendering default lists:", err);
             showFallbackLeaderboard();
         }
     }
@@ -506,7 +503,7 @@
     }
 
     // ==========================================
-    // 4. DEVICE GPS VERIFICATION
+    // 4. SMART GEOLOCATION INTERCEPT LOGIC
     // ==========================================
     function verifyDeviceGeolocation() {
         if (navigator.geolocation) {
@@ -524,10 +521,11 @@
                         leafletMap.setView([userLatitude, userLongitude], 13);
                         if (mapMarker) leafletMap.removeLayer(mapMarker);
                         mapMarker = L.marker([userLatitude, userLongitude]).addTo(leafletMap);
+                        setTimeout(() => { leafletMap.invalidateSize(); }, 200);
                     }
                 },
                 (error) => {
-                    console.warn("GPS Access locked: ", error);
+                    console.warn("GPS lock bypassed / denied access coordinates:", error);
                     coordinatesDisplay.innerText = "Location permission required.";
                     lockBadge.innerText = "LOCKED";
                     lockBadge.style.color = "#ef4444";
@@ -535,12 +533,12 @@
                 { enableHighAccuracy: true, timeout: 12000 }
             );
         } else {
-            coordinatesDisplay.innerText = "GPS Tracking unavailable.";
+            coordinatesDisplay.innerText = "GPS interface missing.";
         }
     }
 
     // ==========================================
-    // 5. TRANSACTION PIPELINE (SUBMIT FORM)
+    // 5. TRANSACTION INGESTION FORWARDER
     // ==========================================
     logStopBtn.addEventListener("click", async () => {
         const noteText = finderNoteInput.value.trim();
@@ -548,23 +546,19 @@
         logStopBtn.innerText = "Logging Stop...";
 
         try {
-            if (!supabase) throw new Error("Database not connected.");
+            if (!supabaseClient) throw new Error("Database client not initialized.");
 
-            // A. Post directly to Supabase logs table row
-            const { error } = await supabase
+            // Insert into Supabase table structure securely
+            const { error } = await supabaseClient
                 .from('penguin_logs') 
-                .insert([{ latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }]);
+                .insert([{ latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }])
+                .select();
 
             if (error) throw error;
 
-            // B. POST payload dispatch straight to automated Webhook path
+            // Compile payload template arrays mapping to the active destination Webhook parameter rules
             const payload = {
-                event: "penguin_checked_in",
-                penguin_name: penguinNameDisplay.innerText,
-                latitude: userLatitude,
-                longitude: userLongitude,
-                note: noteText,
-                timestamp: new Date().toLocaleString()
+                content: `🐧 **New Companion Stop Logged!**\\n• **Pal Name:** ${penguinNameDisplay.innerText}\\n• **Coordinates:** \`${userLatitude.toFixed(4)}°, ${userLongitude.toFixed(4)}°\`\\n• **Notes:** *"${noteText || "No note left."}"*\\n• **Timestamp:** \`${new Date().toLocaleString()}\``
             };
 
             await fetch(WEBHOOK_URL, {
@@ -582,8 +576,8 @@
             fetchLiveDatabaseContent();
 
         } catch (err) {
-            console.error("Data pipeline catch:", err);
-            alert("Submission error. Please ensure your configuration credentials are accurate and tables are matching.");
+            console.error("Data tracking pipeline crash:", err);
+            alert("Submission error: Double-check that your Supabase tables match 'penguin_logs' and RLS insert policies are active.");
             logStopBtn.disabled = false;
             logStopBtn.innerText = "Log This Stop";
         }
