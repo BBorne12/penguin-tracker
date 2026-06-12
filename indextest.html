@@ -230,7 +230,7 @@
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
 
-        /* NEW: Frosted Glass Overlay Popup Styles */
+        /* Frosted Glass Overlay Popup Styles */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -238,7 +238,7 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             z-index: 9999;
-            display: none; /* Controlled via JS */
+            display: none;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -399,6 +399,9 @@
     var currentPositionMarker = null;
     var activeHistoryLayer = null;
 
+    // Hardcoded safety column fallbacks matching your database scheme
+    var MATCHED_ID_COLUMN = "id"; 
+
     // Parse URL parameter string safely (?id=Penguin-035)
     var urlParams = new URLSearchParams(window.location.search);
     var URL_PENGUIN_ID = urlParams.get('id') || "Penguin-035";
@@ -415,7 +418,6 @@
     var modalNameField = document.getElementById("modal-name-field");
     var modalSubmitBtn = document.getElementById("modal-submit-btn");
 
-    // Force default visual fallback context
     penguinNameDisplay.innerText = URL_PENGUIN_ID;
 
     // ==========================================
@@ -459,7 +461,7 @@
     }
 
     // ==========================================
-    // 3. CASE-INSENSITIVE DATA EXTRACTOR ENGINE
+    // 3. AGNOSTIC INTELLIGENT DATA SCANNER
     // ==========================================
     function fetchLiveDatabaseContent() {
         if (!dbClient) return;
@@ -478,32 +480,39 @@
                 }
 
                 if (logsData && logsData.length > 0) {
-                    // CASE SAFETY: Inspect the exact keys your table returned
                     var firstRow = logsData[0];
-                    var idKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'id'; }) || 'id';
-                    var userKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'username' || k.toLowerCase() === 'user'; }) || 'username';
-                    var noteKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'note'; }) || 'note';
-                    var customNameKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'name'; }) || null;
+                    var keys = Object.keys(firstRow);
 
-                    // Filter matching entries matching the active ID parameter tracking loop
+                    // FIXED: Agnostic structural analysis. Finds whatever column actually matches the tag data strings
+                    var idKey = keys.find(function(k) {
+                        return k.toLowerCase() === 'id' || k.toLowerCase().includes('tag') || k.toLowerCase().includes('code') || k.toLowerCase().includes('penguin');
+                    }) || 'id';
+                    
+                    // Lock global reference for the click ingestion transmitter
+                    MATCHED_ID_COLUMN = idKey;
+
+                    var userKey = keys.find(function(k) { return k.toLowerCase() === 'username' || k.toLowerCase() === 'user' || k.toLowerCase() === 'host'; }) || 'username';
+                    var noteKey = keys.find(function(k) { return k.toLowerCase() === 'note' || k.toLowerCase() === 'message'; }) || 'note';
+                    var customNameKey = keys.find(function(k) { return k.toLowerCase() === 'name'; }) || null;
+
+                    // Filter row logs to isolate matches
                     var activeCompanionRows = [];
                     for (var i = 0; i < logsData.length; i++) {
                         var row = logsData[i];
-                        if (row && row[idKey] && String(row[idKey]).toLowerCase() === URL_PENGUIN_ID.toLowerCase()) {
+                        if (row && row[idKey] && String(row[idKey]).trim().toLowerCase() === URL_PENGUIN_ID.trim().toLowerCase()) {
                             activeCompanionRows.push(row);
                         }
                     }
 
                     totalStopsCounter.innerText = "🍁 " + activeCompanionRows.length + " Passport Stops Logged";
 
-                    // POPUP MODAL RULE: If this penguin ID is completely blank in your DB, pop up the frosted registration card!
+                    // POPUP TOGGLE OVERLAY TRIGGER
                     if (activeCompanionRows.length === 0) {
                         namingModal.style.display = "flex";
-                        modalNameField.value = URL_PENGUIN_ID; // Pre-populate parameter string
+                        modalNameField.value = URL_PENGUIN_ID;
                     } else {
                         namingModal.style.display = "none";
                         
-                        // Check if a custom friendly name was logged inside the rows, otherwise display ID
                         if (customNameKey && activeCompanionRows[activeCompanionRows.length - 1][customNameKey]) {
                             penguinNameDisplay.innerText = activeCompanionRows[activeCompanionRows.length - 1][customNameKey];
                         } else {
@@ -511,7 +520,7 @@
                         }
                     }
 
-                    // Draw Historical Map Journey Lines
+                    // Paint Real-World Historical Tracking Path Lines
                     if (activeCompanionRows.length > 0 && activeHistoryLayer) {
                         activeHistoryLayer.clearLayers();
                         var pathCoordinatesArray = [];
@@ -551,7 +560,7 @@
                         leafletMap.fitBounds(activeHistoryLayer.getBounds(), { padding: [30, 30] });
                     }
 
-                    // COMPILE DYNAMIC PENGUIN LEADERBOARD COUNTS
+                    // COMPILE DYNAMIC SCORES DYNAMICALLY
                     var scoreTotalsMap = {};
                     for (var k = 0; k < logsData.length; k++) {
                         var entry = logsData[k];
@@ -600,7 +609,6 @@
                     }
 
                 } else {
-                    // Database exists but has 0 total entries (New app deployment state)
                     namingModal.style.display = "flex";
                     leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet! Log the first stop above.</div>`;
                 }
@@ -665,7 +673,7 @@
                     coordinatesDisplay.innerText = "Location permission required.";
                     lockBadge.innerText = "LOCKED";
                     lockBadge.style.color = "#ef4444";
-                    logStopBtn.disabled = false; // Allow manual fallback submissions
+                    logStopBtn.disabled = false;
                 },
                 { enableHighAccuracy: true, timeout: 12000 }
             );
@@ -684,17 +692,19 @@
         modalSubmitBtn.disabled = true;
         modalSubmitBtn.innerText = "Registering...";
 
-        // Insert first checkpoint row token to permanently log this penguin ID into existence
+        var insertPayload = {
+            latitude: userLatitude || 45.0, 
+            longitude: userLongitude || -93.0, 
+            note: "Scanned & registered new companion profile portfolio!",
+            timestamp: new Date().toISOString() 
+        };
+        // Use dynamically matched key
+        insertPayload[MATCHED_ID_COLUMN] = URL_PENGUIN_ID;
+        insertPayload['name'] = chosenName;
+
         dbClient
             .from('penguin_logs')
-            .insert([{ 
-                id: URL_PENGUIN_ID, 
-                name: chosenName,
-                latitude: userLatitude || 45.0, 
-                longitude: userLongitude || -93.0, 
-                note: " Scanned & registered new companion profile portfolio!",
-                timestamp: new Date().toISOString() 
-            }])
+            .insert([insertPayload])
             .then(function(res) {
                 if (res.error) throw res.error;
                 
@@ -704,7 +714,7 @@
             })
             .catch(function(e) {
                 console.error("Modal registration failed:", e);
-                namingModal.style.display = "none"; // Hide to let user use primary page layout anyway
+                namingModal.style.display = "none";
             });
     });
 
@@ -723,9 +733,17 @@
             return;
         }
 
+        var logPayload = {
+            latitude: userLatitude,
+            longitude: userLongitude,
+            note: noteText,
+            timestamp: new Date().toISOString()
+        };
+        logPayload[MATCHED_ID_COLUMN] = URL_PENGUIN_ID;
+
         dbClient
             .from('penguin_logs') 
-            .insert([{ id: URL_PENGUIN_ID, latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }])
+            .insert([logPayload])
             .then(function(insResponse) {
                 if (insResponse.error) throw insResponse.error;
 
