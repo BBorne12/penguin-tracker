@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penguin Tracker - Adventure Mode</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* Base Setup & CSS Resets */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #02060d;
+            color: #ffffff;
+            font-size: 11pt;
+            line-height: 1.5;
+        }
+
+        /* Container & Mobile-first Responsive Canvas */
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+            background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
+            min-height: 100vh;
+        }
+
+        /* Typography & Headings */
+        h1, h2, h3, h4 {
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        h1 {
+            font-size: 18pt;
+            color: #e0f2fe;
+            text-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+        }
+
+        h2 {
+            font-size: 12pt;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: #7dd3fc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+            opacity: 0.8;
+        }
+
+        /* Layout Blocks */
+        .layout-section {
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-bottom: 16px;
+        }
+
+        .glass-card-inner {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+
+        /* Glowing & Status Elements */
+        .aurora-glow {
+            color: #39ff14;
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
+            font-weight: bold;
+        }
+
+        .ice-glow {
+            color: #00e5ff;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(57, 255, 20, 0.1);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            color: #39ff14;
+            border-radius: 20px;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.4);
+            white-space: nowrap;
+        }
+
+        .warning-badge {
+            display: block;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.07);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border-radius: 8px;
+            font-size: 9pt;
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+
+        /* Styled Input Form Elements */
+        .note-textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 10pt;
+            resize: none;
+            margin-top: 4px;
+            margin-bottom: 8px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .note-textarea:focus {
+            border-color: rgba(0, 229, 255, 0.5);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+        }
+
+        /* Action Control Button */
+        .btn-glow {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            border-radius: 8px;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+            text-decoration: none;
+            font-size: 10pt;
+            -webkit-tap-highlight-color: transparent;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-glow:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Data List & Leaderboard Row Styles */
+        .data-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .data-item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .leaderboard-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .leaderboard-row:last-child {
+            border-bottom: none;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 22px;
+            text-align: center;
+            font-weight: bold;
+            color: #7dd3fc;
+            margin-right: 8px;
+        }
+
+        .label {
+            font-size: 8.5pt;
+            color: #94a3b8;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        .value {
+            font-size: 10.5pt;
+            color: #f8fafc;
+        }
+
+        .stat-subtext {
+            display: block;
+            font-size: 8pt;
+            color: #94a3b8;
+            text-align: right;
+        }
+
+        /* Live Interactive Map Box Styling */
+        #live-map {
+            height: 180px;
+            background: #030712;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            margin: 12px 0;
+            z-index: 1;
+        }
+        
+        .leaflet-tile {
+            filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
+        }
+        .leaflet-bar {
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            box-shadow: none !important;
+        }
+        .leaflet-bar a {
+            background-color: rgba(7, 17, 30, 0.8) !important;
+            color: #00e5ff !important;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.1) !important;
+        }
+
+        /* Header Layout */
+        .app-header {
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            padding-bottom: 14px;
+            margin-bottom: 8px;
+        }
+
+        @media(min-width: 480px) {
+            .app-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div class="app-header">
+        <div>
+            <div class="subtitle">The Traveling Penguin Game</div>
+            <h1>PENGUIN TRACKER</h1>
+        </div>
+        <div style="margin-top: 8px;">
+            <span class="status-badge" id="network-status">🌍 LIVE MAP ACTIVE</span>
+        </div>
+    </div>
+
+    <div class="layout-section">
+        
+        <div class="glass-card">
+            <h2>Current Guest</h2>
+            
+            <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
+                <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
+                <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Loading...</div>
+                <div style="font-size: 8.5pt; color: #94a3b8;">Passed from host to host</div>
+            </div>
+
+            <ul class="data-list">
+                <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><span class="label">Current Status</span></div>
+                    <div><span class="value aurora-glow">On an Adventure / Active</span></div>
+                </li>
+                <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><span class="label">Total Stops So Far</span></div>
+                    <div><span class="value ice-glow" id="total-stops-counter">... Passport Stops</span></div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="glass-card">
+            <h2>Log Your Visit</h2>
+            
+            <ul class="data-list">
+                <li class="data-item">
+                    <span class="label">Where did you find them?</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                        <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt;">Detecting Location...</span>
+                        <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 10pt;">WAITING</span>
+                    </div>
+                </li>
+                <li class="data-item">
+                    <span class="label">Community Journey</span>
+                    <span class="value" style="font-size: 9.5pt; display: block; color: #cbd5e1; margin-top: 2px;">Log your penguin's progress to reach the top of the leaderboard!</span>
+                </li>
+            </ul>
+
+            <div id="live-map"></div>
+
+            <div style="margin-top: 10px;">
+                <label class="label" for="finder-note">Leave a Note</label>
+                <textarea id="finder-note" class="note-textarea" placeholder="Write a message in the guestbook, share a story, or tell us where they are heading next..."></textarea>
+            </div>
+
+            <div class="glass-card-inner">
+                <button id="log-stop-btn" class="btn-glow" disabled>Log This Stop</button>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2>Top Hosts</h2>
+            <div id="leaderboard-container" style="margin-top: 4px;">
+                <div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">Connecting to leaderboard feed...</div>
+            </div>
+        </div>
+
+        <div class="warning-badge">
+            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you find them in public spaces!
+        </div>
+        
+    </div>
+
+</div>
+
+<script>
+    // ==========================================
+    // 1. DATABASE CONFIGURATION KEYS SETUP
+    // ==========================================
+    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
+    const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+
+    // Application state global objects
+    let supabase = null;
+    let userLatitude = 0;
+    let userLongitude = 0;
+    let leafletMap = null;
+    let mapMarker = null;
+
+    // DOM layout elements hooks
+    const coordinatesDisplay = document.getElementById("coordinates-display");
+    const lockBadge = document.getElementById("lock-badge");
+    const logStopBtn = document.getElementById("log-stop-btn");
+    const finderNoteInput = document.getElementById("finder-note");
+    const leaderboardContainer = document.getElementById("leaderboard-container");
+    const totalStopsCounter = document.getElementById("total-stops-counter");
+    const penguinNameDisplay = document.getElementById("penguin-name-display");
+
+    // ==========================================
+    // 2. SAFETY INITIALIZATION BOOTSTRAP
+    // ==========================================
+    window.addEventListener("load", () => {
+        // Enforce safety delay checking to confirm CDNs exist on window global level
+        if (typeof window.supabase === "undefined" || typeof L === "undefined") {
+            console.error("SDK scripts failed loading from CDN.");
+            leaderboardContainer.innerHTML = `<div style="font-size:9pt; color:#ef4444; text-align:center;">Script libraries failed to initialize. Reload page.</div>`;
+            return;
+        }
+
+        // Initialize Supabase client inside window context safely
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Core system startup functions
+        initializeLiveMap();
+        fetchLiveDatabaseContent();
+        verifyDeviceGeolocation();
+    });
+
+    // Renders the geographic map view coordinate tile base
+    function initializeLiveMap() {
+        try {
+            leafletMap = L.map('live-map').setView([0, 0], 1);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap'
+            }).addTo(leafletMap);
+        } catch (e) {
+            console.error("Map rendering error: ", e);
+        }
+    }
+
+    // ==========================================
+    // 3. LIVE CONTENT ENGINE (PULLS STRAIGHT FROM DATABASE)
+    // ==========================================
+    async function fetchLiveDatabaseContent() {
+        if (!supabase || SUPABASE_URL.includes("YOUR_PROJECT_ID")) {
+            // Set friendly defaults if keys are unpopulated
+            penguinNameDisplay.innerText = "Captain Waddles";
+            totalStopsCounter.innerText = "3 Passport Stops Logged";
+            showFallbackLeaderboard();
+            return;
+        }
+
+        try {
+            // A. Fetch total check-in record counts
+            const { count, error: countErr } = await supabase
+                .from('penguin_logs')
+                .select('*', { count: 'exact', head: true });
+
+            if (!countErr && count !== null) {
+                totalStopsCounter.innerText = `🍁 ${count} Passport Stops Logged`;
+            }
+
+            // B. Fetch last known name from log registry entry
+            const { data: nameData, error: nameErr } = await supabase
+                .from('penguin_logs')
+                .select('name')
+                .order('timestamp', { ascending: false })
+                .limit(1);
+
+            if (!nameErr && nameData && nameData.length > 0 && nameData[0].name) {
+                penguinNameDisplay.innerText = nameData[0].name;
+            } else {
+                penguinNameDisplay.innerText = "Captain Waddles"; // Standard fallback
+            }
+
+            // C. Fetch leaderboard values sorted by travel length criteria
+            const { data: leaderboardData, error: dbErr } = await supabase
+                .from('profiles')
+                .select('username, distance_traveled, total_logs')
+                .order('distance_traveled', { ascending: false })
+                .limit(3);
+
+            if (dbErr) throw dbErr;
+
+            leaderboardContainer.innerHTML = "";
+
+            if (!leaderboardData || leaderboardData.length === 0) {
+                leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet!</div>`;
+                return;
+            }
+
+            // Write matching UI row blocks
+            const rankMedals = ["🥇", "🥈", "🥉"];
+            leaderboardData.forEach((row, index) => {
+                const medal = rankMedals[index] || ` ${index + 1} `;
+                const miles = row.distance_traveled ? row.distance_traveled.toLocaleString() : "0";
+                const logCount = row.total_logs || 0;
+
+                leaderboardContainer.innerHTML += `
+                    <div class="leaderboard-row">
+                        <div>
+                            <span class="rank-badge">${medal}</span>
+                            <span class="value">${row.username || "Anonymous Explorer"}</span>
+                        </div>
+                        <div>
+                            <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${miles} miles</span>
+                            <span class="stat-subtext">${logCount} Logs</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+        } catch (err) {
+            console.error("Supabase request error:", err);
+            showFallbackLeaderboard();
+        }
+    }
+
+    function showFallbackLeaderboard() {
+        leaderboardContainer.innerHTML = `
+            <div class="leaderboard-row">
+                <div><span class="rank-badge">🥇</span><span class="value">TrackerBen</span></div>
+                <div><span class="value ice-glow">1,420 miles</span><span class="stat-subtext">42 Logs</span></div>
+            </div>
+            <div class="leaderboard-row">
+                <div><span class="rank-badge">🥈</span><span class="value">ExplorerEmily</span></div>
+                <div><span class="value" style="color: #cbd5e1;">980 miles</span><span class="stat-subtext">38 Logs</span></div>
+            </div>
+            <div class="leaderboard-row">
+                <div><span class="rank-badge">🥉</span><span class="value">ArcticSam</span></div>
+                <div><span class="value" style="color: #cbd5e1;">640 miles</span><span class="stat-subtext">29 Logs</span></div>
+            </div>`;
+    }
+
+    // ==========================================
+    // 4. DEVICE GPS VERIFICATION
+    // ==========================================
+    function verifyDeviceGeolocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userLatitude = position.coords.latitude;
+                    userLongitude = position.coords.longitude;
+
+                    coordinatesDisplay.innerText = `${userLatitude.toFixed(4)}°N, ${userLongitude.toFixed(4)}°W`;
+                    lockBadge.innerText = "✓ LOCATION DETECTED";
+                    lockBadge.style.color = "#39ff14";
+                    logStopBtn.disabled = false;
+
+                    if (leafletMap) {
+                        leafletMap.setView([userLatitude, userLongitude], 13);
+                        if (mapMarker) leafletMap.removeLayer(mapMarker);
+                        mapMarker = L.marker([userLatitude, userLongitude]).addTo(leafletMap);
+                    }
+                },
+                (error) => {
+                    console.warn("GPS Access locked: ", error);
+                    coordinatesDisplay.innerText = "Location permission required.";
+                    lockBadge.innerText = "LOCKED";
+                    lockBadge.style.color = "#ef4444";
+                },
+                { enableHighAccuracy: true, timeout: 12000 }
+            );
+        } else {
+            coordinatesDisplay.innerText = "GPS Tracking unavailable.";
+        }
+    }
+
+    // ==========================================
+    // 5. TRANSACTION PIPELINE (SUBMIT FORM)
+    // ==========================================
+    logStopBtn.addEventListener("click", async () => {
+        const noteText = finderNoteInput.value.trim();
+        logStopBtn.disabled = true;
+        logStopBtn.innerText = "Logging Stop...";
+
+        try {
+            if (!supabase) throw new Error("Database not connected.");
+
+            // A. Post directly to Supabase logs table row
+            const { error } = await supabase
+                .from('penguin_logs') 
+                .insert([{ latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }]);
+
+            if (error) throw error;
+
+            // B. POST payload dispatch straight to automated Webhook path
+            const payload = {
+                event: "penguin_checked_in",
+                penguin_name: penguinNameDisplay.innerText,
+                latitude: userLatitude,
+                longitude: userLongitude,
+                note: noteText,
+                timestamp: new Date().toLocaleString()
+            };
+
+            await fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            logStopBtn.innerText = "✓ Stop Logged!";
+            logStopBtn.style.background = "linear-gradient(135deg, rgba(57, 255, 20, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%)";
+            logStopBtn.style.borderColor = "#39ff14";
+            finderNoteInput.value = "";
+
+            alert("Awesome! The penguin's stop was successfully saved and shared with the group!");
+            fetchLiveDatabaseContent();
+
+        } catch (err) {
+            console.error("Data pipeline catch:", err);
+            alert("Submission error. Please ensure your configuration credentials are accurate and tables are matching.");
+            logStopBtn.disabled = false;
+            logStopBtn.innerText = "Log This Stop";
+        }
+    });
+</script>
+
+</body>
+</html>
