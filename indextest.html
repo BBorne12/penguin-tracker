@@ -125,8 +125,9 @@
         }
 
         /* Styled Input Form Elements */
-        .note-textarea, input[type="file"] {
+        .note-textarea {
             width: 100%;
+            height: 80px;
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(56, 189, 248, 0.2);
             border-radius: 8px;
@@ -137,24 +138,19 @@
             outline: none;
             transition: border-color 0.2s ease;
             box-sizing: border-box;
-        }
-
-        .note-textarea {
-            height: 80px;
             resize: none;
             margin-top: 4px;
             margin-bottom: 8px;
         }
 
-        input[type="file"] {
-            margin-top: 4px;
-            margin-bottom: 12px;
-            cursor: pointer;
-        }
-
-        .note-textarea:focus, input[type="file"]:focus {
+        .note-textarea:focus {
             border-color: rgba(0, 229, 255, 0.5);
             box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+        }
+
+        /* Hidden standard file inputs */
+        .hidden-file-input {
+            display: none !important;
         }
 
         /* Action Control Buttons */
@@ -175,7 +171,7 @@
             text-decoration: none;
             font-size: 10pt;
             -webkit-tap-highlight-color: transparent;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease, border-color 0.2s ease;
         }
 
         .btn-glow:disabled {
@@ -184,9 +180,19 @@
             box-shadow: none;
         }
 
-        .btn-dark {
-            background: #34495e;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        /* Style modifier for Camera interaction capture button */
+        .btn-camera {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            margin-top: 6px;
+            margin-bottom: 12px;
+        }
+        
+        .btn-camera.photo-attached {
+            border-color: #39ff14;
+            color: #39ff14;
+            text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
         }
 
         /* Data List & Leaderboard Row Styles */
@@ -255,6 +261,18 @@
             display: block;
             margin-bottom: 2px;
             letter-spacing: 0.5px;
+        }
+
+        .value {
+            font-size: 10.5pt;
+            color: #f8fafc;
+        }
+
+        .stat-subtext {
+            display: block;
+            font-size: 8pt;
+            color: #94a3b8;
+            text-align: right;
         }
 
         /* Interactive Map Container */
@@ -373,6 +391,27 @@
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
+        <div class="glass-card" id="profile-card-block">
+            <h2>Current Guest</h2>
+            
+            <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
+                <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
+                <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Detecting...</div>
+                <div style="font-size: 8.5pt; color: #94a3b8;">Passed from host to host</div>
+            </div>
+
+            <ul class="data-list">
+                <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><span class="label">Current Status</span></div>
+                    <div><span class="value aurora-glow" id="current-status-display">On an Adventure / Active</span></div>
+                </li>
+                <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><span class="label">Total Stops So Far</span></div>
+                    <div><span class="value ice-glow" id="total-stops-counter">0 Passport Stops Logged</span></div>
+                </li>
+            </ul>
+        </div>
+
         <p id="game-instructions-1" style="text-align: center; font-size: 10.5pt; margin: 0 0 12px 0; font-weight: 500; color: #cbd5e1; line-height: 1.4;">
             🎒 Your New Travel Buddy! Take this penguin on fun adventures, snap photos, and pass it along to friends!
         </p>
@@ -381,23 +420,32 @@
         </p>
 
         <div class="glass-card">
-            <h2>Verify Location</h2>
-            <button class="btn-glow btn-dark" id="gps-lock-btn" onclick="verifyCurrentGPS()">📍 Click to Verify Your Location</button>
-            <div class="status-badge" id="status-text" style="display:block; text-align:center; margin-top:12px; background:rgba(239, 68, 68, 0.1); border-color:rgba(239, 68, 68, 0.3); color:#ef4444; text-shadow:none;">❌ Location Not Verified Yet</div>
-        </div>
+            <h2>Log Your Visit</h2>
+            <ul class="data-list">
+                <li class="data-item">
+                    <span class="label">Where did you find them?</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                        <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt;">Detecting Location...</span>
+                        <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 10pt;">WAITING</span>
+                    </div>
+                </li>
+                <li class="data-item">
+                    <span class="label">Community Journey</span>
+                    <span class="value" style="font-size: 9.5pt; display: block; color: #cbd5e1; margin-top: 2px;">Log your penguin's progress to reach the top of the leaderboard!</span>
+                </li>
+            </ul>
 
-        <div class="glass-card">
-            <h2>Adventure Map</h2>
             <div id="map"></div>
-            <div class="coords" id="coord-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt; text-align:center;">Latitude: -- | Longitude: --</div>
+            <div class="coords" id="coord-display" style="font-family: monospace; color: #94a3b8; font-size: 8.5pt; text-align:center; display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
             <div class="input-group" id="photo-input-group">
-                <label class="label" for="penguin-photo">Snap a Photo of its Journey (Optional):</label>
-                <input type="file" id="penguin-photo" accept="image/*" capture="environment">
+                <label class="label">Snap a Photo of its Journey (Optional):</label>
+                <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
+                <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()">📷 Take a Picture</button>
             </div>
 
             <div class="input-group" id="notes-input-group">
@@ -415,6 +463,10 @@
             <ul class="leaderboard-list" id="leaderboard-output" style="margin-top: 8px;">
                 <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Calculating distances...</li>
             </ul>
+        </div>
+
+        <div class="warning-badge" id="safety-disclaimer-notice">
+            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you find them in public spaces!
         </div>
         
     </div>
@@ -443,11 +495,33 @@
     let historyLayerGroup = null;
     let currentJourneyLine = null;
 
+    // DOM layout elements hooks
+    const coordinatesDisplay = document.getElementById("coordinates-display");
+    const lockBadge = document.getElementById("lock-badge");
+    const customCameraBtn = document.getElementById("custom-camera-btn");
+    const penguinNameDisplay = document.getElementById("penguin-name-display");
+    const totalStopsCounter = document.getElementById("total-stops-counter");
+
+    penguinNameDisplay.innerText = penguinId;
+
     // ===================================================
     // SAFE STRUCTURAL BOOTSTRAPPED INITIALIZATION
     // ===================================================
     window.addEventListener("DOMContentLoaded", function() {
-        // Step 1: Render Map Geometry Safely
+        initializeLiveMap();
+        verifyCurrentGPS(); // Triggers phone location scans silently and seamlessly on load
+
+        if (isViewOnlyMode) { 
+            activateViewOnlyUI(); 
+        }
+
+        setTimeout(function() {
+            loadPenguinHistory(penguinId);
+            buildLeaderboard();
+        }, 150);
+    });
+
+    function initializeLiveMap() {
         try {
             map = L.map('map').setView([39.8283, -98.5795], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
@@ -460,52 +534,61 @@
                 marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
             }
         } catch (mapError) {
-            console.error("Leaflet core instantiation error handled gracefully: ", mapError);
+            console.error("Leaflet instantiation fault intercepted safely: ", mapError);
         }
-
-        // Step 2: UI View Setup Check overrides
-        if (isViewOnlyMode) { 
-            activateViewOnlyUI(); 
-        }
-
-        // Step 3: Run Database Logic safely away from frame painting layout dependencies
-        setTimeout(function() {
-            loadPenguinHistory(penguinId);
-            buildLeaderboard();
-        }, 150);
-    });
+    }
 
     function activateViewOnlyUI() {
         document.getElementById('view-mode-banner').style.display = "block";
-        document.getElementById('gps-lock-btn').style.display = "none";
-        document.getElementById('status-text').style.display = "none";
+        document.getElementById('profile-card-block').style.display = "none";
         document.getElementById('input-fields-card').style.display = "none";
         document.getElementById('game-instructions-1').style.display = "none";
         document.getElementById('game-instructions-2').style.display = "none";
+        document.getElementById('safety-disclaimer-notice').style.display = "none";
         if (marker) { marker.remove(); }
     }
 
+    // Seamless automated background GPS sensing execution sequence 
     function verifyCurrentGPS() {
-        const statusText = document.getElementById('status-text');
-        statusText.innerText = "🔄 Accessing Phone Hardware GPS..."; 
-        statusText.style.color = "#00e5ff";
-        statusText.style.background = "rgba(0, 229, 255, 0.1)";
-        statusText.style.borderColor = "rgba(0, 229, 255, 0.3)";
-
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
-                verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
+                verifiedLat = position.coords.latitude; 
+                verifiedLng = position.coords.longitude;
+                
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
+                
+                // Binds location coordinates metrics seamlessly straight into text fields
+                coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
                 document.getElementById('coord-display').innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
                 
-                statusText.innerText = "✅ Location Verified!"; 
-                statusText.style.color = "#39ff14";
-                statusText.style.background = "rgba(57, 255, 20, 0.1)";
-                statusText.style.borderColor = "rgba(57, 255, 20, 0.3)";
+                lockBadge.innerText = "✓ LOCATION DETECTED";
+                lockBadge.style.color = "#39ff14";
                 
                 document.getElementById('submit-btn').disabled = false;
-            }, () => { alert("GPS lock failed. Please enable location permissions."); }, { enableHighAccuracy: true });
+            }, (err) => { 
+                console.warn("GPS focus skipped: ", err);
+                coordinatesDisplay.innerText = "Location permission required.";
+                lockBadge.innerText = "LOCKED";
+                lockBadge.style.color = "#ef4444";
+            }, { enableHighAccuracy: true });
+        } else {
+            coordinatesDisplay.innerText = "GPS locator missing.";
+        }
+    }
+
+    function triggerHardwareCameraCapture() {
+        document.getElementById('penguin-photo').click();
+    }
+
+    function handleFileSelectionChange() {
+        const fileHolder = document.getElementById('penguin-photo').files[0];
+        if (fileHolder) {
+            customCameraBtn.innerText = "📸 Photo Attached!";
+            customCameraBtn.classList.add("photo-attached");
+        } else {
+            customCameraBtn.innerText = "📷 Take a Picture";
+            customCameraBtn.classList.remove("photo-attached");
         }
     }
 
@@ -514,12 +597,13 @@
         if (nameInput) {
             activeCustomName = nameInput;
             document.getElementById('penguin-id').innerText = `ID: ${penguinId} (${activeCustomName})`;
+            penguinNameDisplay.innerText = activeCustomName;
         }
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
     // ===================================================
-    // FIXED DATA ENGINES (CORRESPONDING TO EXACT SCHEMAS)
+    // DATA ENGINES (MAPPED TO EXACT BACKEND SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin" || !map) return;
@@ -533,12 +617,8 @@
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
-        if (error) {
-            console.error("Logs extraction failed:", error);
-            return;
-        }
+        if (error) return;
 
-        // CORRECTED LOOP LOCK: Confirms length against mapped parameter keys securely
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
@@ -546,7 +626,6 @@
             return;
         }
 
-        // Hide discovery modal overlay if records map out cleanly
         document.getElementById('first-find-modal').style.display = 'none';
 
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
@@ -554,8 +633,11 @@
             activeCustomName = namedEntry.custom_name;
             if (targetId === penguinId) {
                 document.getElementById('penguin-id').innerText = `ID: ${penguinId} (${activeCustomName})`;
+                penguinNameDisplay.innerText = activeCustomName;
             }
         }
+
+        totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
@@ -582,9 +664,6 @@
             currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
             map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
         }
-        
-        // Counter synchronization override logic
-        document.getElementById('total-stops-counter').innerText = `${logs.length} Passport Stops Logged`;
     }
 
     async function buildLeaderboard() {
@@ -597,11 +676,15 @@
 
         const tracks = {};
         const namesMap = {};
+        const logsCountMap = {}; // Tracks raw check-in row entry sizes
 
         allLogs.forEach(log => {
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
+                
+                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
+                
                 if (log.custom_name && log.custom_name.trim() !== "") {
                     namesMap[log.penguin_id] = log.custom_name;
                 }
@@ -616,7 +699,12 @@
                 totalDistanceMeters += points[i].distanceTo(points[i+1]);
             }
             const totalMiles = totalDistanceMeters * 0.000621371; 
-            leaderboardData.push({ id: id, displayName: namesMap[id] ? `${namesMap[id]}` : id, miles: totalMiles });
+            leaderboardData.push({ 
+                id: id, 
+                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
+                miles: totalMiles,
+                stopsCount: logsCountMap[id] || 1
+            });
         });
 
         leaderboardData.sort((a, b) => b.miles - a.miles);
@@ -639,7 +727,16 @@
             else if (index === 1) { medal = "🥈"; }
             else if (index === 2) { medal = "🥉"; }
 
-            li.innerHTML = `<span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span><span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span>`;
+            // UPDATED: Appended total stops counter variables neatly under subtext rules layout matching design guidelines
+            li.innerHTML = `
+                <div>
+                    <span class="rank-badge">${medal}</span>
+                    <span class="p-name">🐧 ${item.displayName}</span>
+                </div>
+                <div>
+                    <span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span>
+                    <span class="stat-subtext">${item.stopsCount} Logs</span>
+                </div>`;
             
             li.onclick = () => {
                 penguinId = item.id;
