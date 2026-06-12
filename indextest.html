@@ -392,7 +392,7 @@
         </div>
 
         <div class="glass-card" id="profile-card-block">
-            <h2>Current Guest</h2>
+            <h2>Penguin</h2>
             
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                 <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
@@ -430,10 +430,10 @@
         </div>
 
         <div class="glass-card" id="tracking-card-block">
-            <h2>Log Your Visit</h2>
-            <ul class="data-list">
+            <h2 id="tracking-card-title">Log Your Visit</h2>
+            <ul class="data-list" id="location-text-elements">
                 <li class="data-item">
-                    <span class="label">Where did you find them?</span>
+                    <span class="label">Current Location</span>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
                         <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt;">Detecting Location...</span>
                         <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 10pt;">WAITING</span>
@@ -520,7 +520,6 @@
     window.addEventListener("DOMContentLoaded", function() {
         initializeLiveMap();
         
-        // Only spin up automated background hardware GPS requests if we are actually allowed to input parameters
         if (!isViewOnlyMode) {
             verifyCurrentGPS(); 
         } else {
@@ -554,9 +553,13 @@
         document.getElementById('view-mode-banner').style.display = "block";
         document.getElementById('profile-card-block').style.display = "none";
         document.getElementById('instruction-panel').style.display = "none";
-        document.getElementById('tracking-card-block').style.display = "none"; // Completely cleans the screen layout from logging assets
         document.getElementById('input-fields-card').style.display = "none";
         document.getElementById('safety-disclaimer-notice').style.display = "none";
+        
+        // FIXED OVERRIDE: Keep the map visible, but clean out the user's location log input blocks
+        document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
+        document.getElementById('location-text-elements').style.display = "none"; 
+        
         if (marker) { marker.remove(); }
     }
 
@@ -649,10 +652,6 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
-        // If in view only mode we still mount and render history popups to the screen framework, but hide standard track map
-        var targetMapContainer = isViewOnlyMode ? window.map : map;
-        if (!targetMapContainer) return;
-
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -674,9 +673,9 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        if (pathCoordinates.length > 0) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
-            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (pathCoordinates.length > 0 && map) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
         }
     }
 
@@ -757,7 +756,7 @@
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
                 
-                // Re-enable and unfreeze hidden profile metrics target map reference box frame instantly to render selected leaderboard details cleanly
+                // FIXED: Keep the card block visible so layout dimensions calculate accurately
                 document.getElementById('tracking-card-block').style.display = "block";
                 if (map) {
                     map.invalidateSize();
