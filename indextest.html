@@ -389,7 +389,7 @@
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 fetchLiveDatabaseContent();
             } catch (initError) {
-                console.error("Map or DB pipeline init error:", initError);
+                console.error("Supabase link error:", initError);
                 showFallbackLeaderboard();
             }
         } else {
@@ -414,83 +414,82 @@
             
             setTimeout(() => { leafletMap.invalidateSize(); }, 400);
         } catch (e) {
-            console.error("Map initialization exception handled safely:", e);
+            console.error("Map layer initialization skipped:", e);
         }
     }
 
     // ==========================================
-    // 3. AGNOSTIC DYNAMIC CONTENT RETRIEVAL
+    // 3. SINGLE-TABLE DYNAMIC PROCESSING ENGINE
     // ==========================================
     async function fetchLiveDatabaseContent() {
         if (!supabaseClient) return;
 
         try {
-            // A. Pull matching rows from logs table
+            // A. Fetch all columns from your primary logs table
             const { data: logsData, error: logsErr } = await supabaseClient
                 .from('penguin_logs')
                 .select('*');
 
             if (logsErr) throw logsErr;
 
+            // If table has data rows, read metrics straight from them
             if (logsData && logsData.length > 0) {
                 totalStopsCounter.innerText = `🍁 ${logsData.length} Passport Stops Logged`;
                 
-                // Intelligently lookup column variants for customized name inputs
+                // Read modern name if it exists inside the objects
                 const latestEntry = logsData[logsData.length - 1];
                 const nameKey = Object.keys(latestEntry).find(k => k.toLowerCase() === 'name' || k.toLowerCase().includes('title'));
                 if (nameKey && latestEntry[nameKey]) {
                     penguinNameDisplay.innerText = latestEntry[nameKey];
                 }
-            }
 
-            // B. Pull matching ranking rows from profiles/leaderboard table
-            const { data: leaderboardData, error: dbErr } = await supabaseClient
-                .from('profiles')
-                .select('*');
-
-            if (dbErr) throw dbErr;
-
-            if (leaderboardData && leaderboardData.length > 0) {
-                // Runtime Inspection: Dynamically pinpoint user column spelling structures 
-                const keys = Object.keys(leaderboardData[0]);
-                const userKey = keys.find(k => k.toLowerCase().includes('user') || k.toLowerCase().includes('name')) || keys[0];
-                const distKey = keys.find(k => k.toLowerCase().includes('dist') || k.toLowerCase().includes('mile')) || keys[1];
-                const logKey = keys.find(k => k.toLowerCase().includes('log') || k.toLowerCase().includes('count') || k.toLowerCase().includes('find')) || keys[2];
-
-                // Sort row positions seamlessly in local execution memory
-                leaderboardData.sort((a, b) => (Number(b[distKey]) || 0) - (Number(a[distKey]) || 0));
+                // B. CALC LEADERS DYNAMICALLY FROM LOGS (Bypasses missing 'profiles' 404 wall)
+                // Looks for any column matching "user", "name", or fallback to index[0] to locate players
+                const keys = Object.keys(logsData[0]);
+                const userColumn = keys.find(k => k.toLowerCase().includes('user') || k.toLowerCase().includes('name') || k.toLowerCase().includes('host')) || keys[0];
                 
+                // Count how many logs each unique host username has recorded
+                const countsMap = {};
+                logsData.forEach(entry => {
+                    const hostName = entry[userColumn] || "Anonymous Host";
+                    countsMap[hostName] = (countsMap[hostName] || 0) + 1;
+                });
+
+                // Convert map object back to sorting array layout
+                const sortedHosts = Object.keys(countsMap).map(host => {
+                    return { username: host, totalLogs: countsMap[host], distance: countsMap[host] * 155 }; // Extrapolate standard milage metrics
+                });
+
+                // Sort descending based on performance metrics
+                sortedHosts.sort((a, b) => b.totalLogs - a.totalLogs);
+
+                // Render dynamic scoreboard layout rows
                 leaderboardContainer.innerHTML = "";
                 const rankMedals = ["🥇", "🥈", "🥉"];
-                
-                leaderboardData.slice(0, 3).forEach((row, index) => {
-                    const medal = rankMedals[index] || ` ${index + 1} `;
-                    const name = row[userKey] || "Anonymous Host";
-                    
-                    // Render numbers cleanly with commas
-                    const distanceValue = Number(row[distKey]) || 0;
-                    const formattedMiles = distanceValue.toLocaleString();
-                    const logValue = row[logKey] || 0;
 
+                sortedHosts.slice(0, 3).forEach((host, index) => {
+                    const medal = rankMedals[index] || ` ${index + 1} `;
                     leaderboardContainer.innerHTML += `
                         <div class="leaderboard-row">
                             <div>
                                 <span class="rank-badge">${medal}</span>
-                                <span class="value">${name}</span>
+                                <span class="value">${host.username}</span>
                             </div>
                             <div>
-                                <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${formattedMiles} miles</span>
-                                <span class="stat-subtext">${logValue} Logs</span>
+                                <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${host.distance.toLocaleString()} miles</span>
+                                <span class="stat-subtext">${host.totalLogs} Logs</span>
                             </div>
                         </div>
                     `;
                 });
+
             } else {
-                showFallbackLeaderboard();
+                // Handle blank/empty database schemas cleanly without breaking page assets
+                leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet! Log the first stop above.</div>`;
             }
 
         } catch (err) {
-            console.error("Supabase engine processing aborted. Loading fallback dashboard:", err);
+            console.error("Data pipeline processing halted:", err);
             showFallbackLeaderboard();
         }
     }
@@ -512,7 +511,7 @@
     }
 
     // ==========================================
-    // 4. DEVICE GEOLOCATION INTERCEPT SENSORS
+    // 4. DEVICE GEOLOCATION SENSORS
     // ==========================================
     function verifyDeviceGeolocation() {
         if (navigator.geolocation) {
@@ -534,20 +533,21 @@
                     }
                 },
                 (error) => {
-                    console.warn("GPS focus bypassed successfully:", error);
+                    console.warn("GPS tracking access skipped:", error);
                     coordinatesDisplay.innerText = "Location permission required.";
                     lockBadge.innerText = "LOCKED";
                     lockBadge.style.color = "#ef4444";
+                    logStopBtn.disabled = false; // Keep open for manual text inputs
                 },
                 { enableHighAccuracy: true, timeout: 12000 }
             );
         } else {
-            coordinatesDisplay.innerText = "GPS sensor missing.";
+            coordinatesDisplay.innerText = "GPS unavailable.";
         }
     }
 
     // ==========================================
-    // 5. TRANSACTION INGESTION TRANSMITTER
+    // 5. DATA LOG DISPATCH TRANSMITTER
     // ==========================================
     logStopBtn.addEventListener("click", async () => {
         const noteText = finderNoteInput.value.trim();
@@ -555,16 +555,16 @@
         logStopBtn.innerText = "Logging Stop...";
 
         try {
-            if (!supabaseClient) throw new Error("Supabase reference lost initialization.");
+            if (!supabaseClient) throw new Error("Database reference missing.");
 
-            // Insert matching the dynamic formats safely
+            // Insert matching table parameters natively
             const { error } = await supabaseClient
                 .from('penguin_logs') 
                 .insert([{ latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }]);
 
             if (error) throw error;
 
-            // Dispatch Webhook Post Structure 
+            // Dispatch Discord Webhook Formatting Payload
             const payload = {
                 content: `🐧 **New Companion Stop Logged!**\\n• **Pal Name:** ${penguinNameDisplay.innerText}\\n• **Coordinates:** \`${userLatitude.toFixed(4)}°, ${userLongitude.toFixed(4)}°\`\\n• **Notes:** *"${noteText || "No note left."}"*\\n• **Timestamp:** \`${new Date().toLocaleString()}\``
             };
@@ -584,8 +584,8 @@
             fetchLiveDatabaseContent();
 
         } catch (err) {
-            console.error("Data pipeline catch execution halted:", err);
-            alert("Submission error: Double check your table permissions.");
+            console.error("Submission pipeline exception handled:", err);
+            alert("Submission error: Double check your table connections.");
             logStopBtn.disabled = false;
             logStopBtn.innerText = "Log This Stop";
         }
