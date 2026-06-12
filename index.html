@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -360,7 +359,6 @@
 </head>
 <body>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -377,7 +375,6 @@
 
 <div class="app-container">
     
-    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -388,15 +385,12 @@
         </div>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
-        <!-- VIEWING BANNER ALERT -->
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
-        <!-- CURRENT GUEST PROFILE PROFILE BOX -->
         <div class="glass-card" id="profile-card-block">
             <h2>Penguin</h2>
             
@@ -418,7 +412,6 @@
             </ul>
         </div>
 
-        <!-- STYLIZED GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 16pt; filter: drop-shadow(0 0 5px rgba(56,189,248,0.3));">🎒</span>
@@ -436,12 +429,11 @@
             </div>
         </div>
 
-        <!-- SEAMLESS AUTOMATED GEOLOCATION METRICS DISPLAY (HIDDEN IN VIEW-ONLY) -->
         <div class="glass-card" id="tracking-card-block">
-            <h2>Log Your Visit</h2>
-            <ul class="data-list">
+            <h2 id="tracking-card-title">Log Your Visit</h2>
+            <ul class="data-list" id="location-text-elements">
                 <li class="data-item">
-                    <span class="label">Where did you find them?</span>
+                    <span class="label">Current Location</span>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
                         <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt;">Detecting Location...</span>
                         <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 10pt;">WAITING</span>
@@ -453,12 +445,10 @@
                 </li>
             </ul>
 
-            <!-- Visual Map Canvas Grid -->
             <div id="map"></div>
             <div class="coords" id="coord-display" style="font-family: monospace; color: #94a3b8; font-size: 8.5pt; text-align:center; display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
-        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
@@ -478,7 +468,6 @@
             </div>
         </div>
 
-        <!-- LEADERBOARD COMPONENT (WITH LOG STOPS) -->
         <div class="glass-card">
             <h2>🏆 Top 10 Most Traveled Penguins</h2>
             <ul class="leaderboard-list" id="leaderboard-output" style="margin-top: 8px;">
@@ -486,7 +475,6 @@
             </ul>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -495,7 +483,6 @@
 
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -566,9 +553,13 @@
         document.getElementById('view-mode-banner').style.display = "block";
         document.getElementById('profile-card-block').style.display = "none";
         document.getElementById('instruction-panel').style.display = "none";
-        document.getElementById('tracking-card-block').style.display = "none"; 
         document.getElementById('input-fields-card').style.display = "none";
         document.getElementById('safety-disclaimer-notice').style.display = "none";
+        
+        // FIXED OVERRIDE: Keep the map visible, but clean out the user's location log input blocks
+        document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
+        document.getElementById('location-text-elements').style.display = "none"; 
+        
         if (marker) { marker.remove(); }
     }
 
@@ -661,9 +652,6 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
-        var targetMapContainer = isViewOnlyMode ? window.map : map;
-        if (!targetMapContainer) return;
-
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -685,9 +673,9 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        if (pathCoordinates.length > 0) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
-            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (pathCoordinates.length > 0 && map) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
         }
     }
 
@@ -768,6 +756,7 @@
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
                 
+                // FIXED: Keep the card block visible so layout dimensions calculate accurately
                 document.getElementById('tracking-card-block').style.display = "block";
                 if (map) {
                     map.invalidateSize();
