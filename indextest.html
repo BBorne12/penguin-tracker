@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -341,6 +342,7 @@
 </head>
 <body>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -357,6 +359,7 @@
 
 <div class="app-container">
     
+    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -367,8 +370,10 @@
         </div>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
+        <!-- VIEWING BANNER ALERT -->
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
@@ -380,18 +385,21 @@
             🚀 **Can you top the leaderboard?** Take it as far as possible to stack up miles! When you're done, hide it in the wild for the next explorer.
         </p>
 
+        <!-- JOURNEY CONTROL BLOCK -->
         <div class="glass-card">
             <h2>Verify Location</h2>
             <button class="btn-glow btn-dark" id="gps-lock-btn" onclick="verifyCurrentGPS()">📍 Click to Verify Your Location</button>
             <div class="status-badge" id="status-text" style="display:block; text-align:center; margin-top:12px; background:rgba(239, 68, 68, 0.1); border-color:rgba(239, 68, 68, 0.3); color:#ef4444; text-shadow:none;">❌ Location Not Verified Yet</div>
         </div>
 
+        <!-- VISUAL TRACKING INTERFACE -->
         <div class="glass-card">
             <h2>Adventure Map</h2>
             <div id="map"></div>
             <div class="coords" id="coord-display" style="font-family: monospace; color: #00e5ff; font-size: 9.5pt; text-align:center;">Latitude: -- | Longitude: --</div>
         </div>
         
+        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
@@ -410,6 +418,7 @@
             </div>
         </div>
 
+        <!-- LEADERBOARD COMPONENT -->
         <div class="glass-card">
             <h2>🏆 Top 10 Most Traveled Penguins</h2>
             <ul class="leaderboard-list" id="leaderboard-output" style="margin-top: 8px;">
@@ -421,6 +430,7 @@
 
 </div>
 
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script>
     // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
@@ -434,10 +444,10 @@
 
     document.getElementById('penguin-id').innerText = `ID: ${penguinId}`;
 
-    // Initialize map
+    // Initialize Map with clean execution hooks
     let map = L.map('map').setView([39.8283, -98.5795], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-    let marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
+    let marker = isViewOnlyMode ? null : L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
 
     let verifiedLat = null; let verifiedLng = null;
     let historyLayerGroup = L.layerGroup().addTo(map);
@@ -466,7 +476,7 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 map.setView([verifiedLat, verifiedLng], 15);
-                marker.setLatLng([verifiedLat, verifiedLng]);
+                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 document.getElementById('coord-display').innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
                 
                 statusText.innerText = "✅ Location Verified!"; 
@@ -479,7 +489,6 @@
         }
     }
 
-    // Capture custom name from first-find modal pop-up
     function saveCustomNameFromModal() {
         const nameInput = document.getElementById('modal-custom-name').value.trim();
         if (nameInput) {
@@ -489,11 +498,12 @@
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
-    // --- RENDER TRACKS AND CHECK NAMES ---
+    // --- RENDER TRACKS AND CHECK NAMES (FIXED METHODOLOGY) ---
     async function loadPenguinHistory(targetId) {
+        if (targetId === "Mystery Penguin") return;
+        
         historyLayerGroup.clearLayers();
         if (currentJourneyLine) { currentJourneyLine.remove(); }
-        if (targetId === "Mystery Penguin") return;
 
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
@@ -501,9 +511,12 @@
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
-        if (error) return;
+        if (error) {
+            console.error("History engine pull blocked:", error);
+            return;
+        }
 
-        // First find loop check
+        // FIXED: Checked target logs matching the exact penguin_id key constraint
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
@@ -511,7 +524,6 @@
             return;
         }
 
-        // Search the records to see if a nickname already exists
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
         if (namedEntry) {
             activeCustomName = namedEntry.custom_name;
@@ -541,8 +553,10 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
-        map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (pathCoordinates.length > 0) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        }
     }
 
     // --- MILEAGE AND RANKING COMPUTATION ---
@@ -558,10 +572,12 @@
         const namesMap = {};
 
         allLogs.forEach(log => {
-            if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
-            tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
-            if (log.custom_name && log.custom_name.trim() !== "") {
-                namesMap[log.penguin_id] = log.custom_name;
+            if (log.penguin_id) {
+                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
+                tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
+                if (log.custom_name && log.custom_name.trim() !== "") {
+                    namesMap[log.penguin_id] = log.custom_name;
+                }
             }
         });
 
@@ -590,7 +606,6 @@
             const li = document.createElement('li');
             li.className = 'leaderboard-row';
             
-            // Apply unique styles for top three ranks
             let rankClass = "";
             let medal = `#${index + 1}`;
             if (index === 0) { medal = "🥇"; rankClass = "ice-glow"; }
@@ -611,8 +626,11 @@
         });
     }
 
-    loadPenguinHistory(penguinId);
-    buildLeaderboard();
+    // Delayed lifecycle triggers to allow safe interface assembly updates
+    setTimeout(function() {
+        loadPenguinHistory(penguinId);
+        buildLeaderboard();
+    }, 200);
 
     // --- HARDWARE COMPRESSION ENGINE ---
     async function compressImage(file) {
