@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -359,6 +360,7 @@
 </head>
 <body>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -375,6 +377,7 @@
 
 <div class="app-container">
     
+    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -385,14 +388,17 @@
         </div>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
+        <!-- VIEWING BANNER ALERT -->
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
+        <!-- CURRENT GUEST PROFILE PROFILE BOX -->
         <div class="glass-card" id="profile-card-block">
-            <h2>Current Guest</h2>
+            <h2>Penguin</h2>
             
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                 <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
@@ -412,14 +418,26 @@
             </ul>
         </div>
 
-        <p id="game-instructions-1" style="text-align: center; font-size: 10.5pt; margin: 0 0 12px 0; font-weight: 500; color: #cbd5e1; line-height: 1.4;">
-            🎒 Your New Travel Buddy! Take this penguin on fun adventures, snap photos, and pass it along to friends!
-        </p>
-        <p id="game-instructions-2" style="text-align: center; font-size: 10pt; margin: 0 0 15px 0; color: #f59e0b; font-weight: 600; line-height: 1.4;">
-            🚀 **Can you top the leaderboard?** Take it as far as possible to stack up miles! When you're done, hide it in the wild for the next explorer.
-        </p>
+        <!-- STYLIZED GAME METHODOLOGY NOTIFICATION PANEL -->
+        <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <span style="font-size: 16pt; filter: drop-shadow(0 0 5px rgba(56,189,248,0.3));">🎒</span>
+                <p style="margin: 0; font-size: 9.5pt; color: #cbd5e1; line-height: 1.4;">
+                    <strong style="color: #e0f2fe; display: block; margin-bottom: 2px;">Your New Travel Buddy!</strong>
+                    Take this penguin on fun adventures, snap photos, and pass it along to friends!
+                </p>
+            </div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; display: flex; align-items: flex-start; gap: 12px;">
+                <span style="font-size: 16pt; filter: drop-shadow(0 0 5px rgba(245,158,11,0.3));">🚀</span>
+                <p style="margin: 0; font-size: 9.5pt; color: #cbd5e1; line-height: 1.4;">
+                    <strong style="color: #f59e0b; display: block; margin-bottom: 2px;">Can you top the leaderboard?</strong>
+                    Take it as far as possible to stack up miles! When you're done, hide it in the wild for the next explorer.
+                </p>
+            </div>
+        </div>
 
-        <div class="glass-card">
+        <!-- SEAMLESS AUTOMATED GEOLOCATION METRICS DISPLAY (HIDDEN IN VIEW-ONLY) -->
+        <div class="glass-card" id="tracking-card-block">
             <h2>Log Your Visit</h2>
             <ul class="data-list">
                 <li class="data-item">
@@ -435,10 +453,12 @@
                 </li>
             </ul>
 
+            <!-- Visual Map Canvas Grid -->
             <div id="map"></div>
             <div class="coords" id="coord-display" style="font-family: monospace; color: #94a3b8; font-size: 8.5pt; text-align:center; display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
+        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
@@ -458,6 +478,7 @@
             </div>
         </div>
 
+        <!-- LEADERBOARD COMPONENT (WITH LOG STOPS) -->
         <div class="glass-card">
             <h2>🏆 Top 10 Most Traveled Penguins</h2>
             <ul class="leaderboard-list" id="leaderboard-output" style="margin-top: 8px;">
@@ -465,14 +486,16 @@
             </ul>
         </div>
 
+        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
-            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you find them in public spaces!
+            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
 </div>
 
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -509,9 +532,10 @@
     // ===================================================
     window.addEventListener("DOMContentLoaded", function() {
         initializeLiveMap();
-        verifyCurrentGPS(); // Triggers phone location scans silently and seamlessly on load
-
-        if (isViewOnlyMode) { 
+        
+        if (!isViewOnlyMode) {
+            verifyCurrentGPS(); 
+        } else {
             activateViewOnlyUI(); 
         }
 
@@ -541,14 +565,13 @@
     function activateViewOnlyUI() {
         document.getElementById('view-mode-banner').style.display = "block";
         document.getElementById('profile-card-block').style.display = "none";
+        document.getElementById('instruction-panel').style.display = "none";
+        document.getElementById('tracking-card-block').style.display = "none"; 
         document.getElementById('input-fields-card').style.display = "none";
-        document.getElementById('game-instructions-1').style.display = "none";
-        document.getElementById('game-instructions-2').style.display = "none";
         document.getElementById('safety-disclaimer-notice').style.display = "none";
         if (marker) { marker.remove(); }
     }
 
-    // Seamless automated background GPS sensing execution sequence 
     function verifyCurrentGPS() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -558,7 +581,6 @@
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 
-                // Binds location coordinates metrics seamlessly straight into text fields
                 coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
                 document.getElementById('coord-display').innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
                 
@@ -606,7 +628,7 @@
     // DATA ENGINES (MAPPED TO EXACT BACKEND SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
-        if (targetId === "Mystery Penguin" || !map) return;
+        if (targetId === "Mystery Penguin") return;
         
         if (historyLayerGroup) historyLayerGroup.clearLayers();
         if (currentJourneyLine) { currentJourneyLine.remove(); }
@@ -639,6 +661,9 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
+        var targetMapContainer = isViewOnlyMode ? window.map : map;
+        if (!targetMapContainer) return;
+
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -661,8 +686,8 @@
         });
 
         if (pathCoordinates.length > 0) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
-            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
+            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
         }
     }
 
@@ -676,7 +701,7 @@
 
         const tracks = {};
         const namesMap = {};
-        const logsCountMap = {}; // Tracks raw check-in row entry sizes
+        const logsCountMap = {}; 
 
         allLogs.forEach(log => {
             if (log.penguin_id) {
@@ -727,7 +752,6 @@
             else if (index === 1) { medal = "🥈"; }
             else if (index === 2) { medal = "🥉"; }
 
-            // UPDATED: Appended total stops counter variables neatly under subtext rules layout matching design guidelines
             li.innerHTML = `
                 <div>
                     <span class="rank-badge">${medal}</span>
@@ -743,6 +767,12 @@
                 isViewOnlyMode = true;
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
+                
+                document.getElementById('tracking-card-block').style.display = "block";
+                if (map) {
+                    map.invalidateSize();
+                }
+                
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
             };
@@ -811,7 +841,6 @@
         const { data, error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
         if (error) { alert("Database entry rejected. Try again."); document.getElementById('submit-btn').disabled = false; return; }
 
-        // Forward Payload Details onto Discord Mobile Webhook Channel
         try {
             const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
             const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
