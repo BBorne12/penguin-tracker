@@ -173,22 +173,6 @@
             box-shadow: none;
         }
 
-        /* Data List & Leaderboard Row Styles */
-        .data-list {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-        }
-
-        .data-item {
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .data-item:last-child {
-            border-bottom: none;
-        }
-
         .leaderboard-row {
             display: flex;
             justify-content: space-between;
@@ -245,14 +229,47 @@
         .leaflet-tile {
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
-        .leaflet-bar {
-            border: 1px solid rgba(56, 189, 248, 0.3) !important;
-            box-shadow: none !important;
+
+        /* NEW: Frosted Glass Overlay Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 13, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none; /* Controlled via JS */
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        .leaflet-bar a {
-            background-color: rgba(7, 17, 30, 0.8) !important;
-            color: #00e5ff !important;
-            border-bottom: 1px solid rgba(56, 189, 248, 0.1) !important;
+
+        .modal-card {
+            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            font-size: 11pt;
+            margin: 16px 0;
+            outline: none;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            border-color: #00e5ff;
         }
 
         /* Header Layout */
@@ -275,6 +292,18 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
+
+<div class="modal-overlay" id="naming-modal">
+    <div class="modal-card">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🎉</span>
+        <h2 style="color: #00e5ff; font-size: 14pt;">New Discovery Found!</h2>
+        <p style="font-size: 9.5pt; color: #94a3b8; margin: 6px 0 0 0;">Give your newly scanned traveling penguin companion a unique name before launching their adventure portfolio.</p>
+        
+        <input type="text" id="modal-name-field" class="modal-input" placeholder="e.g., Captain Waddles">
+        
+        <button id="modal-submit-btn" class="btn-glow">Register Companion</button>
+    </div>
+</div>
 
 <div class="app-container">
     
@@ -382,25 +411,26 @@
     var leaderboardContainer = document.getElementById("leaderboard-container");
     var totalStopsCounter = document.getElementById("total-stops-counter");
     var penguinNameDisplay = document.getElementById("penguin-name-display");
+    var namingModal = document.getElementById("naming-modal");
+    var modalNameField = document.getElementById("modal-name-field");
+    var modalSubmitBtn = document.getElementById("modal-submit-btn");
 
-    // Push URL context up to header panel instantly
+    // Force default visual fallback context
     penguinNameDisplay.innerText = URL_PENGUIN_ID;
 
     // ==========================================
-    // 2. ISOLATED SEPARATE BOOTSTRAP OPERATIONS
+    // 2. TIMED INITIALIZATION BOOTSTRAPPER
     // ==========================================
     window.addEventListener("load", function() {
-        // Build map framework first so canvas boundaries render fully
         initializeLiveMap();
         verifyDeviceGeolocation();
 
-        // Initialize Database Client completely separately to insulate against API faults
         if (typeof window.supabase !== "undefined") {
             try {
                 dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 fetchLiveDatabaseContent();
             } catch (err) {
-                console.error("Database connection fault: ", err);
+                console.error("Database client connection issue:", err);
                 showFallbackLeaderboard();
             }
         } else {
@@ -424,12 +454,12 @@
             activeHistoryLayer = L.featureGroup().addTo(leafletMap);
             setTimeout(function() { leafletMap.invalidateSize(); }, 400);
         } catch (e) {
-            console.error("Leaflet assembly crash caught safely: ", e);
+            console.error("Map rendering error:", e);
         }
     }
 
     // ==========================================
-    // 3. FAULT-INSULATED TABLE ROW LOADER
+    // 3. CASE-INSENSITIVE DATA EXTRACTOR ENGINE
     // ==========================================
     function fetchLiveDatabaseContent() {
         if (!dbClient) return;
@@ -442,24 +472,44 @@
                 var logsErr = response.error;
 
                 if (logsErr) {
-                    console.warn("Table select rejected: ", logsErr);
+                    console.warn("Table select rejected:", logsErr);
                     showFallbackLeaderboard();
                     return;
                 }
 
                 if (logsData && logsData.length > 0) {
-                    // Filter matching entries matching the active ID
+                    // CASE SAFETY: Inspect the exact keys your table returned
+                    var firstRow = logsData[0];
+                    var idKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'id'; }) || 'id';
+                    var userKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'username' || k.toLowerCase() === 'user'; }) || 'username';
+                    var noteKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'note'; }) || 'note';
+                    var customNameKey = Object.keys(firstRow).find(function(k) { return k.toLowerCase() === 'name'; }) || null;
+
+                    // Filter matching entries matching the active ID parameter tracking loop
                     var activeCompanionRows = [];
                     for (var i = 0; i < logsData.length; i++) {
                         var row = logsData[i];
-                        // Checks columns matching 'id' or fallback to index row properties safely
-                        var checkId = row.id || row.Id || row.ID || "";
-                        if (String(checkId).toLowerCase() === URL_PENGUIN_ID.toLowerCase()) {
+                        if (row && row[idKey] && String(row[idKey]).toLowerCase() === URL_PENGUIN_ID.toLowerCase()) {
                             activeCompanionRows.push(row);
                         }
                     }
 
                     totalStopsCounter.innerText = "🍁 " + activeCompanionRows.length + " Passport Stops Logged";
+
+                    // POPUP MODAL RULE: If this penguin ID is completely blank in your DB, pop up the frosted registration card!
+                    if (activeCompanionRows.length === 0) {
+                        namingModal.style.display = "flex";
+                        modalNameField.value = URL_PENGUIN_ID; // Pre-populate parameter string
+                    } else {
+                        namingModal.style.display = "none";
+                        
+                        // Check if a custom friendly name was logged inside the rows, otherwise display ID
+                        if (customNameKey && activeCompanionRows[activeCompanionRows.length - 1][customNameKey]) {
+                            penguinNameDisplay.innerText = activeCompanionRows[activeCompanionRows.length - 1][customNameKey];
+                        } else {
+                            penguinNameDisplay.innerText = URL_PENGUIN_ID;
+                        }
+                    }
 
                     // Draw Historical Map Journey Lines
                     if (activeCompanionRows.length > 0 && activeHistoryLayer) {
@@ -470,8 +520,8 @@
                             var stop = activeCompanionRows[j];
                             var lat = parseFloat(stop.latitude);
                             var lng = parseFloat(stop.longitude);
-                            var msg = stop.note || stop.Note || "No message left.";
-                            var host = stop.username || stop.Username || "Anonymous";
+                            var msg = stop[noteKey] || "No message left.";
+                            var host = stop[userKey] || "Anonymous";
 
                             if (!isNaN(lat) && !isNaN(lng)) {
                                 pathCoordinatesArray.push([lat, lng]);
@@ -501,32 +551,31 @@
                         leafletMap.fitBounds(activeHistoryLayer.getBounds(), { padding: [30, 30] });
                     }
 
-                    // COMPILE "TOP PENGUINS" SCOREBOARD COUNTS
+                    // COMPILE DYNAMIC PENGUIN LEADERBOARD COUNTS
                     var scoreTotalsMap = {};
                     for (var k = 0; k < logsData.length; k++) {
                         var entry = logsData[k];
-                        var pId = entry.id || entry.Id || entry.ID || "";
-                        if (pId) {
-                            var cleanedId = String(pId).trim();
-                            scoreTotalsMap[cleanedId] = (scoreTotalsMap[cleanedId] || 0) + 1;
+                        if (entry && entry[idKey]) {
+                            var penguinIdValue = String(entry[idKey]).trim();
+                            if (penguinIdValue) {
+                                scoreTotalsMap[penguinIdValue] = (scoreTotalsMap[penguinIdValue] || 0) + 1;
+                            }
                         }
                     }
 
                     var scoreboardSortingArray = [];
-                    for (var penguinId in scoreTotalsMap) {
-                        if (scoreTotalsMap.hasOwnProperty(penguinId)) {
-                            var count = scoreTotalsMap[penguinId];
+                    for (var pId in scoreTotalsMap) {
+                        if (scoreTotalsMap.hasOwnProperty(pId)) {
+                            var count = scoreTotalsMap[pId];
                             scoreboardSortingArray.push({
-                                targetId: penguinId,
+                                targetId: pId,
                                 logCount: count,
                                 calculatedDistance: count * 125
                             });
                         }
                     }
 
-                    scoreboardSortingArray.sort(function(a, b) {
-                        return b.logCount - a.logCount;
-                    });
+                    scoreboardSortingArray.sort(function(a, b) { return b.logCount - a.logCount; });
 
                     leaderboardContainer.innerHTML = "";
                     var rankMedals = ["🥇", "🥈", "🥉"];
@@ -551,11 +600,13 @@
                     }
 
                 } else {
+                    // Database exists but has 0 total entries (New app deployment state)
+                    namingModal.style.display = "flex";
                     leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet! Log the first stop above.</div>`;
                 }
             })
             .catch(function(catastrophicErr) {
-                console.error("Agnostic parser crash intercepted: ", catastrophicErr);
+                console.error("Agnostic parser crash intercepted:", catastrophicErr);
                 showFallbackLeaderboard();
             });
     }
@@ -577,7 +628,7 @@
     }
 
     // ==========================================
-    // 4. DEVICE GEOLOCATION INTERCEPT SENSORS
+    // 4. DEVICE GEOLOCATION SENSORS
     // ==========================================
     function verifyDeviceGeolocation() {
         if (navigator.geolocation) {
@@ -610,11 +661,11 @@
                     }
                 },
                 function(error) {
-                    console.warn("GPS tracking access skipped safely.");
+                    console.warn("GPS focus skipped safely.");
                     coordinatesDisplay.innerText = "Location permission required.";
                     lockBadge.innerText = "LOCKED";
                     lockBadge.style.color = "#ef4444";
-                    logStopBtn.disabled = false; // Stay open for manual notes submissions
+                    logStopBtn.disabled = false; // Allow manual fallback submissions
                 },
                 { enableHighAccuracy: true, timeout: 12000 }
             );
@@ -624,7 +675,41 @@
     }
 
     // ==========================================
-    // 5. TRANSACTION INGESTION TRANSMITTER
+    // 5. NEW DISCOVERY MODAL SUBMIT BUTTON ACTION
+    // ==========================================
+    modalSubmitBtn.addEventListener("click", function() {
+        var chosenName = modalNameField.value.trim();
+        if (!chosenName) chosenName = URL_PENGUIN_ID;
+
+        modalSubmitBtn.disabled = true;
+        modalSubmitBtn.innerText = "Registering...";
+
+        // Insert first checkpoint row token to permanently log this penguin ID into existence
+        dbClient
+            .from('penguin_logs')
+            .insert([{ 
+                id: URL_PENGUIN_ID, 
+                name: chosenName,
+                latitude: userLatitude || 45.0, 
+                longitude: userLongitude || -93.0, 
+                note: " Scanned & registered new companion profile portfolio!",
+                timestamp: new Date().toISOString() 
+            }])
+            .then(function(res) {
+                if (res.error) throw res.error;
+                
+                namingModal.style.display = "none";
+                alert("Success! " + chosenName + " is officially registered on the live map grid!");
+                fetchLiveDatabaseContent();
+            })
+            .catch(function(e) {
+                console.error("Modal registration failed:", e);
+                namingModal.style.display = "none"; // Hide to let user use primary page layout anyway
+            });
+    });
+
+    // ==========================================
+    // 6. TRANSACTION LOG STOP ACTION SUBMIT BUTTON
     // ==========================================
     logStopBtn.addEventListener("click", function() {
         var noteText = finderNoteInput.value.trim();
@@ -632,7 +717,7 @@
         logStopBtn.innerText = "Logging Stop...";
 
         if (!dbClient) {
-            alert("Database interface currently uninitialized.");
+            alert("Database interface offline.");
             logStopBtn.disabled = false;
             logStopBtn.innerText = "Log This Stop";
             return;
@@ -645,7 +730,7 @@
                 if (insResponse.error) throw insResponse.error;
 
                 var payload = {
-                    content: `🐧 **New Companion Stop Logged!**\n• **Penguin ID:** ${URL_PENGUIN_ID}\n• **Coordinates:** \`${userLatitude.toFixed(4)}°, ${userLongitude.toFixed(4)}°\`\n• **Notes:** *"${noteText || "No note left."}"*\n• **Timestamp:** \`${new Date().toLocaleString()}\``
+                    content: `🐧 **New Companion Stop Logged!**\n• **Penguin Portfolio:** ${penguinNameDisplay.innerText} (\`${URL_PENGUIN_ID}\`)\n• **Coordinates:** \`${userLatitude.toFixed(4)}°, ${userLongitude.toFixed(4)}°\`\n• **Notes:** *"${noteText || "No note left."}"*\n• **Timestamp:** \`${new Date().toLocaleString()}\``
                 };
 
                 return fetch(WEBHOOK_URL, {
@@ -664,8 +749,8 @@
                 fetchLiveDatabaseContent();
             })
             .catch(function(err) {
-                console.error("Submission failed: ", err);
-                alert("Submission failed. Verify that column schemas correspond to table definitions.");
+                console.error("Submission failed:", err);
+                alert("Submission failed. Ensure RLS policies align with schema rules.");
                 logStopBtn.disabled = false;
                 logStopBtn.innerText = "Log This Stop";
             });
