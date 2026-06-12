@@ -341,7 +341,7 @@
         </div>
 
         <div class="glass-card">
-            <h2>Top Hosts</h2>
+            <h2>Top Penguins</h2>
             <div id="leaderboard-container" style="margin-top: 4px;">
                 </div>
         </div>
@@ -362,7 +362,7 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
 
-    // App state scope settings
+    // App state variables
     let supabaseClient = null;
     let userLatitude = 0;
     let userLongitude = 0;
@@ -374,7 +374,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const URL_PENGUIN_ID = urlParams.get('id') || "Penguin-035";
 
-    // DOM Target hooks
+    // DOM Element hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const logStopBtn = document.getElementById("log-stop-btn");
@@ -383,11 +383,11 @@
     const totalStopsCounter = document.getElementById("total-stops-counter");
     const penguinNameDisplay = document.getElementById("penguin-name-display");
 
-    // Initialize display layout with parameter target instantly
+    // Initialize layout heading right away
     penguinNameDisplay.innerText = URL_PENGUIN_ID;
 
     // ==========================================
-    // 2. TIMED INITIALIZATION BOOTSTRAPPER
+    // 2. STABLE SYSTEM BOOTSTRAPPER
     // ==========================================
     window.addEventListener("load", () => {
         initializeLiveMap();
@@ -397,7 +397,7 @@
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 fetchLiveDatabaseContent();
             } catch (initError) {
-                console.error("Database connection initialization fault: ", initError);
+                console.error("Database client initialization failed: ", initError);
                 showFallbackLeaderboard();
             }
         } else {
@@ -423,151 +423,6 @@
             activeHistoryLayer = L.featureGroup().addTo(leafletMap);
             setTimeout(() => { leafletMap.invalidateSize(); }, 400);
         } catch (e) {
-            console.error("Map layer initialization exception: ", e);
+            console.error("Map rendering error: ", e);
         }
     }
-
-    // ==========================================
-    // 3. LIVE MAP PATH & DYNAMIC CONTENT LOADER
-    // ==========================================
-    async function fetchLiveDatabaseContent() {
-        if (!supabaseClient) return;
-
-        try {
-            // Fetch ALL rows from your single-source tracking table
-            const { data: logsData, error: logsErr } = await supabaseClient
-                .from('penguin_logs')
-                .select('*');
-
-            if (logsErr) throw logsErr;
-
-            if (logsData && logsData.length > 0) {
-                // Pinpoint variable key structures dynamically
-                const keys = Object.keys(logsData[0]);
-                const idColumn = keys.find(k => k.toLowerCase() === 'id' || k.toLowerCase().includes('name') || k.toLowerCase().includes('type')) || keys[0];
-                const userColumn = keys.find(k => k.toLowerCase().includes('user') || k.toLowerCase().includes('name') || k.toLowerCase().includes('host')) || keys[1];
-                const noteColumn = keys.find(k => k.toLowerCase() === 'note' || k.toLowerCase().includes('text') || k.toLowerCase().includes('mess')) || keys[2];
-
-                // Filter database row logs to only map entries that match your current active URL parameter ID
-                const activeCompanionRows = logsData.filter(row => String(row[idColumn]).toLowerCase() === URL_PENGUIN_ID.toLowerCase());
-
-                totalStopsCounter.innerText = `🍁 ${activeCompanionRows.length} Passport Stops Logged`;
-
-                // Render Historical Tracking Path Lines Across the Leaflet Map
-                if (activeCompanionRows.length > 0) {
-                    activeHistoryLayer.clearLayers();
-                    const pathCoordinatesArray = [];
-
-                    activeCompanionRows.forEach((stop, index) => {
-                        const lat = parseFloat(stop.latitude);
-                        const lng = parseFloat(stop.longitude);
-                        const noteText = stop[noteColumn] || "No message left in guestbook.";
-                        const hostName = stop[userColumn] || "Anonymous Host";
-
-                        if (!isNaN(lat) && !isNaN(lng)) {
-                            pathCoordinatesArray.push([lat, lng]);
-
-                            // Add a visual check-in marker dot to the map group layer
-                            const stopMarker = L.circleMarker([lat, lng], {
-                                radius: 6,
-                                fillColor: '#00e5ff',
-                                color: '#ffffff',
-                                weight: 1.5,
-                                fillOpacity: 0.8
-                            }).bindPopup(`<b>Stop #${index + 1}</b><br>Host: ${hostName}<br><i>"${noteText}"</i>`);
-                            
-                            activeHistoryLayer.addLayer(stopMarker);
-                        }
-                    });
-
-                    // Draw a connection line tracking path between all coordinates points logged
-                    if (pathCoordinatesArray.length > 1) {
-                        const travelPolylinePath = L.polyline(pathCoordinatesArray, {
-                            color: '#00e5ff',
-                            weight: 3,
-                            opacity: 0.7,
-                            dashArray: '5, 10'
-                        });
-                        activeHistoryLayer.addLayer(travelPolylinePath);
-                    }
-
-                    // Auto-zoom map boundary frame to perfectly wrap around all active check-in stops
-                    leafletMap.fitBounds(activeHistoryLayer.getBounds(), { padding: [30, 30] });
-                }
-
-                // C. COMPILE HOST METRICS SCOREBOARD DYNAMICALLY
-                const scoreTotalsMap = {};
-                logsData.forEach(entry => {
-                    const hostLabel = entry[userColumn] || "Anonymous Host";
-                    scoreTotalsMap[hostLabel] = (scoreTotalsMap[hostLabel] || 0) + 1;
-                });
-
-                const scoreboardSortingArray = Object.keys(scoreTotalsMap).map(name => {
-                    return { user: name, logCount: scoreTotalsMap[name], calculatedDistance: scoreTotalsMap[name] * 120 };
-                });
-
-                scoreboardSortingArray.sort((a, b) => b.logCount - a.logCount);
-
-                leaderboardContainer.innerHTML = "";
-                const rankMedals = ["🥇", "🥈", "🥉"];
-
-                scoreboardSortingArray.slice(0, 3).forEach((row, index) => {
-                    const medal = rankMedals[index] || ` ${index + 1} `;
-                    leaderboardContainer.innerHTML += `
-                        <div class="leaderboard-row">
-                            <div>
-                                <span class="rank-badge">${medal}</span>
-                                <span class="value">${row.user}</span>
-                            </div>
-                            <div>
-                                <span class="value ${index === 0 ? 'ice-glow' : ''}" style="${index > 0 ? 'color: #cbd5e1;' : ''}">${row.calculatedDistance.toLocaleString()} miles</span>
-                                <span class="stat-subtext">${row.logCount} Logs</span>
-                            </div>
-                        </div>
-                    `;
-                });
-
-            } else {
-                leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet! Log the first stop above.</div>`;
-            }
-
-        } catch (err) {
-            console.error("Dynamic table processing catch block execution: ", err);
-            showFallbackLeaderboard();
-        }
-    }
-
-    function showFallbackLeaderboard() {
-        leaderboardContainer.innerHTML = `
-            <div class="leaderboard-row">
-                <div><span class="rank-badge">🥇</span><span class="value">TrackerBen</span></div>
-                <div><span class="value ice-glow">1,420 miles</span><span class="stat-subtext">42 Logs</span></div>
-            </div>
-            <div class="leaderboard-row">
-                <div><span class="rank-badge">🥈</span><span class="value">ExplorerEmily</span></div>
-                <div><span class="value" style="color: #cbd5e1;">980 miles</span><span class="stat-subtext">38 Logs</span></div>
-            </div>
-            <div class="leaderboard-row">
-                <div><span class="rank-badge">🥉</span><span class="value">ArcticSam</span></div>
-                <div><span class="value" style="color: #cbd5e1;">640 miles</span><span class="stat-subtext">29 Logs</span></div>
-            </div>`;
-    }
-
-    // ==========================================
-    // 4. SMART GEOLOCATION CAPTURE
-    // ==========================================
-    function verifyDeviceGeolocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    userLatitude = position.coords.latitude;
-                    userLongitude = position.coords.longitude;
-
-                    coordinatesDisplay.innerText = `${userLatitude.toFixed(4)}°N, ${userLongitude.toFixed(4)}°W`;
-                    lockBadge.innerText = "✓ LOCATION DETECTED";
-                    lockBadge.style.color = "#39ff14";
-                    logStopBtn.disabled = false;
-
-                    if (leafletMap) {
-                        // Drop glowing pin over user's custom location checkpoint spot
-                        if (currentPosition
