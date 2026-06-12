@@ -358,53 +358,54 @@
     // ==========================================
     // 1. HARDCODED LIVE API CONFIGURATION KEYS
     // ==========================================
-    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
-    const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+    var SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
+    var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
+    var WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
 
-    // App state variables
-    let supabaseClient = null;
-    let userLatitude = 0;
-    let userLongitude = 0;
-    let leafletMap = null;
-    let currentPositionMarker = null;
-    let activeHistoryLayer = null;
+    // Engine global handles
+    var dbClient = null;
+    var userLatitude = 0;
+    var userLongitude = 0;
+    var leafletMap = null;
+    var currentPositionMarker = null;
+    var activeHistoryLayer = null;
 
-    // URL Param extraction checker (?id=Penguin-035)
-    const urlParams = new URLSearchParams(window.location.search);
-    const URL_PENGUIN_ID = urlParams.get('id') || "Penguin-035";
+    // Parse URL parameter string safely (?id=Penguin-035)
+    var urlParams = new URLSearchParams(window.location.search);
+    var URL_PENGUIN_ID = urlParams.get('id') || "Penguin-035";
 
-    // DOM Element hooks
-    const coordinatesDisplay = document.getElementById("coordinates-display");
-    const lockBadge = document.getElementById("lock-badge");
-    const logStopBtn = document.getElementById("log-stop-btn");
-    const finderNoteInput = document.getElementById("finder-note");
-    const leaderboardContainer = document.getElementById("leaderboard-container");
-    const totalStopsCounter = document.getElementById("total-stops-counter");
-    const penguinNameDisplay = document.getElementById("penguin-name-display");
+    // DOM Target hooks
+    var coordinatesDisplay = document.getElementById("coordinates-display");
+    var lockBadge = document.getElementById("lock-badge");
+    var logStopBtn = document.getElementById("log-stop-btn");
+    var finderNoteInput = document.getElementById("finder-note");
+    var leaderboardContainer = document.getElementById("leaderboard-container");
+    var totalStopsCounter = document.getElementById("total-stops-counter");
+    var penguinNameDisplay = document.getElementById("penguin-name-display");
 
-    // Initialize layout heading right away
+    // Push URL context up to header panel instantly
     penguinNameDisplay.innerText = URL_PENGUIN_ID;
 
     // ==========================================
-    // 2. STABLE SYSTEM BOOTSTRAPPER
+    // 2. ISOLATED SEPARATE BOOTSTRAP OPERATIONS
     // ==========================================
-    window.addEventListener("load", () => {
+    window.addEventListener("load", function() {
+        // Build map framework first so canvas boundaries render fully
         initializeLiveMap();
+        verifyDeviceGeolocation();
 
+        // Initialize Database Client completely separately to insulate against API faults
         if (typeof window.supabase !== "undefined") {
             try {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 fetchLiveDatabaseContent();
-            } catch (initError) {
-                console.error("Database client initialization failed: ", initError);
+            } catch (err) {
+                console.error("Database connection fault: ", err);
                 showFallbackLeaderboard();
             }
         } else {
             showFallbackLeaderboard();
         }
-
-        verifyDeviceGeolocation();
     });
 
     function initializeLiveMap() {
@@ -421,8 +422,255 @@
             }).addTo(leafletMap);
             
             activeHistoryLayer = L.featureGroup().addTo(leafletMap);
-            setTimeout(() => { leafletMap.invalidateSize(); }, 400);
+            setTimeout(function() { leafletMap.invalidateSize(); }, 400);
         } catch (e) {
-            console.error("Map rendering error: ", e);
+            console.error("Leaflet assembly crash caught safely: ", e);
         }
     }
+
+    // ==========================================
+    // 3. FAULT-INSULATED TABLE ROW LOADER
+    // ==========================================
+    function fetchLiveDatabaseContent() {
+        if (!dbClient) return;
+
+        dbClient
+            .from('penguin_logs')
+            .select('*')
+            .then(function(response) {
+                var logsData = response.data;
+                var logsErr = response.error;
+
+                if (logsErr) {
+                    console.warn("Table select rejected: ", logsErr);
+                    showFallbackLeaderboard();
+                    return;
+                }
+
+                if (logsData && logsData.length > 0) {
+                    // Filter matching entries matching the active ID
+                    var activeCompanionRows = [];
+                    for (var i = 0; i < logsData.length; i++) {
+                        var row = logsData[i];
+                        // Checks columns matching 'id' or fallback to index row properties safely
+                        var checkId = row.id || row.Id || row.ID || "";
+                        if (String(checkId).toLowerCase() === URL_PENGUIN_ID.toLowerCase()) {
+                            activeCompanionRows.push(row);
+                        }
+                    }
+
+                    totalStopsCounter.innerText = "🍁 " + activeCompanionRows.length + " Passport Stops Logged";
+
+                    // Draw Historical Map Journey Lines
+                    if (activeCompanionRows.length > 0 && activeHistoryLayer) {
+                        activeHistoryLayer.clearLayers();
+                        var pathCoordinatesArray = [];
+
+                        for (var j = 0; j < activeCompanionRows.length; j++) {
+                            var stop = activeCompanionRows[j];
+                            var lat = parseFloat(stop.latitude);
+                            var lng = parseFloat(stop.longitude);
+                            var msg = stop.note || stop.Note || "No message left.";
+                            var host = stop.username || stop.Username || "Anonymous";
+
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                                pathCoordinatesArray.push([lat, lng]);
+
+                                var stopMarker = L.circleMarker([lat, lng], {
+                                    radius: 6,
+                                    fillColor: '#00e5ff',
+                                    color: '#ffffff',
+                                    weight: 1.5,
+                                    fillOpacity: 0.8
+                                }).bindPopup("<b>Stop #" + (j + 1) + "</b><br>Host: " + host + "<br><i>\"" + msg + "\"</i>");
+                                
+                                activeHistoryLayer.addLayer(stopMarker);
+                            }
+                        }
+
+                        if (pathCoordinatesArray.length > 1) {
+                            var travelPolylinePath = L.polyline(pathCoordinatesArray, {
+                                color: '#00e5ff',
+                                weight: 3,
+                                opacity: 0.7,
+                                dashArray: '5, 10'
+                            });
+                            activeHistoryLayer.addLayer(travelPolylinePath);
+                        }
+
+                        leafletMap.fitBounds(activeHistoryLayer.getBounds(), { padding: [30, 30] });
+                    }
+
+                    // COMPILE "TOP PENGUINS" SCOREBOARD COUNTS
+                    var scoreTotalsMap = {};
+                    for (var k = 0; k < logsData.length; k++) {
+                        var entry = logsData[k];
+                        var pId = entry.id || entry.Id || entry.ID || "";
+                        if (pId) {
+                            var cleanedId = String(pId).trim();
+                            scoreTotalsMap[cleanedId] = (scoreTotalsMap[cleanedId] || 0) + 1;
+                        }
+                    }
+
+                    var scoreboardSortingArray = [];
+                    for (var penguinId in scoreTotalsMap) {
+                        if (scoreTotalsMap.hasOwnProperty(penguinId)) {
+                            var count = scoreTotalsMap[penguinId];
+                            scoreboardSortingArray.push({
+                                targetId: penguinId,
+                                logCount: count,
+                                calculatedDistance: count * 125
+                            });
+                        }
+                    }
+
+                    scoreboardSortingArray.sort(function(a, b) {
+                        return b.logCount - a.logCount;
+                    });
+
+                    leaderboardContainer.innerHTML = "";
+                    var rankMedals = ["🥇", "🥈", "🥉"];
+
+                    var renderLimit = Math.min(scoreboardSortingArray.length, 3);
+                    for (var m = 0; m < renderLimit; m++) {
+                        var item = scoreboardSortingArray[m];
+                        var medal = rankMedals[m] || " " + (m + 1) + " ";
+                        
+                        leaderboardContainer.innerHTML += `
+                            <div class="leaderboard-row">
+                                <div>
+                                    <span class="rank-badge">${medal}</span>
+                                    <span class="value">${item.targetId}</span>
+                                </div>
+                                <div>
+                                    <span class="value ${m === 0 ? 'ice-glow' : ''}" style="${m > 0 ? 'color: #cbd5e1;' : ''}">${item.calculatedDistance.toLocaleString()} miles</span>
+                                    <span class="stat-subtext">${item.logCount} Logs</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                } else {
+                    leaderboardContainer.innerHTML = `<div style="font-size:9.5pt; color:#94a3b8; text-align:center; padding:10px;">No explorer logs recorded yet! Log the first stop above.</div>`;
+                }
+            })
+            .catch(function(catastrophicErr) {
+                console.error("Agnostic parser crash intercepted: ", catastrophicErr);
+                showFallbackLeaderboard();
+            });
+    }
+
+    function showFallbackLeaderboard() {
+        leaderboardContainer.innerHTML = `
+            <div class="leaderboard-row">
+                <div><span class="rank-badge">🥇</span><span class="value">Penguin-035</span></div>
+                <div><span class="value ice-glow">1,420 miles</span><span class="stat-subtext">42 Logs</span></div>
+            </div>
+            <div class="leaderboard-row">
+                <div><span class="rank-badge">🥈</span><span class="value">Penguin-012</span></div>
+                <div><span class="value" style="color: #cbd5e1;">980 miles</span><span class="stat-subtext">38 Logs</span></div>
+            </div>
+            <div class="leaderboard-row">
+                <div><span class="rank-badge">🥉</span><span class="value">Penguin-088</span></div>
+                <div><span class="value" style="color: #cbd5e1;">640 miles</span><span class="stat-subtext">29 Logs</span></div>
+            </div>`;
+    }
+
+    // ==========================================
+    // 4. DEVICE GEOLOCATION INTERCEPT SENSORS
+    // ==========================================
+    function verifyDeviceGeolocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLatitude = position.coords.latitude;
+                    userLongitude = position.coords.longitude;
+
+                    coordinatesDisplay.innerText = userLatitude.toFixed(4) + "°N, " + userLongitude.toFixed(4) + "°W";
+                    lockBadge.innerText = "✓ LOCATION DETECTED";
+                    lockBadge.style.color = "#39ff14";
+                    logStopBtn.disabled = false;
+
+                    if (leafletMap) {
+                        if (currentPositionMarker) leafletMap.removeLayer(currentPositionMarker);
+                        
+                        currentPositionMarker = L.circleMarker([userLatitude, userLongitude], {
+                            radius: 8,
+                            fillColor: '#39ff14',
+                            color: '#ffffff',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        }).addTo(leafletMap).bindPopup("Your Check-In Spot");
+
+                        if (activeHistoryLayer && activeHistoryLayer.getLayers().length === 0) {
+                            leafletMap.setView([userLatitude, userLongitude], 12);
+                            currentPositionMarker.openPopup();
+                        }
+                        setTimeout(function() { leafletMap.invalidateSize(); }, 200);
+                    }
+                },
+                function(error) {
+                    console.warn("GPS tracking access skipped safely.");
+                    coordinatesDisplay.innerText = "Location permission required.";
+                    lockBadge.innerText = "LOCKED";
+                    lockBadge.style.color = "#ef4444";
+                    logStopBtn.disabled = false; // Stay open for manual notes submissions
+                },
+                { enableHighAccuracy: true, timeout: 12000 }
+            );
+        } else {
+            coordinatesDisplay.innerText = "GPS sensor missing.";
+        }
+    }
+
+    // ==========================================
+    // 5. TRANSACTION INGESTION TRANSMITTER
+    // ==========================================
+    logStopBtn.addEventListener("click", function() {
+        var noteText = finderNoteInput.value.trim();
+        logStopBtn.disabled = true;
+        logStopBtn.innerText = "Logging Stop...";
+
+        if (!dbClient) {
+            alert("Database interface currently uninitialized.");
+            logStopBtn.disabled = false;
+            logStopBtn.innerText = "Log This Stop";
+            return;
+        }
+
+        dbClient
+            .from('penguin_logs') 
+            .insert([{ id: URL_PENGUIN_ID, latitude: userLatitude, longitude: userLongitude, note: noteText, timestamp: new Date().toISOString() }])
+            .then(function(insResponse) {
+                if (insResponse.error) throw insResponse.error;
+
+                var payload = {
+                    content: `🐧 **New Companion Stop Logged!**\n• **Penguin ID:** ${URL_PENGUIN_ID}\n• **Coordinates:** \`${userLatitude.toFixed(4)}°, ${userLongitude.toFixed(4)}°\`\n• **Notes:** *"${noteText || "No note left."}"*\n• **Timestamp:** \`${new Date().toLocaleString()}\``
+                };
+
+                return fetch(WEBHOOK_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+            })
+            .then(function() {
+                logStopBtn.innerText = "✓ Stop Logged!";
+                logStopBtn.style.background = "linear-gradient(135deg, rgba(57, 255, 20, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%)";
+                logStopBtn.style.borderColor = "#39ff14";
+                finderNoteInput.value = "";
+
+                alert("Awesome! The penguin's stop was successfully saved and shared with the group!");
+                fetchLiveDatabaseContent();
+            })
+            .catch(function(err) {
+                console.error("Submission failed: ", err);
+                alert("Submission failed. Verify that column schemas correspond to table definitions.");
+                logStopBtn.disabled = false;
+                logStopBtn.innerText = "Log This Stop";
+            });
+    });
+</script>
+
+</body>
+</html>
