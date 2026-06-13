@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -209,7 +208,7 @@
             background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
         }
 
-        /* Leaderboard Segment Toggles */
+        /* Toggles & Segment Selection Bars */
         .tab-bar {
             display: flex;
             background: rgba(0, 0, 0, 0.3);
@@ -379,7 +378,6 @@
 </head>
 <body>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -394,7 +392,6 @@
 
 <div class="app-container">
     
-    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -405,14 +402,12 @@
         </div>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
-        <!-- CURRENT GUEST PROFILE BOX -->
         <div class="glass-card" id="profile-card-block">
             <h2>Penguin</h2>
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
@@ -432,7 +427,6 @@
             </ul>
         </div>
 
-        <!-- GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 16pt;">🎒</span>
@@ -450,7 +444,6 @@
             </div>
         </div>
 
-        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <h2 id="tracking-card-title">Log Your Visit</h2>
             <ul class="data-list" id="location-text-elements">
@@ -470,11 +463,9 @@
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
-        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
-            <!-- DYNAMIC POI DROPDOWN COMPONENT -->
             <div class="input-group" id="poi-input-group" style="display: none;">
                 <label class="label" style="color: #39ff14; text-shadow: 0 0 5px rgba(57, 255, 20, 0.2);">🏛️ Nearby Historic Monument or Marker Found!</label>
                 <select id="poi-selector" class="select-poi">
@@ -498,7 +489,6 @@
             </div>
         </div>
 
-        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -512,7 +502,6 @@
             </ul>
         </div>
 
-        <!-- PROXIMITY NEARBY POI DISCOVERY PANEL (FIXED: REMOVED "(TOP 10)") -->
         <div class="glass-card" id="nearby-landmarks-card">
             <h2>🏛️ Nearby Historic Landmarks</h2>
             <ul class="poi-proximity-list" id="poi-proximity-output" style="margin-top: 8px;">
@@ -520,14 +509,12 @@
             </ul>
         </div>
 
-        <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
         <div class="glass-card" id="passport-history-card">
             <h2>📜 Monument Passport History</h2>
             <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
                 <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Loading passport stamps...</li>
             </ul>
             
-            <!-- Structural Arrow Navigation Frame Footer -->
             <div class="pagination-container" id="passport-pagination" style="display: none;">
                 <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
                 <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
@@ -535,7 +522,6 @@
             </div>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -544,7 +530,6 @@
 
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -673,6 +658,9 @@
         return R * c;
     }
 
+    // ===================================================
+    // UPDATED: WIDENED 10,000 METER GEOGRAPHIC REGIONAL DISCOVERY ENGINE
+    // ===================================================
     async function lookupNearbyMonuments(lat, lng) {
         if (!poiLayerGroup) return;
         poiLayerGroup.clearLayers();
@@ -681,14 +669,15 @@
         const poiGroup = document.getElementById('poi-input-group');
         const poiSelector = document.getElementById('poi-selector');
         
-        const offset = 0.015; 
+        // FIXED OVERRIDE: Expanded bounding coordinates parameter calculations to cover ~10,000 meters / 6.2 miles
+        const offset = 0.090; 
         const minLat = lat - offset; const maxLat = lat + offset;
         const minLng = lng - offset; const maxLng = lng + offset;
 
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:15];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
 
         try {
-            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">🔄 Pinging global database grid for historic items...</li>`;
+            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">🔄 Scanning 10,000m regional grid zone for historic landmarks...</li>`;
             
             const fetchRes = await fetch(overpassUrl);
             const resJson = await fetchRes.json();
@@ -748,7 +737,7 @@
                         
                         liNode.onclick = function() {
                             if (map && poiMarkersMap[landmarkItem.idToken]) {
-                                map.setView([landmarkItem.lat, landmarkItem.lon], 16);
+                                map.setView([landmarkItem.lat, landmarkItem.lon], 15);
                                 poiMarkersMap[landmarkItem.idToken].openPopup();
                                 document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
                             }
@@ -756,13 +745,14 @@
                         poiProximityOutput.appendChild(liNode);
                     }
                 } else {
-                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside your immediate radius.</li>`;
+                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
                 }
             } else {
-                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside your immediate radius.</li>`;
+                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
             }
         } catch (poiErr) {
             console.warn("POI fallback bypass: ", poiErr);
+            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Landmark database lookup timeout. Explore a new sector to scan!</li>`;
         }
     }
 
