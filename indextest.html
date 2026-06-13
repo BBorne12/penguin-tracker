@@ -93,7 +93,7 @@
         /* Card Header Flex Layout */
         .card-header-flex {
             display: flex;
-            justify-content: space-between;
+            justify-space-between;
             align-items: center;
             margin-bottom: 12px;
         }
@@ -1068,8 +1068,9 @@
     // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
-        if (historyLayerGroup) historyLayerGroup.clearLayers();
-        if (currentJourneyLine) { currentJourneyLine.remove(); currentJourneyLine = null; }
+        // FIXED CRITICAL ALIGNMENT: Clear vector traces and layout group matrices cleanly before appending paths
+        if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
+        if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
 
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
@@ -1120,8 +1121,7 @@
             const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
             const stopLabel = namedEntry ? `🐧 ${resolvedDisplayName}` : `Stop #${index + 1}`;
             
-            L.marker(latLng, { icon: historicalIcon })
-                .addTo(historyLayerGroup)
+            L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup)
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
@@ -1215,18 +1215,14 @@
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
-                // 1. Instantly toggle global runtime tags
                 isViewOnlyMode = true;
+                // FIXED INTEGRATION LOCK: Sets global search scope parameter explicitly inside target context thread
                 penguinId = item.id;
                 
-                // 2. Expand UI cards blocks natively inside DOM layout structure
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
-                
-                // 3. Smoothly scroll player to the top map container card
                 document.getElementById('tracking-card-block').scrollIntoView({ behavior: 'smooth' });
 
-                // 4. FIXED TIMEOUT BUFFER: Wait for expanding animation properties to resolve before mapping paths
                 setTimeout(() => {
                     if (map) { 
                         map.invalidateSize(); 
