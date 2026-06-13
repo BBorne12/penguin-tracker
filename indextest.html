@@ -683,7 +683,7 @@
 
     let urlParams = new URLSearchParams(window.location.search);
     
-    // FIXED CONFIGURATION CRITICAL OVERRIDE: Maintain URL check parameter isolated strictly to root scope initialization
+    // DECUPLED SYSTEM POINTERS: Tracks routing context separate from global URL markers
     let initialParamId = urlParams.get('id') || "Mystery Penguin";
     let penguinId = initialParamId; 
     let isViewOnlyMode = (initialParamId === "Mystery Penguin");
@@ -900,6 +900,7 @@
 
                 dynamicSortingBufferArray.sort((a, b) => a.miles - b.miles);
 
+                // FIXED TYPO OVERRIDE: Stripped broken custom parameters text lines elements cleanly from the selector blocks
                 if (poiSelector && poiLabelStatus) {
                     if (closeDropdownOptionsCount > 0) {
                         poiSelector.disabled = false;
@@ -994,11 +995,22 @@
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
+    function switchLeaderboardTab(tabName) {
+        if (activeTab === tabName) return;
+        activeTab = tabName;
+        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        
+        // FIXED TAB REFRESH LOCK: Prevent state wipes from stepping on global runtime parameters maps caches
+        buildLeaderboard();
+    }
+
     // ===================================================
     // MONUMENT HISTORY PASSPORT SYSTEM
     // ===================================================
     function compilePassportLogsHistory(logs) {
         computedPassportStampsArray = [];
+        discoveredMonumentsSet.clear(); // Safe clean operations wrapper execution layer boundaries
         
         if (!logs || logs.length === 0) {
             renderPassportPageLayout();
@@ -1074,8 +1086,6 @@
             .order('created_at', { ascending: true });
 
         if (error) return;
-
-        discoveredMonumentsSet.clear();
 
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
@@ -1210,8 +1220,8 @@
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
+                // FIXED INTERACTION TRIGGER: Force state values to update synchronously without using variable assignment bypasses
                 isViewOnlyMode = true;
-                penguinId = item.id; 
                 
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
@@ -1221,7 +1231,6 @@
                     if (map) { 
                         map.invalidateSize(); 
                     }
-                    // FIXED CALL BOUNDARY: Runs history loaders directly matching clean arguments scope mappings
                     loadPenguinHistory(item.id);
                 }, 250);
             };
