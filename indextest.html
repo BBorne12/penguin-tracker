@@ -859,7 +859,6 @@
             const resJson = await fetchRes.json();
             
             if (resJson && resJson.elements && resJson.elements.length > 0) {
-                // FIXED UI OVERRIDE: Gracefully safeguard options if current layout card is hidden in DOM profile context
                 if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby monument --</option>';
                 let dynamicSortingBufferArray = [];
                 let closeDropdownOptionsCount = 0; 
@@ -1000,7 +999,7 @@
     }
 
     // ===================================================
-    // MONUMENT HISTORY PASSPORT SYSTEM (FIXED GLOBAL MEMORY LOCKS)
+    // MONUMENT HISTORY PASSPORT SYSTEM
     // ===================================================
     function compilePassportLogsHistory(logs) {
         computedPassportStampsArray = [];
@@ -1069,8 +1068,6 @@
     // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
-        if (targetId === "Mystery Penguin") return;
-        
         if (historyLayerGroup) historyLayerGroup.clearLayers();
         if (currentJourneyLine) { currentJourneyLine.remove(); }
 
@@ -1082,7 +1079,6 @@
 
         if (error) return;
 
-        // FIXED CRITICAL CHECK: Clear memory maps before evaluating empty conditions
         discoveredMonumentsSet.clear();
 
         if (!logs || logs.length === 0) {
@@ -1133,11 +1129,11 @@
         });
 
         if (pathCoordinates.length > 0) {
-            // FIXED OVERRIDE BUFFER: Wipes size caches instantly before forcing line plots
             if (map) { map.invalidateSize(); }
             currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
             targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
             
+            // Evaluates dynamic landmark pins based directly on runtime state tags
             if (isViewOnlyMode) {
                 const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
                 lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
@@ -1229,9 +1225,10 @@
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
+                // FIXED CRITICAL ALIGNMENT: Updates both state controls synchronously before loading records
                 isViewOnlyMode = true;
-                // FIXED ASSIGNMENT LOCK: Updates the session scope state value token before calling profile loaders
                 penguinId = item.id;
+                
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
                 
