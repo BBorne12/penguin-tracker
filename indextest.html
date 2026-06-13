@@ -93,7 +93,7 @@
         /* Card Header Flex Layout */
         .card-header-flex {
             display: flex;
-            justify-space-between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
@@ -682,8 +682,12 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let urlParams = new URLSearchParams(window.location.search);
-    let penguinId = urlParams.get('id') || "Mystery Penguin";
-    let isViewOnlyMode = (penguinId === "Mystery Penguin");
+    
+    // FIXED CONFIGURATION CRITICAL OVERRIDE: Maintain URL check parameter isolated strictly to root scope initialization
+    let initialParamId = urlParams.get('id') || "Mystery Penguin";
+    let penguinId = initialParamId; 
+    let isViewOnlyMode = (initialParamId === "Mystery Penguin");
+    
     let activeCustomName = "";
     let activeTab = "distance"; 
 
@@ -990,14 +994,6 @@
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
-    function switchLeaderboardTab(tabName) {
-        if (activeTab === tabName) return;
-        activeTab = tabName;
-        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
-        buildLeaderboard();
-    }
-
     // ===================================================
     // MONUMENT HISTORY PASSPORT SYSTEM
     // ===================================================
@@ -1068,7 +1064,6 @@
     // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
-        // FIXED CRITICAL ALIGNMENT: Clear vector traces and layout group matrices cleanly before appending paths
         if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
         if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
 
@@ -1216,8 +1211,7 @@
             
             li.onclick = () => {
                 isViewOnlyMode = true;
-                // FIXED INTEGRATION LOCK: Sets global search scope parameter explicitly inside target context thread
-                penguinId = item.id;
+                penguinId = item.id; 
                 
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
@@ -1227,6 +1221,7 @@
                     if (map) { 
                         map.invalidateSize(); 
                     }
+                    // FIXED CALL BOUNDARY: Runs history loaders directly matching clean arguments scope mappings
                     loadPenguinHistory(item.id);
                 }, 250);
             };
