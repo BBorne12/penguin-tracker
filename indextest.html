@@ -698,12 +698,12 @@
     // Map Global Pointers
     let map = null;
     let marker = null;
-    let verifiedLat = null; 
-    let verifiedLng = null;
     let historyLayerGroup = null;
     let poiLayerGroup = null; 
     let currentJourneyLine = null;
     let poiMarkersMap = {}; 
+    let verifiedLat = null;
+    let verifiedLng = null;
 
     // DOM hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
@@ -762,7 +762,7 @@
         
         document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
         document.getElementById('location-text-elements').style.display = "none"; 
-        if (marker) { marker.remove(); }
+        if (marker) { marker.remove(); marker = null; }
     }
 
     function verifyCurrentGPS() {
@@ -1069,7 +1069,7 @@
     // ===================================================
     async function loadPenguinHistory(targetId) {
         if (historyLayerGroup) historyLayerGroup.clearLayers();
-        if (currentJourneyLine) { currentJourneyLine.remove(); }
+        if (currentJourneyLine) { currentJourneyLine.remove(); currentJourneyLine = null; }
 
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
@@ -1104,9 +1104,6 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
-        var targetMapContainer = map; 
-        if (!targetMapContainer) return;
-
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -1128,12 +1125,10 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        if (pathCoordinates.length > 0) {
-            if (map) { map.invalidateSize(); }
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
-            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (pathCoordinates.length > 0 && map) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
             
-            // Evaluates dynamic landmark pins based directly on runtime state tags
             if (isViewOnlyMode) {
                 const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
                 lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
@@ -1195,11 +1190,6 @@
         if (!listOutput) return;
         listOutput.innerHTML = "";
 
-        if (top10.length === 0) {
-            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:10pt;">No logs logged yet!</li>`;
-            return;
-        }
-
         top10.forEach((item, index) => {
             const li = document.createElement('li');
             li.className = 'leaderboard-row';
@@ -1225,15 +1215,24 @@
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
-                // FIXED CRITICAL ALIGNMENT: Updates both state controls synchronously before loading records
+                // 1. Instantly toggle global runtime tags
                 isViewOnlyMode = true;
                 penguinId = item.id;
                 
+                // 2. Expand UI cards blocks natively inside DOM layout structure
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
                 
-                loadPenguinHistory(item.id);
-                document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
+                // 3. Smoothly scroll player to the top map container card
+                document.getElementById('tracking-card-block').scrollIntoView({ behavior: 'smooth' });
+
+                // 4. FIXED TIMEOUT BUFFER: Wait for expanding animation properties to resolve before mapping paths
+                setTimeout(() => {
+                    if (map) { 
+                        map.invalidateSize(); 
+                    }
+                    loadPenguinHistory(item.id);
+                }, 250);
             };
             listOutput.appendChild(li);
         });
