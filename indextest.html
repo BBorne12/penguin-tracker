@@ -208,7 +208,7 @@
             background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
         }
 
-        /* Leaderboard Segment Toggles */
+        /* Toggles & Segment Selection Bars */
         .tab-bar {
             display: flex;
             background: rgba(0, 0, 0, 0.3);
@@ -239,7 +239,43 @@
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Data List & Leaderboard Row Styles */
+        /* Pagination Navigation Interface Controller Container */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .page-arrow {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: #00e5ff;
+            font-weight: bold;
+            font-size: 12pt;
+            padding: 4px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .page-arrow:disabled {
+            color: #4b5563;
+            border-color: rgba(255, 255, 255, 0.05);
+            cursor: not-allowed;
+            background: transparent;
+        }
+
+        .page-indicator {
+            font-size: 9pt;
+            color: #94a3b8;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* Data List, Leaderboard & Passport Row Styles */
         .data-list {
             margin: 0;
             padding: 0;
@@ -255,13 +291,13 @@
             border-bottom: none;
         }
 
-        .leaderboard-list {
+        .leaderboard-list, .poi-proximity-list, .passport-history-list {
             list-style: none;
             padding: 0;
             margin: 0;
         }
 
-        .leaderboard-row {
+        .leaderboard-row, .poi-proximity-row, .passport-history-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -272,30 +308,35 @@
             transition: background 0.2s;
         }
 
-        .leaderboard-row:hover {
+        .leaderboard-row:hover, .poi-proximity-row:hover, .passport-history-row:hover {
             background: rgba(255, 255, 255, 0.05);
         }
 
-        .leaderboard-row:last-child {
+        .leaderboard-row:last-child, .poi-proximity-row:last-child, .passport-history-row:last-child {
             border-bottom: none;
         }
 
-        .rank-badge {
+        .rank-badge, .poi-icon-badge, .passport-icon-badge {
             display: inline-block;
             width: 28px;
             font-weight: bold;
             color: #7dd3fc;
         }
 
-        .p-name {
+        .p-name, .poi-list-name, .passport-list-name {
             font-weight: 600;
             color: #f8fafc;
         }
 
-        .p-dist {
+        .p-dist, .poi-list-dist, .passport-list-date {
             font-weight: bold;
             color: #00e5ff;
             font-size: 10.5pt;
+        }
+
+        .passport-list-date {
+            color: #cc00ff;
+            text-shadow: 0 0 8px rgba(204,0,255,0.3);
         }
 
         .label {
@@ -461,6 +502,26 @@
             </ul>
         </div>
 
+        <div class="glass-card" id="nearby-landmarks-card">
+            <h2>🏛️ Nearby Historic Landmarks (Top 10)</h2>
+            <ul class="poi-proximity-list" id="poi-proximity-output" style="margin-top: 8px;">
+                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Awaiting location verification to scan map grid...</li>
+            </ul>
+        </div>
+
+        <div class="glass-card" id="passport-history-card">
+            <h2>📜 Monument Passport History</h2>
+            <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
+                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Loading passport stamps...</li>
+            </ul>
+            
+            <div class="pagination-container" id="passport-pagination" style="display: none;">
+                <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
+                <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
+                <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+            </div>
+        </div>
+
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -480,7 +541,12 @@
     let penguinId = urlParams.get('id') || "Mystery Penguin";
     let isViewOnlyMode = (penguinId === "Mystery Penguin");
     let activeCustomName = "";
-    let activeTab = "distance"; // Tracks current leaderboard segment layout
+    let activeTab = "distance"; 
+
+    // NEW STATE VARIABLES: Handles paginated sliding indexes cleanly
+    let activePassportPage = 1;
+    const ITEMS_PER_PAGE = 10;
+    let computedPassportStampsArray = [];
 
     document.getElementById('penguin-id').innerText = `ID: ${penguinId}`;
 
@@ -490,8 +556,9 @@
     let verifiedLat = null; 
     let verifiedLng = null;
     let historyLayerGroup = null;
-    let poiLayerGroup = null; // Layer specialized strictly for POI pins
+    let poiLayerGroup = null; 
     let currentJourneyLine = null;
+    let poiMarkersMap = {}; 
 
     // DOM hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
@@ -499,6 +566,9 @@
     const customCameraBtn = document.getElementById("custom-camera-btn");
     const penguinNameDisplay = document.getElementById("penguin-name-display");
     const totalStopsCounter = document.getElementById("total-stops-counter");
+    const poiProximityOutput = document.getElementById("poi-proximity-output");
+    const passportHistoryOutput = document.getElementById("passport-history-output");
+    const passportPagination = document.getElementById("passport-pagination");
 
     penguinNameDisplay.innerText = penguinId;
 
@@ -509,6 +579,7 @@
             verifyCurrentGPS(); 
         } else {
             activateViewOnlyUI(); 
+            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
         }
 
         setTimeout(function() {
@@ -564,7 +635,6 @@
                 
                 document.getElementById('submit-btn').disabled = false;
 
-                // Fire the dynamic Overpass API Monument Scanner
                 lookupNearbyMonuments(verifiedLat, verifiedLng);
 
             }, (err) => { 
@@ -572,66 +642,112 @@
                 coordinatesDisplay.innerText = "Location permission required.";
                 lockBadge.innerText = "LOCKED";
                 lockBadge.style.color = "#ef4444";
+                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:10pt;">⚠️ GPS sensor locked. Location permissions are required to scan nearby monuments.</li>`;
             }, { enableHighAccuracy: true });
         }
     }
 
-    // ===================================================
-    // ENHANCEMENT 1: LIVE MAP POI DISCOVERY PLOTTER
-    // ===================================================
+    function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 3958.8; 
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - Math.sqrt(a)));
+        return R * c;
+    }
+
     async function lookupNearbyMonuments(lat, lng) {
         if (!poiLayerGroup) return;
         poiLayerGroup.clearLayers();
+        poiMarkersMap = {}; 
 
         const poiGroup = document.getElementById('poi-input-group');
         const poiSelector = document.getElementById('poi-selector');
         
-        const offset = 0.009; 
+        const offset = 0.015; 
         const minLat = lat - offset; const maxLat = lat + offset;
         const minLng = lng - offset; const maxLng = lng + offset;
 
         const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:15];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
 
         try {
+            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">🔄 Pinging global database grid for historic items...</li>`;
+            
             const fetchRes = await fetch(overpassUrl);
             const resJson = await fetchRes.json();
             
             if (resJson && resJson.elements && resJson.elements.length > 0) {
                 poiSelector.innerHTML = '<option value="">-- Optional: Tag this Monument --</option>';
-                let landmarksFoundCount = 0;
+                let dynamicSortingBufferArray = [];
 
-                // Neon-Purple custom marker stylings for POI items map pins
                 const poiIcon = L.divIcon({
                     className: 'poi-div-icon',
                     html: "<div style='background-color:#cc00ff; width:14px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #cc00ff;'></div>",
                     iconSize: [14, 12], iconAnchor: [7, 6]
                 });
 
-                resJson.elements.forEach(element => {
-                    if (element.tags && element.tags.name) {
-                        landmarksFoundCount++;
+                resJson.elements.forEach((element, internalIdx) => {
+                    if (element.tags && element.tags.name && element.lat && element.lon) {
+                        const distanceInMiles = calculateHaversineDistance(lat, lng, element.lat, element.lon);
                         
-                        // A. Push entry token option node right into dropdown menu selector card
+                        dynamicSortingBufferArray.push({
+                            name: element.tags.name, lat: element.lat, lon: element.lon, miles: distanceInMiles, idToken: `poi_node_${internalIdx}`
+                        });
+
                         const optionNode = document.createElement('option');
                         optionNode.value = element.tags.name;
                         optionNode.innerText = `🏛️ ${element.tags.name}`;
                         poiSelector.appendChild(optionNode);
 
-                        // B. Drop dynamic glowing neon-purple POI pin directly onto Leaflet canvas
-                        if (element.lat && element.lon) {
-                            L.marker([element.lat, element.lon], { icon: poiIcon })
+                        const landmarkMarkerNode = L.marker([element.lat, element.lon], { icon: poiIcon })
                              .addTo(poiLayerGroup)
                              .bindPopup(`<b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
-                        }
+                             
+                        poiMarkersMap[`poi_node_${internalIdx}`] = landmarkMarkerNode;
                     }
                 });
 
-                if (landmarksFoundCount > 0) {
+                dynamicSortingBufferArray.sort((a, b) => a.miles - b.miles);
+
+                if (dynamicSortingBufferArray.length > 0) {
                     poiGroup.style.display = "block"; 
+                    poiProximityOutput.innerHTML = ""; 
+
+                    const listRenderLimit = Math.min(dynamicSortingBufferArray.length, 10);
+                    for (let m = 0; m < listRenderLimit; m++) {
+                        const landmarkItem = dynamicSortingBufferArray[m];
+                        let humanReadableDistanceText = "";
+                        if (landmarkItem.miles < 0.1) {
+                            humanReadableDistanceText = `${(landmarkItem.miles * 5280).toFixed(0)} feet away`;
+                        } else {
+                            humanReadableDistanceText = `${landmarkItem.miles.toFixed(2)} miles away`;
+                        }
+
+                        const liNode = document.createElement('li');
+                        liNode.className = 'poi-proximity-row';
+                        liNode.innerHTML = `
+                            <div><span class="poi-icon-badge">🏛️</span><span class="poi-list-name">${landmarkItem.name}</span></div>
+                            <div><span class="poi-list-dist">${humanReadableDistanceText}</span></div>`;
+                        
+                        liNode.onclick = function() {
+                            if (map && poiMarkersMap[landmarkItem.idToken]) {
+                                map.setView([landmarkItem.lat, landmarkItem.lon], 16);
+                                poiMarkersMap[landmarkItem.idToken].openPopup();
+                                document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                            }
+                        };
+                        poiProximityOutput.appendChild(liNode);
+                    }
+                } else {
+                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside your immediate radius.</li>`;
                 }
+            } else {
+                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside your immediate radius.</li>`;
             }
         } catch (poiErr) {
-            console.warn("POI dynamic landmark engine lookup bypassed safely: ", poiErr);
+            console.warn("POI fallback bypass: ", poiErr);
         }
     }
 
@@ -663,15 +779,75 @@
     function switchLeaderboardTab(tabName) {
         if (activeTab === tabName) return;
         activeTab = tabName;
-        
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
         document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
-        
         buildLeaderboard();
     }
 
     // ===================================================
-    // DATA ENGINES (MAPPED TO EXACT BACKEND SCHEMAS)
+    // ENHANCEMENT: MONUMENT HISTORY PASSPORT PAGINATOR
+    // ===================================================
+    function compilePassportLogsHistory(logs) {
+        computedPassportStampsArray = [];
+        
+        // Reverse array traversal loop to place the absolute newest monument tags at the top
+        for (let i = logs.length - 1; i >= 0; i--) {
+            const entry = logs[i];
+            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:')) {
+                // Regular Expression search extractor to cleanly slice out the monument title string inside brackets
+                const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
+                const monumentName = matchString ? matchString[1] : "Unknown Landmark";
+                
+                computedPassportStampsArray.push({
+                    name: monumentName,
+                    date: new Date(entry.created_at).toLocaleDateString()
+                });
+            }
+        }
+
+        activePassportPage = 1;
+        renderPassportPageLayout();
+    }
+
+    function renderPassportPageLayout() {
+        passportHistoryOutput.innerHTML = "";
+
+        if (computedPassportStampsArray.length === 0) {
+            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">This penguin hasn't collected any monument passport stamps yet!</li>`;
+            passportPagination.style.display = "none";
+            return;
+        }
+
+        const totalPages = Math.ceil(computedPassportStampsArray.length / ITEMS_PER_PAGE);
+        passportPagination.style.display = totalPages > 1 ? "flex" : "none";
+        document.getElementById('passport-page-indicator').innerText = `Page ${activePassportPage} of ${totalPages}`;
+        
+        document.getElementById('passport-prev-btn').disabled = (activePassportPage === 1);
+        document.getElementById('passport-next-btn').disabled = (activePassportPage === totalPages);
+
+        // Slide slice offsets calculations
+        const startIdx = (activePassportPage - 1) * ITEMS_PER_PAGE;
+        const endIdx = startIdx + ITEMS_PER_PAGE;
+        const pageItemsSlice = computedPassportStampsArray.slice(startIdx, endIdx);
+
+        pageItemsSlice.forEach(stamp => {
+            const rowLi = document.createElement('li');
+            rowLi.className = 'passport-history-row';
+            rowLi.innerHTML = `
+                <div><span class="passport-icon-badge">🏅</span><span class="p-name">${stamp.name}</span></div>
+                <div><span class="passport-list-date">${stamp.date}</span></div>`;
+            passportHistoryOutput.appendChild(rowLi);
+        });
+    }
+
+    function changePassportPage(directionOffset) {
+        activePassportPage += directionOffset;
+        renderPassportPageLayout();
+        document.getElementById('passport-history-card').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ===================================================
+    // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin") return;
@@ -691,10 +867,14 @@
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
             }
+            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Awaiting registration portfolio check-in...</li>`;
             return;
         }
 
         document.getElementById('first-find-modal').style.display = 'none';
+
+        // Map and extract passport rows histories tokens instantly
+        compilePassportLogsHistory(logs);
 
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
         if (namedEntry) {
@@ -723,7 +903,6 @@
 
             const dateObj = new Date(log.created_at).toLocaleDateString();
             let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px;">` : "";
-            
             const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
             const stopLabel = log.custom_name ? `🐧 ${log.custom_name}` : `Stop #${index + 1}`;
             
@@ -735,12 +914,14 @@
         if (pathCoordinates.length > 0) {
             currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
             targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+            
+            if (isViewOnlyMode && pathCoordinates.length > 0) {
+                const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
+                lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
+            }
         }
     }
 
-    // ===================================================
-    // ENHANCEMENT 2: DUAL TAB CALCULATION ENGINE 
-    // ===================================================
     async function buildLeaderboard() {
         const { data: allLogs, error } = await supabaseClient
             .from('penguin_logs')
@@ -752,7 +933,7 @@
         const tracks = {};
         const namesMap = {};
         const logsCountMap = {}; 
-        const monumentTagsCountMap = {}; // Tracks monument occurrences inside string properties
+        const monumentTagsCountMap = {}; 
 
         allLogs.forEach(log => {
             if (log.penguin_id) {
@@ -761,7 +942,6 @@
                 
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
                 
-                // Inspects log parameter texts for pre-pended monument tokens strings to process ranking points
                 if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) {
                     monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
                 }
@@ -781,15 +961,10 @@
             }
             const totalMiles = totalDistanceMeters * 0.000621371; 
             leaderboardData.push({ 
-                id: id, 
-                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
-                miles: totalMiles,
-                stopsCount: logsCountMap[id] || 1,
-                monumentsCount: monumentTagsCountMap[id] || 0
+                id: id, displayName: namesMap[id] ? `${namesMap[id]}` : id, miles: totalMiles, stopsCount: logsCountMap[id] || 1, monumentsCount: monumentTagsCountMap[id] || 0
             });
         });
 
-        // Toggle array sort parameters rules depending on which tab selector layer is loaded
         if (activeTab === "distance") {
             leaderboardData.sort((a, b) => b.miles - a.miles);
         } else {
@@ -800,11 +975,6 @@
         const listOutput = document.getElementById('leaderboard-output');
         listOutput.innerHTML = "";
 
-        if (top10.length === 0) {
-            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:10pt;">No logs logged yet!</li>`;
-            return;
-        }
-
         top10.forEach((item, index) => {
             const li = document.createElement('li');
             li.className = 'leaderboard-row';
@@ -814,7 +984,6 @@
             else if (index === 1) { medal = "🥈"; }
             else if (index === 2) { medal = "🥉"; }
 
-            // Dynamic presentation layer toggle
             let rightSideValueMetricsHTML = "";
             if (activeTab === "distance") {
                 rightSideValueMetricsHTML = `
@@ -827,21 +996,15 @@
             }
 
             li.innerHTML = `
-                <div>
-                    <span class="rank-badge">${medal}</span>
-                    <span class="p-name">🐧 ${item.displayName}</span>
-                </div>
+                <div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div>
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
-                penguinId = item.id;
-                isViewOnlyMode = true;
+                penguinId = item.id; isViewOnlyMode = true;
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
-                
                 document.getElementById('tracking-card-block').style.display = "block";
                 if (map) { map.invalidateSize(); }
-                
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
             };
