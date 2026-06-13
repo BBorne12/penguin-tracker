@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -82,6 +81,7 @@
             padding: 16px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             margin-bottom: 16px;
+            position: relative;
         }
 
         .glass-card-inner {
@@ -498,7 +498,6 @@
 </head>
 <body>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -511,9 +510,22 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="edit-profile-modal">
+    <div class="modal-card">
+        <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
+        <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
+        
+        <p style="font-size: 9pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
+        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
+            </div>
+        
+        <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
+        <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
+    </div>
+</div>
+
 <div class="app-container">
     
-    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -524,20 +536,19 @@
         </div>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
-        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
+            <button id="edit-profile-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #38bdf8; font-weight: bold; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
+            
             <h2>Penguin</h2>
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                <span style="font-size: 36pt; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));">🐧</span>
-                <div class="ice-glow" id="penguin-name-display" style="margin-top: 6px; font-size: 12pt; font-weight: 600;">Detecting...</div>
-                <div style="font-size: 8.5pt; color: #94a3b8;">Passed from host to host</div>
+                <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
+                <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 14pt; font-weight: 600;">Detecting...</div>
             </div>
             <ul class="data-list">
                 <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
@@ -551,7 +562,6 @@
             </ul>
         </div>
 
-        <!-- GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 16pt;">🎒</span>
@@ -569,10 +579,8 @@
             </div>
         </div>
 
-        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
-                <!-- ADDED ID TO PREVENT CRASH -->
                 <h2 id="tracking-card-title">Log Your Visit</h2>
                 <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh Location</button>
             </div>
@@ -592,12 +600,9 @@
             <div id="map"></div>
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
-        
-        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
-            <!-- PERSISTENT DROPDOWN COMPONENT BLOCK -->
             <div class="input-group" id="poi-input-group">
                 <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Monument or Marker:</label>
                 <select id="poi-selector" class="select-poi" disabled>
@@ -620,7 +625,7 @@
                 <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
             </div>
         </div>
-        <!-- LEADERBOARD CARD BLOCK -->
+
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -634,7 +639,6 @@
             </ul>
         </div>
 
-        <!-- PROXIMITY NEARBY POI DISCOVERY PANEL -->
         <div class="glass-card" id="nearby-landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Nearby Historic Landmarks</h2>
@@ -645,7 +649,6 @@
             </ul>
         </div>
 
-        <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
         <div class="glass-card" id="passport-history-card">
             <h2>📜 Monument Passport History</h2>
             <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
@@ -659,21 +662,18 @@
             </div>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
-    <!-- PERSISTENT APPLICATION MASTER FOOTER BADGE -->
     <div class="app-footer">
-        Arctic Game Engine • Version 2.6.1 (Stable Fix)
+        Arctic Game Engine • Version 2.6.3
     </div>
 
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -682,14 +682,20 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let urlParams = new URLSearchParams(window.location.search);
-    
-    // DECUPLED SYSTEM POINTERS: Tracks routing context separate from global URL markers
     let initialParamId = urlParams.get('id') || "Mystery Penguin";
     let penguinId = initialParamId; 
     let isViewOnlyMode = (initialParamId === "Mystery Penguin");
     
     let activeCustomName = "";
+    let activeAvatarColor = "#38bdf8"; 
     let activeTab = "distance"; 
+
+    // AVATAR SYSTEM CONFIGURATION
+    const AVATAR_COLORS = [
+        '#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', 
+        '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'
+    ];
+    let selectedAvatarColor = '#38bdf8'; 
 
     // STATE VARIABLES
     let activePassportPage = 1;
@@ -697,7 +703,7 @@
     let computedPassportStampsArray = [];
     let discoveredMonumentsSet = new Set(); 
 
-    // Safe Initialization Wrapper
+    // Safe Initialization
     const penguinIdHeader = document.getElementById('penguin-id');
     if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
 
@@ -711,16 +717,16 @@
     let verifiedLat = null;
     let verifiedLng = null;
 
-    // DOM hooks (Safely captured on function calls instead of globally to prevent crashes)
+    // DOM hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const customCameraBtn = document.getElementById("custom-camera-btn");
-    
     const penguinNameDisplayEl = document.getElementById("penguin-name-display");
     if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
 
     window.addEventListener("DOMContentLoaded", function() {
         initializeLiveMap();
+        updateProfileAvatar(activeAvatarColor); 
         
         if (!isViewOnlyMode) {
             verifyCurrentGPS(); 
@@ -736,6 +742,92 @@
         }, 150);
     });
 
+    // ===================================================
+    // AVATAR & PROFILE EDITING LOGIC (GLOBAL SYNC)
+    // ===================================================
+    function getPenguinSvg(bgColor) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
+            <ellipse cx="50" cy="55" rx="30" ry="35" fill="#1e293b"/>
+            <ellipse cx="50" cy="65" rx="20" ry="25" fill="#ffffff"/>
+            <circle cx="38" cy="45" r="5" fill="#ffffff"/>
+            <circle cx="62" cy="45" r="5" fill="#ffffff"/>
+            <circle cx="38" cy="45" r="2" fill="#000000"/>
+            <circle cx="62" cy="45" r="2" fill="#000000"/>
+            <polygon points="45,52 55,52 50,60" fill="#fbbf24"/>
+        </svg>`;
+    }
+
+    function initAvatarGrid() {
+        const grid = document.getElementById('avatar-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        AVATAR_COLORS.forEach(color => {
+            const div = document.createElement('div');
+            div.style.width = '45px';
+            div.style.height = '45px';
+            div.style.cursor = 'pointer';
+            div.style.borderRadius = '10px';
+            div.style.border = selectedAvatarColor === color ? '3px solid #39ff14' : '2px solid transparent';
+            div.innerHTML = getPenguinSvg(color);
+            div.onclick = () => {
+                selectedAvatarColor = color;
+                initAvatarGrid(); 
+            };
+            grid.appendChild(div);
+        });
+    }
+
+    function openEditModal() {
+        document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
+        selectedAvatarColor = activeAvatarColor || '#38bdf8';
+        initAvatarGrid();
+        document.getElementById('edit-profile-modal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-profile-modal').style.display = 'none';
+    }
+
+    async function saveProfileEdit() {
+        const newName = document.getElementById('edit-custom-name').value.trim();
+        if(!newName) return alert("Penguin name cannot be empty.");
+
+        activeCustomName = newName;
+        activeAvatarColor = selectedAvatarColor;
+
+        const pIdEl = document.getElementById('penguin-id');
+        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${activeCustomName}` : `ID: ${penguinId} (${activeCustomName})`;
+        
+        const pNameEl = document.getElementById('penguin-name-display');
+        if (pNameEl) pNameEl.innerText = activeCustomName;
+        
+        updateProfileAvatar(activeAvatarColor);
+        closeEditModal();
+
+        // Push name AND avatar color to Supabase globally
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .update({ custom_name: activeCustomName, avatar_color: activeAvatarColor })
+            .eq('penguin_id', penguinId);
+
+        if (error) {
+            console.error("Failed to update profile in DB", error);
+        } else {
+            buildLeaderboard(); 
+        }
+    }
+
+    function updateProfileAvatar(colorHex) {
+        const container = document.getElementById('profile-avatar-container');
+        if (container) {
+            container.innerHTML = getPenguinSvg(colorHex || '#38bdf8');
+        }
+    }
+
+    // ===================================================
+    // MAP AND UI LOGIC
+    // ===================================================
     function initializeLiveMap() {
         try {
             map = L.map('map').setView([39.8283, -98.5795], 4);
@@ -754,17 +846,12 @@
         }
     }
 
-    // ===================================================
-    // BULLETPROOF UI HIDING
-    // (This fixes the Javascript crash that blocked clicks)
-    // ===================================================
     function activateViewOnlyUI() {
         const safeHide = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
         const safeShow = (id) => { const el = document.getElementById(id); if (el) el.style.display = "block"; };
         const safeText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
         safeShow('view-mode-banner');
-        safeHide('profile-card-block');
         safeHide('instruction-panel');
         safeHide('input-fields-card');
         safeHide('safety-disclaimer-notice');
@@ -772,7 +859,6 @@
         safeHide('map-location-refresh-btn');
         safeHide('location-text-elements');
         
-        // This was the exact line crashing your site before because the ID didn't exist
         safeText('tracking-card-title', "Adventure Portfolio History");
         
         if (marker) { marker.remove(); marker = null; }
@@ -1010,6 +1096,11 @@
             if (pIdEl) pIdEl.innerText = `ID: ${penguinId} (${activeCustomName})`;
             const pNameEl = document.getElementById('penguin-name-display');
             if (pNameEl) pNameEl.innerText = activeCustomName;
+            
+            // Push name update to db on first discovery save
+            supabaseClient.from('penguin_logs')
+                .update({ custom_name: activeCustomName })
+                .eq('penguin_id', penguinId).then(()=>{});
         }
         const modal = document.getElementById('first-find-modal');
         if (modal) modal.style.display = 'none';
@@ -1108,9 +1199,10 @@
         if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
         if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
 
+        // Fetching avatar_color in the select query
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name')
+            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
@@ -1135,17 +1227,26 @@
 
         compilePassportLogsHistory(logs);
 
+        // Name Extraction
         let resolvedDisplayName = targetId;
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
         if (namedEntry) {
             resolvedDisplayName = namedEntry.custom_name;
         }
+        activeCustomName = resolvedDisplayName;
+
+        // Avatar Extraction from Global Database
+        const avatarEntry = logs.find(log => log.avatar_color && log.avatar_color.trim() !== "");
+        activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
         
         const pIdEl = document.getElementById('penguin-id');
         if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
         
         const pNameEl = document.getElementById("penguin-name-display");
         if (pNameEl) pNameEl.innerText = resolvedDisplayName;
+
+        // Render Global Avatar
+        updateProfileAvatar(activeAvatarColor);
 
         const totalStopsEl = document.getElementById("total-stops-counter");
         if (totalStopsEl) totalStopsEl.innerText = `${logs.length} Passport Stops Logged`;
@@ -1265,22 +1366,19 @@
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
-                // FIXED INTERACTION TRIGGER: Force state values to update perfectly without JS throwing hidden errors
                 isViewOnlyMode = true;
                 penguinId = item.id;
                 
                 activateViewOnlyUI();
                 
-                const trackingBlock = document.getElementById('tracking-card-block');
-                if (trackingBlock) {
-                    trackingBlock.style.display = "block";
-                    trackingBlock.scrollIntoView({ behavior: 'smooth' });
+                const trackCard = document.getElementById('tracking-card-block');
+                if (trackCard) {
+                    trackCard.style.display = "block";
+                    trackCard.scrollIntoView({ behavior: 'smooth' });
                 }
 
                 setTimeout(() => {
-                    if (map) { 
-                        map.invalidateSize(); 
-                    }
+                    if (map) { map.invalidateSize(); }
                     loadPenguinHistory(item.id);
                 }, 250);
             };
@@ -1350,8 +1448,15 @@
             notes = `[Tagged at Monument: ${cleanedPoiStringValue}] ${notes}`.trim();
         }
 
+        // Pushing avatar_color into the database entry!
         const submissionData = {
-            penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, photo_url: uploadedPhotoUrl, custom_name: activeCustomName
+            penguin_id: penguinId, 
+            latitude: verifiedLat, 
+            longitude: verifiedLng, 
+            finder_note: notes, 
+            photo_url: uploadedPhotoUrl, 
+            custom_name: activeCustomName,
+            avatar_color: activeAvatarColor
         };
 
         const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
