@@ -291,7 +291,7 @@
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Pagination Interface Container */
+        /* Pagination Controls */
         .pagination-container {
             display: flex;
             justify-content: space-between;
@@ -427,7 +427,7 @@
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
 
-        /* Frosted Glass Overlay Popup Styles */
+        /* Overlays & Modals */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -469,14 +469,12 @@
             border-color: #00e5ff;
         }
 
-        /* Header Layout */
         .app-header {
             border-bottom: 1px solid rgba(56, 189, 248, 0.2);
             padding-bottom: 14px;
             margin-bottom: 8px;
         }
 
-        /* App Footer Container */
         .app-footer {
             text-align: center;
             padding: 24px 0 8px 0;
@@ -861,7 +859,8 @@
             const resJson = await fetchRes.json();
             
             if (resJson && resJson.elements && resJson.elements.length > 0) {
-                poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby monument --</option>';
+                // FIXED UI OVERRIDE: Gracefully safeguard options if current layout card is hidden in DOM profile context
+                if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby monument --</option>';
                 let dynamicSortingBufferArray = [];
                 let closeDropdownOptionsCount = 0; 
 
@@ -880,7 +879,7 @@
                             name: element.tags.name, lat: element.lat, lon: element.lon, miles: distanceInMiles, idToken: `poi_node_${internalIdx}`
                         });
 
-                        if (distanceInMeters <= 500) {
+                        if (distanceInMeters <= 500 && poiSelector) {
                             closeDropdownOptionsCount++;
                             const optionNode = document.createElement('option');
                             optionNode.value = element.tags.name;
@@ -898,17 +897,19 @@
 
                 dynamicSortingBufferArray.sort((a, b) => a.miles - b.miles);
 
-                if (closeDropdownOptionsCount > 0) {
-                    poiSelector.disabled = false;
-                    poiLabelStatus.innerText = "🏛️ Nearby Historic Monument or Marker Found!";
-                    poiLabelStatus.style.color = "#39ff14";
-                    poiLabelStatus.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.2)";
-                } else {
-                    poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
-                    poiSelector.disabled = true;
-                    poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Monument or Marker:";
-                    poiLabelStatus.style.color = "#94a3b8";
-                    poiLabelStatus.style.textShadow = "none";
+                if (poiSelector && poiLabelStatus) {
+                    if (closeDropdownOptionsCount > 0) {
+                        poiSelector.disabled = false;
+                        poiLabelStatus.innerText = "🏛️ Nearby Historic Monument or Marker Found!";
+                        poiLabelStatus.style.color = "#39ff14";
+                        poiLabelStatus.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.2)";
+                    } else {
+                        poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
+                        poiSelector.disabled = true;
+                        poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Monument or Marker:";
+                        poiLabelStatus.style.color = "#94a3b8";
+                        poiLabelStatus.style.textShadow = "none";
+                    }
                 }
 
                 if (dynamicSortingBufferArray.length > 0) {
@@ -952,11 +953,13 @@
                 }
             } else {
                 poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
-                poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
-                poiSelector.disabled = true;
-                poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Monument or Marker:";
-                poiLabelStatus.style.color = "#94a3b8";
-                poiLabelStatus.style.textShadow = "none";
+                if (poiSelector && poiLabelStatus) {
+                    poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
+                    poiSelector.disabled = true;
+                    poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Monument or Marker:";
+                    poiLabelStatus.style.color = "#94a3b8";
+                    poiLabelStatus.style.textShadow = "none";
+                }
             }
         } catch (poiErr) {
             console.warn("POI fallback bypass: ", poiErr);
@@ -988,14 +991,24 @@
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
+    function switchLeaderboardTab(tabName) {
+        if (activeTab === tabName) return;
+        activeTab = tabName;
+        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        buildLeaderboard();
+    }
+
     // ===================================================
-    // MONUMENT HISTORY PASSPORT PAGINATOR
+    // MONUMENT HISTORY PASSPORT SYSTEM (FIXED GLOBAL MEMORY LOCKS)
     // ===================================================
     function compilePassportLogsHistory(logs) {
         computedPassportStampsArray = [];
-        discoveredMonumentsSet.clear(); 
         
-        if (!logs || logs.length === 0) return; 
+        if (!logs || logs.length === 0) {
+            renderPassportPageLayout();
+            return; 
+        }
 
         for (let i = logs.length - 1; i >= 0; i--) {
             const entry = logs[i];
@@ -1069,7 +1082,9 @@
 
         if (error) return;
 
-        // NEW DISCOVERY TRIGGER ZONE
+        // FIXED CRITICAL CHECK: Clear memory maps before evaluating empty conditions
+        discoveredMonumentsSet.clear();
+
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
@@ -1082,20 +1097,18 @@
 
         compilePassportLogsHistory(logs);
 
-        // FIXED INTEGRATION CRITICAL FIX: Evaluate name parameters tokens based strictly on incoming targetId value pointers
         let resolvedDisplayName = targetId;
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
         if (namedEntry) {
             resolvedDisplayName = namedEntry.custom_name;
         }
         
-        // Update display containers dynamically
         document.getElementById('penguin-id').innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
         penguinNameDisplay.innerText = resolvedDisplayName;
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
-        var targetMapContainer = isViewOnlyMode ? window.map : map;
+        var targetMapContainer = map; 
         if (!targetMapContainer) return;
 
         const pathCoordinates = [];
@@ -1120,6 +1133,8 @@
         });
 
         if (pathCoordinates.length > 0) {
+            // FIXED OVERRIDE BUFFER: Wipes size caches instantly before forcing line plots
+            if (map) { map.invalidateSize(); }
             currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
             targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
             
@@ -1181,6 +1196,7 @@
 
         const top10 = leaderboardData.slice(0, 10);
         const listOutput = document.getElementById('leaderboard-output');
+        if (!listOutput) return;
         listOutput.innerHTML = "";
 
         if (top10.length === 0) {
@@ -1214,11 +1230,11 @@
             
             li.onclick = () => {
                 isViewOnlyMode = true;
+                // FIXED ASSIGNMENT LOCK: Updates the session scope state value token before calling profile loaders
+                penguinId = item.id;
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
-                if (map) { map.invalidateSize(); }
                 
-                // FIXED EXECUTION: Passes target item.id cleanly down to history handler loops
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
             };
