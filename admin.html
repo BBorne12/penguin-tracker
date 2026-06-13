@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penguin Tracker - Central Command Operations</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Base Setup & CSS Resets */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #02060d;
+            color: #ffffff;
+            font-size: 11pt;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 16px;
+            background: radial-gradient(circle at 50% 0%, #1a102f 0%, #09071e 60%, #02060d 100%);
+            min-height: 100vh;
+        }
+
+        h1, h2, h3 {
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        h1 {
+            font-size: 18pt;
+            color: #fae8ff;
+            text-shadow: 0 0 15px rgba(217, 70, 239, 0.4);
+        }
+
+        h2 {
+            font-size: 12pt;
+            color: #d946ef;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: #f5d0fe;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+            opacity: 0.8;
+        }
+
+        .layout-section {
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        /* Command Card Styles */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(217, 70, 239, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            margin-bottom: 16px;
+        }
+
+        /* Form Inputs */
+        .admin-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(217, 70, 239, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            font-size: 11pt;
+            outline: none;
+            margin-bottom: 12px;
+        }
+
+        .admin-input:focus {
+            border-color: #d946ef;
+            box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
+        }
+
+        /* Buttons */
+        .btn-command {
+            display: inline-block;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, rgba(217, 70, 239, 0.2) 0%, rgba(162, 28, 175, 0.2) 100%);
+            border: 1px solid rgba(217, 70, 239, 0.4);
+            border-radius: 6px;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            font-size: 9pt;
+            transition: all 0.2s ease;
+        }
+
+        .btn-command:hover {
+            background: rgba(217, 70, 239, 0.3);
+            box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Tables & Lists Matrices */
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 10pt;
+        }
+
+        .matrix-table th, .matrix-table td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .matrix-table th {
+            color: #f5d0fe;
+            font-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        .matrix-table tbody tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .matrix-table tbody tr:hover {
+            background: rgba(217, 70, 239, 0.05);
+        }
+
+        .badge-count {
+            font-weight: bold;
+            color: #a21caf;
+            background: rgba(217, 70, 239, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .log-audit-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px 6px;
+        }
+
+        .log-audit-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Auth Screen Cover */
+        #auth-lock-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #02060d;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- GATEKEEPER AUTHORIZATION SHIELD -->
+<div id="auth-lock-screen">
+    <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
+        <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
+        <h2>Operations Gatekeeper</h2>
+        <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
+        <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
+        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
+    </div>
+</div>
+
+<div class="app-container" id="admin-main-ui" style="display: none;">
+    
+    <!-- HEADER -->
+    <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <div class="subtitle">Back-Office Fleet Control</div>
+            <h1>Central Command Portal</h1>
+        </div>
+        <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
+    </div>
+
+    <!-- MAIN DASHBOARD HUB -->
+    <div class="layout-section">
+        
+        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
+        <div class="glass-card">
+            <h2>Active Game Piece Inventory Matrix</h2>
+            <div style="overflow-x: auto;">
+                <table class="matrix-table" id="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Penguin Identity</th>
+                            <th>Active Name</th>
+                            <th>Total Pings</th>
+                            <th>Landmarks</th>
+                            <th>Est. Mileage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL (CONCURRENT CONSOLE) -->
+        <div class="glass-card" id="audit-panel-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                <div>
+                    <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
+                    <span style="font-size: 8.5pt; color: #cbd5e1;" id="audit-title-custom">Custom Name Pointer</span>
+                </div>
+                <button class="btn-command btn-danger" id="master-reset-btn" style="font-size: 8pt; padding: 6px 12px;">⚠️ Master Reset Piece</button>
+            </div>
+
+            <!-- CHRONOLOGICAL HISTORY SCROLLER FEED -->
+            <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                <!-- Chronological history steps inject here -->
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // --- CONNECT CREDENTIALS ---
+    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Operational memory allocation scopes
+    let activeAuditedPenguinId = null;
+    let globalCachedLogsArray = [];
+
+    // Simple client-side auth memory lock sequence
+    function verifyAccessLock() {
+        const inputPass = document.getElementById('admin-password-field').value;
+        // You can change your secret admin passcode key here
+        if (inputPass === "borne2track") {
+            sessionStorage.setItem("admin_verified", "true");
+            document.getElementById('auth-lock-screen').style.display = "none";
+            document.getElementById('admin-main-ui').style.display = "block";
+            loadAdminInventoryMatrix();
+        } else {
+            alert("Authorization token signature mismatch. Access denied.");
+        }
+    }
+
+    // Retain auth state if window is refreshed
+    if (sessionStorage.getItem("admin_verified") === "true") {
+        document.getElementById('auth-lock-screen').style.display = "none";
+        document.getElementById('admin-main-ui').style.display = "block";
+        loadAdminInventoryMatrix();
+    }
+
+    function logoutAdmin() {
+        sessionStorage.removeItem("admin_verified");
+        location.reload();
+    }
+
+    // Mathematical Haversine calculator for inventory summary aggregation rows
+    function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
+        const R = 3958.8; 
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    // ===================================================
+    // PIPELINE ENGINE: CORE DATABASE REGISTRY INVENTORY
+    // ===================================================
+    async function loadAdminInventoryMatrix() {
+        const { data: rawLogs, error } = await supabaseClient
+            .from('penguin_logs')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
+            .order('created_at', { ascending: true });
+
+        if (error || !rawLogs) {
+            document.getElementById('inventory-tbody').innerHTML = `<tr><td colspan="5" style="color:#ef4444;text-align:center;">Database error encountered. Data retrieval failed.</td></tr>`;
+            return;
+        }
+
+        globalCachedLogsArray = rawLogs; // Push records to global runtime scope memory mapping
+
+        // Process data clusters using plural structural grammar conventions
+        const fleetClusters = {};
+        rawLogs.forEach(log => {
+            const id = log.penguin_id;
+            if (!fleetClusters[id]) {
+                fleetClusters[id] = {
+                    id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id
+                };
+            }
+            fleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
+            fleetClusters[id].pingsCount++;
+            
+            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) {
+                fleetClusters[id].landmarksCount++;
+            }
+            if (log.custom_name && log.custom_name.trim() !== "") {
+                fleetClusters[id].activeName = log.custom_name;
+            }
+        });
+
+        const tbody = document.getElementById('inventory-tbody');
+        tbody.innerHTML = "";
+
+        const dynamicFleetKeys = Object.keys(fleetClusters);
+        if (dynamicFleetKeys.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No records were found in the target data store pipeline.</td></tr>`;
+            return;
+        }
+
+        dynamicFleetKeys.forEach(key => {
+            const summaryNode = fleetClusters[key];
+            
+            // Calculate aggregate mileage
+            let compiledMiles = 0;
+            for (let i = 0; i < summaryNode.points.length - 1; i++) {
+                compiledMiles += getDistanceBetweenPoints(
+                    summaryNode.points[i].lat, summaryNode.points[i].lng,
+                    summaryNode.points[i+1].lat, summaryNode.points[i+1].lng
+                );
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:bold;color:#f5d0fe;">🐧 ${summaryNode.id}</td>
+                <td><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
+                <td><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
+                <td><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
+                <td><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>`;
+            
+            // Hook row interaction to trigger simultaneous timeline file audit display
+            tr.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ===================================================
+    // AUDITING ENGINE: CHRONOLOGICAL RECORD SURGERY
+    // ===================================================
+    function launchSurgicalAuditDeck(targetId, displayName) {
+        activeAuditedPenguinId = targetId;
+        document.getElementById('audit-panel-card').style.display = "block";
+        document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
+        document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
+        
+        // Setup master reset binding anchor cleanly
+        document.getElementById('master-reset-btn').onclick = () => invokeMasterResetSequence(targetId);
+
+        renderSurgicalLogsFeed();
+    }
+
+    function renderSurgicalLogsFeed() {
+        const feedContainer = document.getElementById('audit-logs-feed');
+        feedContainer.innerHTML = "";
+
+        // Sift global cached matrix and isolate logs matching selection criteria
+        const operationalSlice = globalCachedLogsArray.filter(log => log.penguin_id === activeAuditedPenguinId);
+        
+        // Render chronological history rows matching the target selection arrays
+        // Displays newest entries at top of audit scrolling deck layout viewport
+        for (let i = operationalSlice.length - 1; i >= 0; i--) {
+            const logItem = operationalSlice[i];
+            const timestampText = new Date(logItem.created_at).toLocaleString();
+            
+            let photoElementHTML = "";
+            let stripPhotoActionButtonHTML = "";
+            
+            if (logItem.photo_url) {
+                photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
+                // Operational task button: Wipe photo parameters while preserving coordinate entry metadata logs
+                stripPhotoActionButtonHTML = `<button onclick="stripPhotoLink('${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
+            }
+
+            const itemBlock = document.createElement('div');
+            itemBlock.className = "log-audit-item";
+            itemBlock.innerHTML = `
+                <div style="display:flex; justify-content:between; align-items:center;">
+                    <span style="font-family:monospace; color:#00e5ff; font-size:8.5pt;">⏱️ ${timestampText}</span>
+                    <div style="margin-left:auto;">
+                        ${stripPhotoActionButtonHTML}
+                        <button onclick="purgeSingleLog('${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
+                    </div>
+                </div>
+                <div style="font-size:9pt; color:#cbd5e1; margin-top:4px;">
+                    <span style="color:#94a3b8; font-size:8pt; display:block;">Coords: ${logItem.latitude.toFixed(4)}°, ${logItem.longitude.toFixed(4)}°</span>
+                    <strong>Note:</strong> <i>"${logItem.finder_note || 'No description text recorded.'}"</i>
+                    ${photoElementHTML}
+                </div>`;
+            
+            feedContainer.appendChild(itemBlock);
+        }
+    }
+
+    // ===================================================
+    // MUTATION ENGINES: EXECUTING STORAGE OVERRIDES
+    // ===================================================
+
+    // ACTION A: Purge a single record safely based on row unique ISO timestamp metrics matches
+    async function purgeSingleLog(createdAtISOString) {
+        if (!confirm("Are you certain you want to purge this record entry? This action cannot be revoked.")) return;
+
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .delete()
+            .eq('penguin_id', activeAuditedPenguinId)
+            .eq('created_at', createdAtISOString);
+
+        if (error) {
+            alert("Database processing exception encountered. Record purge was denied.");
+            return;
+        }
+
+        alert("Record row purged completely.");
+        // Refresh local memory matrix states seamlessly
+        await loadAdminInventoryMatrix();
+        renderSurgicalLogsFeed();
+    }
+
+    // ACTION B: Wipe attached photo elements parameters link while retaining base telemetry logs rows structure
+    async function stripPhotoLink(createdAtISOString) {
+        if (!confirm("Remove the photo file string location token from this row record payload?")) return;
+
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .update({ photo_url: null })
+            .eq('penguin_id', activeAuditedPenguinId)
+            .eq('created_at', createdAtISOString);
+
+        if (error) {
+            alert("Database processing override faulted.");
+            return;
+        }
+
+        alert("Image pointer reference stripped successfully.");
+        await loadAdminInventoryMatrix();
+        renderSurgicalLogsFeed();
+    }
+
+    // ACTION C: Total master clearance overhaul sequence mutation command
+    async function invokeMasterResetSequence(targetId) {
+        const doubleCheckVerificationPhrase = prompt(`🚨 MASTER RESET HAZARD DECK ACTIVATED 🚨\n\nThis operation destroys EVERY logging marker record row associated with "${targetId}".\n\nTo proceed with this file structure overhaul, type out the reset token key string phrase exactly: "OVERHAUL FLEET DATA"`);
+        
+        if (doubleCheckVerificationPhrase !== "OVERHAUL FLEET DATA") {
+            alert("Verification key signature validation failed. Master reset sequence aborted.");
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .delete()
+            .eq('penguin_id', targetId);
+
+        if (error) {
+            alert("Mass structural overwrite operation was rejected by server schemas safeguards configurations.");
+            return;
+        }
+
+        alert(`Success! Data records for "${targetId}" were overwritten and wiped completely. The piece has returned to standard factory tracking defaults status templates configuration settings.`);
+        document.getElementById('audit-panel-card').style.display = "none";
+        activeAuditedPenguinId = null;
+        
+        await loadAdminInventoryMatrix();
+    }
+</script>
+
+</body>
+</html>
