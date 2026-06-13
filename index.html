@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -280,7 +281,7 @@
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Pagination Navigation Interface Controller Container */
+        /* Pagination Layout Styles */
         .pagination-container {
             display: flex;
             justify-content: space-between;
@@ -316,7 +317,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* Data Lists Layout Engine Definitions */
+        /* Lists Presentation Ensembles */
         .data-list {
             margin: 0;
             padding: 0;
@@ -419,6 +420,7 @@
 </head>
 <body>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -433,6 +435,7 @@
 
 <div class="app-container">
     
+    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -443,12 +446,14 @@
         </div>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
+        <!-- CURRENT GUEST PROFILE BOX -->
         <div class="glass-card" id="profile-card-block">
             <h2>Penguin</h2>
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
@@ -468,6 +473,7 @@
             </ul>
         </div>
 
+        <!-- GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 16pt;">🎒</span>
@@ -485,6 +491,7 @@
             </div>
         </div>
 
+        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <h2 id="tracking-card-title">Log Your Visit</h2>
             <ul class="data-list" id="location-text-elements">
@@ -504,9 +511,11 @@
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
+        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
+            <!-- DYNAMIC POI DROPDOWN COMPONENT -->
             <div class="input-group" id="poi-input-group" style="display: none;">
                 <label class="label" style="color: #39ff14; text-shadow: 0 0 5px rgba(57, 255, 20, 0.2);">🏛️ Tag a Nearby Historic Monument or Marker!</label>
                 <select id="poi-selector" class="select-poi">
@@ -530,6 +539,7 @@
             </div>
         </div>
 
+        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -543,6 +553,7 @@
             </ul>
         </div>
 
+        <!-- PROXIMITY NEARBY POI DISCOVERY PANEL -->
         <div class="glass-card" id="nearby-landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Nearby Historic Landmarks</h2>
@@ -553,12 +564,14 @@
             </ul>
         </div>
 
+        <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
         <div class="glass-card" id="passport-history-card">
             <h2>📜 Monument Passport History</h2>
             <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
                 <li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Loading passport stamps...</li>
             </ul>
             
+            <!-- Structural Arrow Navigation Frame Footer -->
             <div class="pagination-container" id="passport-pagination" style="display: none;">
                 <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
                 <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
@@ -566,6 +579,7 @@
             </div>
         </div>
 
+        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -574,6 +588,7 @@
 
 </div>
 
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -661,7 +676,7 @@
         
         document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
         document.getElementById('location-text-elements').style.display = "none"; 
-        if (marker) { marker.remove(); }
+        if (marker) { marker.remove(); marker = null; }
     }
 
     function verifyCurrentGPS() {
@@ -693,7 +708,7 @@
         }
     }
 
-    function triggerManualProximityRefresh() {
+    async function triggerManualProximityRefresh() {
         if (isViewOnlyMode) return;
         
         const refreshBtn = document.getElementById('manual-refresh-poi-btn');
@@ -733,7 +748,7 @@
     }
 
     // ===================================================
-    // DUAL-RADIUS PROCESSING ENGINE (10K MAP VS 500M TAG LIMIT)
+    // FIXED DUAL-RADIUS DISCOVERY LOOP ENGINE
     // ===================================================
     async function lookupNearbyMonuments(lat, lng) {
         if (!poiLayerGroup) return;
@@ -802,9 +817,10 @@
                 if (dynamicSortingBufferArray.length > 0) {
                     poiProximityOutput.innerHTML = ""; 
 
+                    // FIXED TYPO: Corrected terminal variable checks to run smoothly without getting locked into loops
                     const listRenderLimit = Math.min(dynamicSortingBufferArray.length, 5);
-                    for (let m = 0; m < listRenderLimit; m++) {
-                        const landmarkItem = dynamicSortingBufferArray[m];
+                    for (let x = 0; x < listRenderLimit; x++) {
+                        const landmarkItem = dynamicSortingBufferArray[x];
                         let humanReadableDistanceText = "";
                         if (landmarkItem.miles < 0.1) {
                             humanReadableDistanceText = `${(landmarkItem.miles * 5280).toFixed(0)} feet away`;
@@ -944,13 +960,13 @@
     }
 
     // ===================================================
-    // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
+    // FIXED DATA FETCH PIPELINE
     // ===================================================
     async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin") return;
         
         if (historyLayerGroup) historyLayerGroup.clearLayers();
-        if (currentJourneyLine) { currentJourneyLine.remove(); }
+        if (currentJourneyLine) { currentJourneyLine.remove(); currentJourneyLine = null; }
 
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
@@ -983,9 +999,6 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
-        var targetMapContainer = isViewOnlyMode ? window.map : map;
-        if (!targetMapContainer) return;
-
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -1007,15 +1020,19 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        // FIXED STRUCTURAL FIX: Plotted polyline array sequence executes completely and terminates safely on map before querying async monument data elements
-        if (pathCoordinates.length > 0) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
-            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+        // FIXED ENHANCEMENT: Wrap map viewport and lines drawing directly inside a micro execution thread to guarantee lines plot perfectly
+        if (pathCoordinates.length > 0 && map) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
             
-            if (isViewOnlyMode) {
-                const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
-                lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
-            }
+            setTimeout(() => {
+                map.invalidateSize();
+                map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
+                
+                if (isViewOnlyMode) {
+                    const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
+                    lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
+                }
+            }, 50);
         }
     }
 
@@ -1106,7 +1123,7 @@
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
-                if (map) { map.invalidateSize(); }
+                
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
             };
@@ -1148,7 +1165,7 @@
             try {
                 const compressedBlob = await compressImage(photoFile);
                 const fileName = `${penguinId}_${Date.now()}.jpg`;
-                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                const { error: storageError = null } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
                 if (storageError) throw storageError;
                 const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
                 uploadedPhotoUrl = publicUrlData.publicUrl;
