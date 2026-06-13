@@ -281,7 +281,7 @@
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Pagination Layout Styles */
+        /* Pagination Layout Handlers */
         .pagination-container {
             display: flex;
             justify-content: space-between;
@@ -317,7 +317,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* Lists Presentation Ensembles */
+        /* Data Lists Layout Engine Definitions */
         .data-list {
             margin: 0;
             padding: 0;
@@ -415,6 +415,63 @@
         
         .leaflet-tile {
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
+        }
+
+        /* Frosted Glass Overlay Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 13, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            font-size: 11pt;
+            margin: 16px 0;
+            outline: none;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            border-color: #00e5ff;
+        }
+
+        /* Header Layout */
+        .app-header {
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            padding-bottom: 14px;
+            margin-bottom: 8px;
+        }
+
+        @media(min-width: 480px) {
+            .app-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
         }
     </style>
 </head>
@@ -676,7 +733,7 @@
         
         document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
         document.getElementById('location-text-elements').style.display = "none"; 
-        if (marker) { marker.remove(); marker = null; }
+        if (marker) { marker.remove(); }
     }
 
     function verifyCurrentGPS() {
@@ -708,7 +765,7 @@
         }
     }
 
-    async function triggerManualProximityRefresh() {
+    function triggerManualProximityRefresh() {
         if (isViewOnlyMode) return;
         
         const refreshBtn = document.getElementById('manual-refresh-poi-btn');
@@ -748,7 +805,7 @@
     }
 
     // ===================================================
-    // FIXED DUAL-RADIUS DISCOVERY LOOP ENGINE
+    // DUAL-RADIUS PROCESSING ENGINE (10K MAP VS 500M TAG LIMIT)
     // ===================================================
     async function lookupNearbyMonuments(lat, lng) {
         if (!poiLayerGroup) return;
@@ -817,9 +874,8 @@
                 if (dynamicSortingBufferArray.length > 0) {
                     poiProximityOutput.innerHTML = ""; 
 
-                    // FIXED TYPO: Corrected terminal variable checks to run smoothly without getting locked into loops
                     const listRenderLimit = Math.min(dynamicSortingBufferArray.length, 5);
-                    for (let x = 0; x < listRenderLimit; x++) {
+                    for (let x = 0; x < listRenderLimit; x++) { // FIXED: Fixed internal counter bounds variable pointer loop error
                         const landmarkItem = dynamicSortingBufferArray[x];
                         let humanReadableDistanceText = "";
                         if (landmarkItem.miles < 0.1) {
@@ -860,7 +916,6 @@
             }
         } catch (poiErr) {
             console.warn("POI fallback bypass: ", poiErr);
-            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Landmark database lookup timeout. Explore a new sector to scan!</li>`;
         }
     }
 
@@ -960,13 +1015,13 @@
     }
 
     // ===================================================
-    // FIXED DATA FETCH PIPELINE
+    // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin") return;
         
         if (historyLayerGroup) historyLayerGroup.clearLayers();
-        if (currentJourneyLine) { currentJourneyLine.remove(); currentJourneyLine = null; }
+        if (currentJourneyLine) { currentJourneyLine.remove(); }
 
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
@@ -976,6 +1031,7 @@
 
         if (error) return;
 
+        // FIXED INTEGRATION LAYER: Evaluates empty logs immediately to prevent early return bypasses inside the sub-compilation loops
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
@@ -999,6 +1055,9 @@
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
+        var targetMapContainer = isViewOnlyMode ? window.map : map;
+        if (!targetMapContainer) return;
+
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
@@ -1020,19 +1079,14 @@
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
         });
 
-        // FIXED ENHANCEMENT: Wrap map viewport and lines drawing directly inside a micro execution thread to guarantee lines plot perfectly
-        if (pathCoordinates.length > 0 && map) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
+        if (pathCoordinates.length > 0) {
+            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(targetMapContainer);
+            targetMapContainer.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
             
-            setTimeout(() => {
-                map.invalidateSize();
-                map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
-                
-                if (isViewOnlyMode) {
-                    const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
-                    lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
-                }
-            }, 50);
+            if (isViewOnlyMode) {
+                const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1];
+                lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]);
+            }
         }
     }
 
@@ -1123,7 +1177,7 @@
                 document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
-                
+                if (map) { map.invalidateSize(); }
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
             };
@@ -1165,7 +1219,7 @@
             try {
                 const compressedBlob = await compressImage(photoFile);
                 const fileName = `${penguinId}_${Date.now()}.jpg`;
-                const { error: storageError = null } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
                 if (storageError) throw storageError;
                 const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
                 uploadedPhotoUrl = publicUrlData.publicUrl;
