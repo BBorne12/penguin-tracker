@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -32,6 +33,8 @@
             padding: 16px;
             background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Typography & Headings */
@@ -68,6 +71,7 @@
         .layout-section {
             width: 100%;
             margin-top: 16px;
+            flex: 1;
         }
 
         /* Glassmorphism Card Style */
@@ -287,7 +291,7 @@
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Pagination Controls */
+        /* Pagination Interface Container */
         .pagination-container {
             display: flex;
             justify-content: space-between;
@@ -422,10 +426,81 @@
         .leaflet-tile {
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
+
+        /* Frosted Glass Overlay Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 13, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            font-size: 11pt;
+            margin: 16px 0;
+            outline: none;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            border-color: #00e5ff;
+        }
+
+        /* Header Layout */
+        .app-header {
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            padding-bottom: 14px;
+            margin-bottom: 8px;
+        }
+
+        /* App Footer Container */
+        .app-footer {
+            text-align: center;
+            padding: 24px 0 8px 0;
+            font-size: 8pt;
+            color: #4b5563;
+            letter-spacing: 1px;
+            font-weight: 500;
+            text-transform: uppercase;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+            margin-top: 32px;
+        }
+
+        @media(min-width: 480px) {
+            .app-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
+        }
     </style>
 </head>
 <body>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -440,6 +515,7 @@
 
 <div class="app-container">
     
+    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -450,12 +526,14 @@
         </div>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
+        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
             <h2>Penguin</h2>
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
@@ -475,6 +553,7 @@
             </ul>
         </div>
 
+        <!-- GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 16pt;">🎒</span>
@@ -492,6 +571,7 @@
             </div>
         </div>
 
+        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2>Log Your Visit</h2>
@@ -514,11 +594,13 @@
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
+        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
+            <!-- PERSISTENT DROPDOWN COMPONENT BLOCK -->
             <div class="input-group" id="poi-input-group">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Monument or Marker:</label>
+                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛 White Tag a Nearby Historic Monument or Marker:</label>
                 <select id="poi-selector" class="select-poi" disabled>
                     <option value="">-- Not near any landmarks (Must be within 500m) --</option>
                 </select>
@@ -540,6 +622,7 @@
             </div>
         </div>
 
+        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -553,6 +636,7 @@
             </ul>
         </div>
 
+        <!-- PROXIMITY NEARBY POI DISCOVERY PANEL -->
         <div class="glass-card" id="nearby-landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Nearby Historic Landmarks</h2>
@@ -563,6 +647,7 @@
             </ul>
         </div>
 
+        <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
         <div class="glass-card" id="passport-history-card">
             <h2>📜 Monument Passport History</h2>
             <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
@@ -576,14 +661,21 @@
             </div>
         </div>
 
+        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
+    <!-- PERSISTENT APPLICATION MASTER FOOTER BADGE -->
+    <div class="app-footer">
+        Arctic Game Engine • Version 2.6
+    </div>
+
 </div>
 
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -788,7 +880,6 @@
                             name: element.tags.name, lat: element.lat, lon: element.lon, miles: distanceInMiles, idToken: `poi_node_${internalIdx}`
                         });
 
-                        // Filter condition loop: Append items if within 500 meters
                         if (distanceInMeters <= 500) {
                             closeDropdownOptionsCount++;
                             const optionNode = document.createElement('option');
@@ -799,7 +890,7 @@
 
                         const landmarkMarkerNode = L.marker([element.lat, element.lon], { icon: poiIcon })
                              .addTo(poiLayerGroup)
-                             .bindPopup(`<b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
+                             .bindPopup(`<b><b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
                              
                         poiMarkersMap[`poi_node_${internalIdx}`] = landmarkMarkerNode;
                     }
@@ -807,7 +898,6 @@
 
                 dynamicSortingBufferArray.sort((a, b) => a.miles - b.miles);
 
-                // FIXED CAPABILITIES: Control permanent state configurations of select parameters box frame
                 if (closeDropdownOptionsCount > 0) {
                     poiSelector.disabled = false;
                     poiLabelStatus.innerText = "🏛️ Nearby Historic Monument or Marker Found!";
@@ -913,6 +1003,8 @@
         computedPassportStampsArray = [];
         discoveredMonumentsSet.clear(); 
         
+        if (!logs || logs.length === 0) return; // Prevent loop checks on empty arrays
+
         for (let i = logs.length - 1; i >= 0; i--) {
             const entry = logs[i];
             if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:')) {
@@ -985,7 +1077,7 @@
 
         if (error) return;
 
-        // FIXED INTEGRATION LAYER Check
+        // FIXED INTEGRATION CRITICAL FIX: Evaluate new discoveries BEFORE running string parsing engines
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
