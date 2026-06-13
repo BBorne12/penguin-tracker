@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penguin Tracker - Professional Edition v2.7</title>
+    <title>Penguin Tracker - Arctic Adventure Mode</title>
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* =========================================
-           BASE SETUP & CSS RESETS
-           ========================================= */
+        /* Base Setup & CSS Resets */
         *, *::before, *::after {
             box-sizing: border-box;
         }
@@ -50,7 +48,6 @@
             font-size: 18pt;
             color: #e0f2fe;
             text-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
-            margin-bottom: 8px;
         }
 
         h2 {
@@ -70,15 +67,14 @@
             opacity: 0.8;
         }
 
-        /* =========================================
-           LAYOUT BLOCKS & GLASSMORPHISM
-           ========================================= */
+        /* Layout Blocks */
         .layout-section {
             width: 100%;
             margin-top: 16px;
             flex: 1;
         }
 
+        /* Glassmorphism Card Style */
         .glass-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(56, 189, 248, 0.15);
@@ -94,6 +90,7 @@
             margin-top: 12px;
         }
 
+        /* Card Header Flex Layout */
         .card-header-flex {
             display: flex;
             justify-content: space-between;
@@ -101,9 +98,7 @@
             margin-bottom: 12px;
         }
 
-        /* =========================================
-           GLOWING & STATUS ELEMENTS
-           ========================================= */
+        /* Glowing & Status Elements */
         .aurora-glow {
             color: #39ff14;
             text-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
@@ -155,9 +150,7 @@
             line-height: 1.4;
         }
 
-        /* =========================================
-           INPUT FORM ELEMENTS
-           ========================================= */
+        /* Styled Input Form Elements */
         .note-textarea, .select-poi {
             width: 100%;
             background: rgba(0, 0, 0, 0.4);
@@ -202,13 +195,12 @@
             box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
         }
 
+        /* Hidden standard file inputs */
         .hidden-file-input {
             display: none !important;
         }
 
-        /* =========================================
-           ACTION CONTROL BUTTONS
-           ========================================= */
+        /* Action Control Buttons */
         .btn-glow {
             display: block;
             width: 100%;
@@ -268,9 +260,7 @@
             box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
         }
 
-        /* =========================================
-           LEADERBOARD TABS & PAGINATION
-           ========================================= */
+        /* Leaderboard Segment Toggles */
         .tab-bar {
             display: flex;
             background: rgba(0, 0, 0, 0.3);
@@ -301,6 +291,7 @@
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
+        /* Pagination Controls */
         .pagination-container {
             display: flex;
             justify-content: space-between;
@@ -336,9 +327,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* =========================================
-           DATA LISTS & ROWS
-           ========================================= */
+        /* Data Lists Styles */
         .data-list {
             margin: 0;
             padding: 0;
@@ -423,12 +412,10 @@
             text-align: right;
         }
 
-        /* =========================================
-           INTERACTIVE MAP CONTAINER
-           ========================================= */
+        /* Interactive Map Container */
         #map {
             width: 100% !important;
-            height: 250px !important;
+            height: 220px !important;
             background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important;
             border-radius: 8px !important;
@@ -440,9 +427,7 @@
             filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%);
         }
 
-        /* =========================================
-           OVERLAYS & MODALS
-           ========================================= */
+        /* Overlays & Modals */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -513,6 +498,7 @@
 </head>
 <body>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -527,6 +513,7 @@
 
 <div class="app-container">
     
+    <!-- HEADER SECTION -->
     <div class="app-header">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -537,12 +524,14 @@
         </div>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
+        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
             <h2>Penguin</h2>
             <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
@@ -562,6 +551,7 @@
             </ul>
         </div>
 
+        <!-- GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 16pt;">🎒</span>
@@ -579,9 +569,11 @@
             </div>
         </div>
 
+        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
-                <h2>Log Your Visit</h2>
+                <!-- ADDED ID TO PREVENT CRASH -->
+                <h2 id="tracking-card-title">Log Your Visit</h2>
                 <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh Location</button>
             </div>
             <ul class="data-list" id="location-text-elements">
@@ -601,9 +593,11 @@
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
+        <!-- INPUT INTERFACES -->
         <div class="glass-card" id="input-fields-card">
             <h2>Log New Stop</h2>
             
+            <!-- PERSISTENT DROPDOWN COMPONENT BLOCK -->
             <div class="input-group" id="poi-input-group">
                 <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Monument or Marker:</label>
                 <select id="poi-selector" class="select-poi" disabled>
@@ -626,7 +620,7 @@
                 <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
             </div>
         </div>
-
+        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -640,6 +634,7 @@
             </ul>
         </div>
 
+        <!-- PROXIMITY NEARBY POI DISCOVERY PANEL -->
         <div class="glass-card" id="nearby-landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Nearby Historic Landmarks</h2>
@@ -650,6 +645,7 @@
             </ul>
         </div>
 
+        <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
         <div class="glass-card" id="passport-history-card">
             <h2>📜 Monument Passport History</h2>
             <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
@@ -663,23 +659,24 @@
             </div>
         </div>
 
+        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
+    <!-- PERSISTENT APPLICATION MASTER FOOTER BADGE -->
     <div class="app-footer">
-        Arctic Game Engine • Version 2.7
+        Arctic Game Engine • Version 2.6.1 (Stable Fix)
     </div>
 
 </div>
 
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // ===================================================
-    // INITIALIZATION & SUPABASE CONFIGURATION
-    // ===================================================
+    // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -700,7 +697,9 @@
     let computedPassportStampsArray = [];
     let discoveredMonumentsSet = new Set(); 
 
-    document.getElementById('penguin-id').innerText = `ID: ${penguinId}`;
+    // Safe Initialization Wrapper
+    const penguinIdHeader = document.getElementById('penguin-id');
+    if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
 
     // Map Global Pointers
     let map = null;
@@ -712,17 +711,13 @@
     let verifiedLat = null;
     let verifiedLng = null;
 
-    // DOM hooks
+    // DOM hooks (Safely captured on function calls instead of globally to prevent crashes)
     const coordinatesDisplay = document.getElementById("coordinates-display");
     const lockBadge = document.getElementById("lock-badge");
     const customCameraBtn = document.getElementById("custom-camera-btn");
-    const penguinNameDisplay = document.getElementById("penguin-name-display");
-    const totalStopsCounter = document.getElementById("total-stops-counter");
-    const poiProximityOutput = document.getElementById("poi-proximity-output");
-    const passportHistoryOutput = document.getElementById("passport-history-output");
-    const passportPagination = document.getElementById("passport-pagination");
-
-    penguinNameDisplay.innerText = penguinId;
+    
+    const penguinNameDisplayEl = document.getElementById("penguin-name-display");
+    if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
 
     window.addEventListener("DOMContentLoaded", function() {
         initializeLiveMap();
@@ -731,7 +726,8 @@
             verifyCurrentGPS(); 
         } else {
             activateViewOnlyUI(); 
-            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
+            const poiOutput = document.getElementById("poi-proximity-output");
+            if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
         }
 
         setTimeout(function() {
@@ -740,9 +736,6 @@
         }, 150);
     });
 
-    // ===================================================
-    // LEAFLET MAP INITIALIZATION & VIEW STATES
-    // ===================================================
     function initializeLiveMap() {
         try {
             map = L.map('map').setView([39.8283, -98.5795], 4);
@@ -761,23 +754,30 @@
         }
     }
 
+    // ===================================================
+    // BULLETPROOF UI HIDING
+    // (This fixes the Javascript crash that blocked clicks)
+    // ===================================================
     function activateViewOnlyUI() {
-        document.getElementById('view-mode-banner').style.display = "block";
-        document.getElementById('profile-card-block').style.display = "none";
-        document.getElementById('instruction-panel').style.display = "none";
-        document.getElementById('input-fields-card').style.display = "none";
-        document.getElementById('safety-disclaimer-notice').style.display = "none";
-        document.getElementById('manual-refresh-poi-btn').style.display = "none"; 
-        document.getElementById('map-location-refresh-btn').style.display = "none"; 
+        const safeHide = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
+        const safeShow = (id) => { const el = document.getElementById(id); if (el) el.style.display = "block"; };
+        const safeText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+
+        safeShow('view-mode-banner');
+        safeHide('profile-card-block');
+        safeHide('instruction-panel');
+        safeHide('input-fields-card');
+        safeHide('safety-disclaimer-notice');
+        safeHide('manual-refresh-poi-btn');
+        safeHide('map-location-refresh-btn');
+        safeHide('location-text-elements');
         
-        document.getElementById('tracking-card-title').innerText = "Adventure Portfolio History";
-        document.getElementById('location-text-elements').style.display = "none"; 
+        // This was the exact line crashing your site before because the ID didn't exist
+        safeText('tracking-card-title', "Adventure Portfolio History");
+        
         if (marker) { marker.remove(); marker = null; }
     }
 
-    // ===================================================
-    // HARDWARE GEOLOCATION TRACKING
-    // ===================================================
     function verifyCurrentGPS() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -787,22 +787,29 @@
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 
-                coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
-                document.getElementById('coord-display').innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
+                if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
+                const coordDisplayHidden = document.getElementById('coord-display');
+                if (coordDisplayHidden) coordDisplayHidden.innerText = `Lat: ${verifiedLat.toFixed(5)} | Lng: ${verifiedLng.toFixed(5)}`;
                 
-                lockBadge.innerText = "✓ LOCATION DETECTED";
-                lockBadge.style.color = "#39ff14";
+                if (lockBadge) {
+                    lockBadge.innerText = "✓ LOCATION DETECTED";
+                    lockBadge.style.color = "#39ff14";
+                }
                 
-                document.getElementById('submit-btn').disabled = false;
+                const submitBtn = document.getElementById('submit-btn');
+                if (submitBtn) submitBtn.disabled = false;
 
                 lookupNearbyMonuments(verifiedLat, verifiedLng);
 
             }, (err) => { 
                 console.warn("GPS focus skipped: ", err);
-                coordinatesDisplay.innerText = "Location permission required.";
-                lockBadge.innerText = "LOCKED";
-                lockBadge.style.color = "#ef4444";
-                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:10pt;">⚠️ GPS sensor locked. Location permissions are required to scan nearby monuments.</li>`;
+                if (coordinatesDisplay) coordinatesDisplay.innerText = "Location permission required.";
+                if (lockBadge) {
+                    lockBadge.innerText = "LOCKED";
+                    lockBadge.style.color = "#ef4444";
+                }
+                const poiOutput = document.getElementById("poi-proximity-output");
+                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:10pt;">⚠️ GPS sensor locked. Location permissions are required to scan nearby monuments.</li>`;
             }, { enableHighAccuracy: true });
         }
     }
@@ -813,26 +820,26 @@
         const refreshBtnList = document.getElementById('manual-refresh-poi-btn');
         const refreshBtnMap = document.getElementById('map-location-refresh-btn');
         
-        refreshBtnList.innerText = "Scanning..."; refreshBtnList.disabled = true;
-        refreshBtnMap.innerText = "Scanning..."; refreshBtnMap.disabled = true;
+        if (refreshBtnList) { refreshBtnList.innerText = "Scanning..."; refreshBtnList.disabled = true; }
+        if (refreshBtnMap) { refreshBtnMap.innerText = "Scanning..."; refreshBtnMap.disabled = true; }
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; 
                 verifiedLng = position.coords.longitude;
                 
-                coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
+                if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
 
                 lookupNearbyMonuments(verifiedLat, verifiedLng).then(() => {
-                    refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false;
-                    refreshBtnMap.innerText = "📍 Refresh Location"; refreshBtnMap.disabled = false;
+                    if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
+                    if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh Location"; refreshBtnMap.disabled = false; }
                 });
             }, () => {
                 alert("GPS hardware link unavailable.");
-                refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false;
-                refreshBtnMap.innerText = "📍 Refresh Location"; refreshBtnMap.disabled = false;
+                if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
+                if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh Location"; refreshBtnMap.disabled = false; }
             }, { enableHighAccuracy: true });
         }
     }
@@ -858,6 +865,7 @@
 
         const poiSelector = document.getElementById('poi-selector');
         const poiLabelStatus = document.getElementById('poi-label-status');
+        const poiProximityOutput = document.getElementById("poi-proximity-output");
         
         const offset = 0.090; 
         const minLat = lat - offset; const maxLat = lat + offset;
@@ -866,7 +874,7 @@
         const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
 
         try {
-            poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">🔄 Scanning 10,000m regional grid zone for historic landmarks...</li>`;
+            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">🔄 Scanning 10,000m regional grid zone for historic landmarks...</li>`;
             
             const fetchRes = await fetch(overpassUrl);
             const resJson = await fetchRes.json();
@@ -924,7 +932,7 @@
                     }
                 }
 
-                if (dynamicSortingBufferArray.length > 0) {
+                if (dynamicSortingBufferArray.length > 0 && poiProximityOutput) {
                     poiProximityOutput.innerHTML = ""; 
 
                     const listRenderLimit = Math.min(dynamicSortingBufferArray.length, 5);
@@ -960,10 +968,10 @@
                         };
                         poiProximityOutput.appendChild(liNode);
                     }
-                } else {
+                } else if (poiProximityOutput) {
                     poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
                 }
-            } else {
+            } else if (poiProximityOutput) {
                 poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
                 if (poiSelector && poiLabelStatus) {
                     poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
@@ -978,19 +986,17 @@
         }
     }
 
-    // ===================================================
-    // UI MODALS & FILE HANDLING
-    // ===================================================
     function triggerHardwareCameraCapture() {
-        document.getElementById('penguin-photo').click();
+        const fileInput = document.getElementById('penguin-photo');
+        if (fileInput) fileInput.click();
     }
 
     function handleFileSelectionChange() {
-        const fileHolder = document.getElementById('penguin-photo').files[0];
-        if (fileHolder) {
+        const fileInput = document.getElementById('penguin-photo');
+        if (fileInput && fileInput.files[0] && customCameraBtn) {
             customCameraBtn.innerText = "📸 Photo Attached!";
             customCameraBtn.classList.add("photo-attached");
-        } else {
+        } else if (customCameraBtn) {
             customCameraBtn.innerText = "📷 Take a Picture";
             customCameraBtn.classList.remove("photo-attached");
         }
@@ -1000,17 +1006,25 @@
         const nameInput = document.getElementById('modal-custom-name').value.trim();
         if (nameInput) {
             activeCustomName = nameInput;
-            document.getElementById('penguin-id').innerText = `ID: ${penguinId} (${activeCustomName})`;
-            penguinNameDisplay.innerText = activeCustomName;
+            const pIdEl = document.getElementById('penguin-id');
+            if (pIdEl) pIdEl.innerText = `ID: ${penguinId} (${activeCustomName})`;
+            const pNameEl = document.getElementById('penguin-name-display');
+            if (pNameEl) pNameEl.innerText = activeCustomName;
         }
-        document.getElementById('first-find-modal').style.display = 'none';
+        const modal = document.getElementById('first-find-modal');
+        if (modal) modal.style.display = 'none';
     }
 
     function switchLeaderboardTab(tabName) {
         if (activeTab === tabName) return;
         activeTab = tabName;
-        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        
+        const distTab = document.getElementById('tab-distance');
+        if (distTab) distTab.classList.toggle('active', tabName === 'distance');
+        
+        const monTab = document.getElementById('tab-monuments');
+        if (monTab) monTab.classList.toggle('active', tabName === 'monuments');
+        
         buildLeaderboard();
     }
 
@@ -1046,20 +1060,25 @@
     }
 
     function renderPassportPageLayout() {
+        const passportHistoryOutput = document.getElementById('passport-history-output');
+        const passportPagination = document.getElementById('passport-pagination');
+        
+        if (!passportHistoryOutput) return;
         passportHistoryOutput.innerHTML = "";
 
         if (computedPassportStampsArray.length === 0) {
             passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">This penguin hasn't collected any monument passport stamps yet!</li>`;
-            passportPagination.style.display = "none";
+            if (passportPagination) passportPagination.style.display = "none";
             return;
         }
 
         const totalPages = Math.ceil(computedPassportStampsArray.length / ITEMS_PER_PAGE);
-        passportPagination.style.display = totalPages > 1 ? "flex" : "none";
-        document.getElementById('passport-page-indicator').innerText = `Page ${activePassportPage} of ${totalPages}`;
-        
-        document.getElementById('passport-prev-btn').disabled = (activePassportPage === 1);
-        document.getElementById('passport-next-btn').disabled = (activePassportPage === totalPages);
+        if (passportPagination) {
+            passportPagination.style.display = totalPages > 1 ? "flex" : "none";
+            document.getElementById('passport-page-indicator').innerText = `Page ${activePassportPage} of ${totalPages}`;
+            document.getElementById('passport-prev-btn').disabled = (activePassportPage === 1);
+            document.getElementById('passport-next-btn').disabled = (activePassportPage === totalPages);
+        }
 
         const startIdx = (activePassportPage - 1) * ITEMS_PER_PAGE;
         const endIdx = startIdx + ITEMS_PER_PAGE;
@@ -1078,11 +1097,12 @@
     function changePassportPage(directionOffset) {
         activePassportPage += directionOffset;
         renderPassportPageLayout();
-        document.getElementById('passport-history-card').scrollIntoView({ behavior: 'smooth' });
+        const card = document.getElementById('passport-history-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth' });
     }
 
     // ===================================================
-    // DATA ENGINES (SUPABASE INTEGRATION)
+    // DATA ENGINES (MAPPED TO EXACT SUPABASE SCHEMAS)
     // ===================================================
     async function loadPenguinHistory(targetId) {
         if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
@@ -1098,15 +1118,20 @@
 
         discoveredMonumentsSet.clear();
 
+        const firstFindModal = document.getElementById('first-find-modal');
+        const passportHistoryOutput = document.getElementById("passport-history-output");
+
         if (!logs || logs.length === 0) {
-            if (!isViewOnlyMode) {
-                document.getElementById('first-find-modal').style.display = 'flex';
+            if (!isViewOnlyMode && firstFindModal) {
+                firstFindModal.style.display = 'flex';
             }
-            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Awaiting registration portfolio check-in...</li>`;
+            if (passportHistoryOutput) {
+                passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:10pt;">Awaiting registration portfolio check-in...</li>`;
+            }
             return;
         }
 
-        document.getElementById('first-find-modal').style.display = 'none';
+        if (firstFindModal) firstFindModal.style.display = 'none';
 
         compilePassportLogsHistory(logs);
 
@@ -1116,10 +1141,14 @@
             resolvedDisplayName = namedEntry.custom_name;
         }
         
-        document.getElementById('penguin-id').innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
-        penguinNameDisplay.innerText = resolvedDisplayName;
+        const pIdEl = document.getElementById('penguin-id');
+        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
+        
+        const pNameEl = document.getElementById("penguin-name-display");
+        if (pNameEl) pNameEl.innerText = resolvedDisplayName;
 
-        totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
+        const totalStopsEl = document.getElementById("total-stops-counter");
+        if (totalStopsEl) totalStopsEl.innerText = `${logs.length} Passport Stops Logged`;
 
         const pathCoordinates = [];
         const historicalIcon = L.divIcon({
@@ -1206,6 +1235,11 @@
         if (!listOutput) return;
         listOutput.innerHTML = "";
 
+        if (top10.length === 0) {
+            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:10pt;">No logs logged yet!</li>`;
+            return;
+        }
+
         top10.forEach((item, index) => {
             const li = document.createElement('li');
             li.className = 'leaderboard-row';
@@ -1230,25 +1264,23 @@
                 <div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div>
                 <div>${rightSideValueMetricsHTML}</div>`;
             
-            // ===============================================
-            // THE LEADERBOARD CLICK EVENT FIX
-            // ===============================================
             li.onclick = () => {
-                // 1. Explicitly update the global context states
+                // FIXED INTERACTION TRIGGER: Force state values to update perfectly without JS throwing hidden errors
                 isViewOnlyMode = true;
                 penguinId = item.id;
                 
-                // 2. Hide the entry forms since we are viewing another penguin
                 activateViewOnlyUI();
-                document.getElementById('tracking-card-block').style.display = "block";
                 
-                // 3. Smooth scroll to the map
-                document.getElementById('tracking-card-block').scrollIntoView({ behavior: 'smooth' });
+                const trackingBlock = document.getElementById('tracking-card-block');
+                if (trackingBlock) {
+                    trackingBlock.style.display = "block";
+                    trackingBlock.scrollIntoView({ behavior: 'smooth' });
+                }
 
-                // 4. Force map invalidation *after* layout changes to prevent the map bounding error
                 setTimeout(() => {
-                    if (map) { map.invalidateSize(); }
-                    // Pass the item.id explicitly to the history loader
+                    if (map) { 
+                        map.invalidateSize(); 
+                    }
                     loadPenguinHistory(item.id);
                 }, 250);
             };
@@ -1278,12 +1310,21 @@
     // --- FORM SUBMISSION PIPELINE ---
     async function submitDiscovery() {
         if (!verifiedLat || !verifiedLng) return;
-        document.getElementById('submit-btn').disabled = true;
-        document.getElementById('submit-btn').innerText = "Uploading tracking logs...";
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Uploading tracking logs...";
+        }
 
-        let notes = document.getElementById('finder-notes').value.trim();
-        const selectedPoi = document.getElementById('poi-selector').value;
-        const photoFile = document.getElementById('penguin-photo').files[0];
+        const finderNotesEl = document.getElementById('finder-notes');
+        let notes = finderNotesEl ? finderNotesEl.value.trim() : "";
+        
+        const poiSelector = document.getElementById('poi-selector');
+        const selectedPoi = poiSelector ? poiSelector.value : "";
+        
+        const photoInput = document.getElementById('penguin-photo');
+        const photoFile = photoInput ? photoInput.files[0] : null;
+        
         let uploadedPhotoUrl = null;
 
         if (photoFile) {
@@ -1314,7 +1355,11 @@
         };
 
         const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
-        if (error) { alert("Database entry rejected."); document.getElementById('submit-btn').disabled = false; return; }
+        if (error) { 
+            alert("Database entry rejected."); 
+            if (submitBtn) submitBtn.disabled = false; 
+            return; 
+        }
 
         try {
             const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
