@@ -600,7 +600,7 @@
             
             <!-- PERSISTENT DROPDOWN COMPONENT BLOCK -->
             <div class="input-group" id="poi-input-group">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛 White Tag a Nearby Historic Monument or Marker:</label>
+                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Monument or Marker:</label>
                 <select id="poi-selector" class="select-poi" disabled>
                     <option value="">-- Not near any landmarks (Must be within 500m) --</option>
                 </select>
@@ -890,7 +890,7 @@
 
                         const landmarkMarkerNode = L.marker([element.lat, element.lon], { icon: poiIcon })
                              .addTo(poiLayerGroup)
-                             .bindPopup(`<b><b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
+                             .bindPopup(`<b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
                              
                         poiMarkersMap[`poi_node_${internalIdx}`] = landmarkMarkerNode;
                     }
@@ -988,14 +988,6 @@
         document.getElementById('first-find-modal').style.display = 'none';
     }
 
-    function switchLeaderboardTab(tabName) {
-        if (activeTab === tabName) return;
-        activeTab = tabName;
-        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
-        buildLeaderboard();
-    }
-
     // ===================================================
     // MONUMENT HISTORY PASSPORT PAGINATOR
     // ===================================================
@@ -1003,7 +995,7 @@
         computedPassportStampsArray = [];
         discoveredMonumentsSet.clear(); 
         
-        if (!logs || logs.length === 0) return; // Prevent loop checks on empty arrays
+        if (!logs || logs.length === 0) return; 
 
         for (let i = logs.length - 1; i >= 0; i--) {
             const entry = logs[i];
@@ -1077,7 +1069,7 @@
 
         if (error) return;
 
-        // FIXED INTEGRATION CRITICAL FIX: Evaluate new discoveries BEFORE running string parsing engines
+        // NEW DISCOVERY TRIGGER ZONE
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 document.getElementById('first-find-modal').style.display = 'flex';
@@ -1090,14 +1082,16 @@
 
         compilePassportLogsHistory(logs);
 
+        // FIXED INTEGRATION CRITICAL FIX: Evaluate name parameters tokens based strictly on incoming targetId value pointers
+        let resolvedDisplayName = targetId;
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
         if (namedEntry) {
-            activeCustomName = namedEntry.custom_name;
-            if (targetId === penguinId) {
-                document.getElementById('penguin-id').innerText = `ID: ${penguinId} (${activeCustomName})`;
-                penguinNameDisplay.innerText = activeCustomName;
-            }
+            resolvedDisplayName = namedEntry.custom_name;
         }
+        
+        // Update display containers dynamically
+        document.getElementById('penguin-id').innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
+        penguinNameDisplay.innerText = resolvedDisplayName;
 
         totalStopsCounter.innerText = `${logs.length} Passport Stops Logged`;
 
@@ -1118,7 +1112,7 @@
             const dateObj = new Date(log.created_at).toLocaleDateString();
             let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px;">` : "";
             const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-            const stopLabel = log.custom_name ? `🐧 ${log.custom_name}` : `Stop #${index + 1}`;
+            const stopLabel = namedEntry ? `🐧 ${resolvedDisplayName}` : `Stop #${index + 1}`;
             
             L.marker(latLng, { icon: historicalIcon })
                 .addTo(historyLayerGroup)
@@ -1219,11 +1213,12 @@
                 <div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => {
-                penguinId = item.id; isViewOnlyMode = true;
-                document.getElementById('penguin-id').innerText = `Viewing: ${item.displayName}`;
+                isViewOnlyMode = true;
                 activateViewOnlyUI();
                 document.getElementById('tracking-card-block').style.display = "block";
                 if (map) { map.invalidateSize(); }
+                
+                // FIXED EXECUTION: Passes target item.id cleanly down to history handler loops
                 loadPenguinHistory(item.id);
                 document.getElementById('game-panel').scrollIntoView({ behavior: 'smooth' });
             };
