@@ -634,7 +634,7 @@
             <h2>Log New Stop</h2>
             
             <div class="input-group" id="poi-input-group">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Monument or Marker:</label>
+                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
                 <select id="poi-selector" class="select-poi" disabled>
                     <option value="">-- Not near any landmarks (Must be within 500m) --</option>
                 </select>
@@ -662,7 +662,7 @@
             
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
-                <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Monuments</button>
+                <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button>
             </div>
 
             <ul class="leaderboard-list" id="leaderboard-output">
@@ -683,7 +683,7 @@
 
         <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
         <div class="glass-card" id="passport-history-card">
-            <h2>📜 Monument Passport History</h2>
+            <h2>📜 Landmark Passport History</h2>
             <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
                 <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
             </ul>
@@ -692,6 +692,20 @@
                 <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
                 <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
                 <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+            </div>
+        </div>
+
+        <!-- PAGINATED ALL STOPS HISTORY LOG -->
+        <div class="glass-card" id="all-stops-history-card">
+            <h2>📜 All Journey Stops History</h2>
+            <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
+                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
+            </ul>
+            
+            <div class="pagination-container" id="all-stops-pagination" style="display: none;">
+                <button class="page-arrow" id="all-stops-prev-btn" onclick="changeAllStopsPage(-1)">←</button>
+                <span class="page-indicator" id="all-stops-page-indicator">Page 1 of 1</span>
+                <button class="page-arrow" id="all-stops-next-btn" onclick="changeAllStopsPage(1)">→</button>
             </div>
         </div>
 
@@ -704,7 +718,7 @@
 
     <!-- VERSION IDENTIFIER FOOTER -->
     <div class="app-footer">
-        Arctic Game Engine • Version 2.6.7
+        Arctic Game Engine • Version 2.7.0
     </div>
 
 </div>
@@ -735,8 +749,11 @@
 
     // STATE VARIABLES
     let activePassportPage = 1;
+    let activeAllStopsPage = 1;
     const ITEMS_PER_PAGE = 10;
+    
     let computedPassportStampsArray = [];
+    let computedAllStopsArray = [];
     let discoveredMonumentsSet = new Set(); 
 
     // Safe Initialization
@@ -797,26 +814,18 @@
     function getPenguinSvg(bgColor) {
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
             <rect width="100" height="100" rx="20" fill="${bgColor}"/>
-            <!-- Back flippers/arms -->
             <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
             <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
-            <!-- Main Body -->
             <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
-            <!-- White Belly -->
             <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
-            <!-- White Face Cheeks -->
             <circle cx="36" cy="45" r="15" fill="#ffffff"/>
             <circle cx="64" cy="45" r="15" fill="#ffffff"/>
-            <!-- Feet -->
             <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
             <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
-            <!-- Eyes -->
             <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
             <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
-            <!-- Eye Catchlights -->
             <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
             <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
-            <!-- Beak -->
             <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
         </svg>`;
     }
@@ -958,7 +967,7 @@
                     lockBadge.style.color = "#ef4444";
                 }
                 const poiOutput = document.getElementById("poi-proximity-output");
-                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:11pt;">⚠️ GPS sensor locked. Location permissions are required to scan nearby monuments.</li>`;
+                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:11pt;">⚠️ GPS sensor locked. Location permissions are required to scan nearby landmarks.</li>`;
             }, { enableHighAccuracy: true });
         }
     }
@@ -1029,7 +1038,7 @@
             const resJson = await fetchRes.json();
             
             if (resJson && resJson.elements && resJson.elements.length > 0) {
-                if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby monument --</option>';
+                if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby landmark --</option>';
                 let dynamicSortingBufferArray = [];
                 let closeDropdownOptionsCount = 0; 
 
@@ -1069,13 +1078,13 @@
                 if (poiSelector && poiLabelStatus) {
                     if (closeDropdownOptionsCount > 0) {
                         poiSelector.disabled = false;
-                        poiLabelStatus.innerText = "🏛️ Nearby Historic Monument or Marker Found!";
+                        poiLabelStatus.innerText = "🏛️ Nearby Historic Landmark or Marker Found!";
                         poiLabelStatus.style.color = "#39ff14";
                         poiLabelStatus.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.2)";
                     } else {
                         poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
                         poiSelector.disabled = true;
-                        poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Monument or Marker:";
+                        poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:";
                         poiLabelStatus.style.color = "#94a3b8";
                         poiLabelStatus.style.textShadow = "none";
                     }
@@ -1118,14 +1127,14 @@
                         poiProximityOutput.appendChild(liNode);
                     }
                 } else if (poiProximityOutput) {
-                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
+                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic landmarks or markers found inside this 10,000m regional grid sector.</li>`;
                 }
             } else if (poiProximityOutput) {
-                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic monuments or markers found inside this 10,000m regional grid sector.</li>`;
+                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic landmarks or markers found inside this 10,000m regional grid sector.</li>`;
                 if (poiSelector && poiLabelStatus) {
                     poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
                     poiSelector.disabled = true;
-                    poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Monument or Marker:";
+                    poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:";
                     poiLabelStatus.style.color = "#94a3b8";
                     poiLabelStatus.style.textShadow = "none";
                 }
@@ -1182,7 +1191,7 @@
     }
 
     // ===================================================
-    // MONUMENT HISTORY PASSPORT SYSTEM
+    // LANDMARK HISTORY PASSPORT SYSTEM
     // ===================================================
     function compilePassportLogsHistory(logs) {
         computedPassportStampsArray = [];
@@ -1220,7 +1229,7 @@
         passportHistoryOutput.innerHTML = "";
 
         if (computedPassportStampsArray.length === 0) {
-            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This penguin hasn't collected any monument passport stamps yet!</li>`;
+            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This penguin hasn't collected any landmark passport stamps yet!</li>`;
             if (passportPagination) passportPagination.style.display = "none";
             return;
         }
@@ -1255,6 +1264,93 @@
     }
 
     // ===================================================
+    // ALL STOPS HISTORY SYSTEM
+    // ===================================================
+    function compileAllStopsHistory(logs, markersArray) {
+        computedAllStopsArray = [];
+        if (!logs || logs.length === 0) {
+            renderAllStopsPageLayout();
+            return; 
+        }
+
+        for (let i = logs.length - 1; i >= 0; i--) {
+            const entry = logs[i];
+            
+            let cleanNote = entry.finder_note || "";
+            if (cleanNote.includes('[Tagged at Monument:')) {
+                cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+            }
+
+            computedAllStopsArray.push({
+                stopNumber: i + 1,
+                note: cleanNote || "No adventure notes left.",
+                date: new Date(entry.created_at).toLocaleDateString(),
+                lat: entry.latitude,
+                lng: entry.longitude,
+                markerReference: markersArray[i] 
+            });
+        }
+
+        activeAllStopsPage = 1;
+        renderAllStopsPageLayout();
+    }
+
+    function renderAllStopsPageLayout() {
+        const outputEl = document.getElementById('all-stops-history-output');
+        const paginationEl = document.getElementById('all-stops-pagination');
+        
+        if (!outputEl) return;
+        outputEl.innerHTML = "";
+
+        if (computedAllStopsArray.length === 0) {
+            outputEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No stops logged yet!</li>`;
+            if (paginationEl) paginationEl.style.display = "none";
+            return;
+        }
+
+        const totalPages = Math.ceil(computedAllStopsArray.length / ITEMS_PER_PAGE);
+        if (paginationEl) {
+            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
+            document.getElementById('all-stops-page-indicator').innerText = `Page ${activeAllStopsPage} of ${totalPages}`;
+            document.getElementById('all-stops-prev-btn').disabled = (activeAllStopsPage === 1);
+            document.getElementById('all-stops-next-btn').disabled = (activeAllStopsPage === totalPages);
+        }
+
+        const startIdx = (activeAllStopsPage - 1) * ITEMS_PER_PAGE;
+        const pageItemsSlice = computedAllStopsArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+        pageItemsSlice.forEach(stop => {
+            const rowLi = document.createElement('li');
+            rowLi.className = 'passport-history-row';
+            rowLi.innerHTML = `
+                <div>
+                    <span class="passport-icon-badge">📍</span>
+                    <span class="p-name">Stop #${stop.stopNumber}</span>
+                    <span style="display:block; font-size:10.5pt; color:#cbd5e1; font-style:italic; font-weight:normal; margin-top:2px;">"${stop.note}"</span>
+                </div>
+                <div style="text-align:right;">
+                    <span class="passport-list-date" style="color:#00e5ff; text-shadow:none;">${stop.date}</span>
+                    <span style="display:block; font-size:9pt; color:#4b5563; font-family:monospace;">${stop.lat.toFixed(3)}°, ${stop.lng.toFixed(3)}°</span>
+                </div>`;
+            
+            rowLi.onclick = function() {
+                if (map && stop.markerReference) {
+                    map.setView([stop.lat, stop.lng], 14);
+                    stop.markerReference.openPopup();
+                    document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                }
+            };
+            outputEl.appendChild(rowLi);
+        });
+    }
+
+    function changeAllStopsPage(directionOffset) {
+        activeAllStopsPage += directionOffset;
+        renderAllStopsPageLayout();
+        document.getElementById('all-stops-history-card').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ===================================================
     // DATA ENGINES
     // ===================================================
     async function loadPenguinHistory(targetId) {
@@ -1273,6 +1369,7 @@
 
         const firstFindModal = document.getElementById('first-find-modal');
         const passportHistoryOutput = document.getElementById("passport-history-output");
+        const allStopsOutput = document.getElementById("all-stops-history-output");
 
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
@@ -1281,6 +1378,9 @@
             }
             if (passportHistoryOutput) {
                 passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
+            }
+            if (allStopsOutput) {
+                allStopsOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
             }
             return;
         }
@@ -1311,6 +1411,8 @@
         if (totalStopsEl) totalStopsEl.innerText = `${logs.length} Passport Stops Logged`;
 
         const pathCoordinates = [];
+        const markersArray = [];
+        
         const historicalIcon = L.divIcon({
             className: 'custom-div-icon',
             html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>",
@@ -1326,9 +1428,13 @@
             const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
             const stopLabel = namedEntry ? `🐧 ${resolvedDisplayName}` : `Stop #${index + 1}`;
             
-            L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup)
+            const newMarker = L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup)
                 .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+            
+            markersArray.push(newMarker);
         });
+
+        compileAllStopsHistory(logs, markersArray);
 
         if (pathCoordinates.length > 0 && map) {
             currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
@@ -1526,7 +1632,7 @@
             const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
             const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
             let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
-            if (cleanedPoiStringValue) discordMsg += `🏛️ **Monument Tagged:** \`${cleanedPoiStringValue}\`\n`;
+            if (cleanedPoiStringValue) discordMsg += `🏛️ **Landmark Tagged:** \`${cleanedPoiStringValue}\`\n`;
             discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
             
             const message = { username: "Penguin Scout", content: discordMsg };
