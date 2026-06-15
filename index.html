@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Arctic Adventure Mode</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -231,8 +230,10 @@
         .btn-camera {
             background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
             border: 1px solid rgba(56, 189, 248, 0.25);
-            margin-top: 6px;
-            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16pt; /* Makes emoji larger */
         }
         
         .btn-camera.photo-attached {
@@ -498,7 +499,6 @@
 </head>
 <body>
 
-<!-- WELCOME STORY MODAL OVERLAY -->
 <div class="modal-overlay" id="welcome-modal" style="z-index: 10000;">
     <div class="modal-card" style="text-align: left;">
         <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! 🐧</h2>
@@ -515,7 +515,6 @@
     </div>
 </div>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal" style="z-index: 9999;">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -528,7 +527,6 @@
     </div>
 </div>
 
-<!-- EDIT PROFILE MODAL OVERLAY -->
 <div class="modal-overlay" id="edit-profile-modal" style="z-index: 9999;">
     <div class="modal-card">
         <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
@@ -536,15 +534,13 @@
         
         <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
         <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
-            <!-- Dynamic Avatars Injected Here -->
-        </div>
+            </div>
         
         <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
 
-<!-- DEDICATED MAP POPUP MODAL -->
 <div class="modal-overlay" id="map-modal" style="z-index: 10001;">
     <div class="modal-card" style="max-width: 90%; width: 500px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
@@ -555,7 +551,6 @@
 
 <div class="app-container">
     
-    <!-- HEADER SECTION -->
     <div class="app-header" style="position: relative; padding-right: 40px;">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -565,20 +560,16 @@
             <span class="status-badge" id="penguin-id">Detecting Tag...</span>
         </div>
         
-        <!-- Persistent Help Button -->
         <button id="help-btn" onclick="openWelcomeModal()" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
             ⚠️ VIEW-ONLY MODE: Logging Disabled
         </div>
 
-        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
-            <!-- Edit Profile Button -->
             <button id="edit-profile-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 10pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
             
             <h2>Penguin</h2>
@@ -597,7 +588,6 @@
                 </li>
             </ul>
         </div>
-        <!-- GAME METHODOLOGY NOTIFICATION PANEL -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 20pt;">🎒</span>
@@ -615,7 +605,6 @@
             </div>
         </div>
 
-        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
@@ -632,9 +621,15 @@
             </ul>
             <div id="map"></div>
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
+            
+            <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
+                <select id="poi-selector" class="select-poi" disabled>
+                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
+                </select>
+            </div>
         </div>
         
-        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Journey Stops</h2>
             
@@ -643,32 +638,19 @@
                 <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
             </div>
 
-            <!-- TAB: LOG NEW STOP -->
             <div id="stop-log-container">
-                <div class="input-group" id="poi-input-group" style="margin-top: 12px;">
-                    <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
-                    <select id="poi-selector" class="select-poi" disabled>
-                        <option value="">-- Not near any landmarks (Must be within 500m) --</option>
-                    </select>
-                </div>
-
-                <div class="input-group" id="photo-input-group" style="margin-top: 12px;">
-                    <label class="label">Snap a Photo of its Journey (Optional):</label>
-                    <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
-                    <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()">📷 Take a Picture</button>
-                </div>
-
                 <div class="input-group" id="notes-input-group">
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
                     <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
                 </div>
                 
-                <div class="glass-card-inner">
-                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
+                <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
+                <div class="glass-card-inner" style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
+                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" style="flex: 1; margin: 0;" disabled>Log Penguin Location</button>
                 </div>
             </div>
 
-            <!-- TAB: ALL STOPS HISTORY -->
             <div id="stop-history-container" style="display: none;">
                 <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
@@ -682,7 +664,6 @@
             </div>
         </div>
 
-        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -696,7 +677,6 @@
             </ul>
         </div>
 
-        <!-- CONSOLIDATED LANDMARKS CARD -->
         <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Landmarks</h2>
@@ -708,14 +688,12 @@
                 <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
             </div>
 
-            <!-- TAB: NEARBY LANDMARKS -->
             <div id="landmark-nearby-container">
                 <ul class="poi-proximity-list" id="poi-proximity-output">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
                 </ul>
             </div>
 
-            <!-- TAB: LANDMARK PASSPORT HISTORY -->
             <div id="landmark-history-container" style="display: none;">
                 <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
@@ -729,21 +707,18 @@
             </div>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
-    <!-- VERSION IDENTIFIER FOOTER -->
     <div class="app-footer">
-        Arctic Game Engine • Version 2.8.0
+        Arctic Game Engine • Version 2.8.1
     </div>
 
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -1029,6 +1004,9 @@
         safeHide('location-text-elements');
         safeHide('edit-profile-btn');
         
+        // Hide landmark tagging dropdown directly
+        safeHide('poi-input-group');
+        
         // Hide the Log New tab entirely in view-only mode
         safeHide('tab-stop-log');
         switchStopsTab('history');
@@ -1253,11 +1231,12 @@
 
     function handleFileSelectionChange() {
         const fileInput = document.getElementById('penguin-photo');
+        const customCameraBtn = document.getElementById('custom-camera-btn');
         if (fileInput && fileInput.files[0] && customCameraBtn) {
-            customCameraBtn.innerText = "📸 Photo Attached!";
+            customCameraBtn.innerHTML = "📸"; 
             customCameraBtn.classList.add("photo-attached");
         } else if (customCameraBtn) {
-            customCameraBtn.innerText = "📷 Take a Picture";
+            customCameraBtn.innerHTML = "📷";
             customCameraBtn.classList.remove("photo-attached");
         }
     }
