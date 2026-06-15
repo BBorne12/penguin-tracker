@@ -544,6 +544,15 @@
     </div>
 </div>
 
+<!-- DEDICATED MAP POPUP MODAL -->
+<div class="modal-overlay" id="map-modal" style="z-index: 10001;">
+    <div class="modal-card" style="max-width: 90%; width: 500px; padding: 16px;">
+        <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
+        <div id="modal-map" style="width: 100%; height: 350px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"></div>
+        <button class="btn-glow" style="margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
+    </div>
+</div>
+
 <div class="app-container">
     
     <!-- HEADER SECTION -->
@@ -609,50 +618,67 @@
         <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
-                <h2 id="tracking-card-title">Log Your Visit</h2>
-                <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh Location</button>
+                <h2 id="tracking-card-title">Location</h2>
+                <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh</button>
             </div>
             <ul class="data-list" id="location-text-elements">
                 <li class="data-item">
-                    <span class="label">Current Location</span>
+                    <span class="label">Current Coordinates</span>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
                         <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 11pt;">Detecting Location...</span>
                         <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 11pt;">WAITING</span>
                     </div>
-                </li>
-                <li class="data-item">
-                    <span class="label">Community Journey</span>
-                    <span class="value" style="font-size: 11pt; display: block; color: #cbd5e1; margin-top: 2px;">Log your penguin's progress to reach the top of the leaderboard!</span>
                 </li>
             </ul>
             <div id="map"></div>
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
         </div>
         
-        <!-- INPUT INTERFACES -->
-        <div class="glass-card" id="input-fields-card">
-            <h2>Log New Stop</h2>
+        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
+        <div class="glass-card" id="journey-stops-card">
+            <h2>📍 Journey Stops</h2>
             
-            <div class="input-group" id="poi-input-group">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
-                <select id="poi-selector" class="select-poi" disabled>
-                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
-                </select>
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-stop-log" onclick="switchStopsTab('log')">✍️ Log New</button>
+                <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
             </div>
 
-            <div class="input-group" id="photo-input-group" style="margin-top: 12px;">
-                <label class="label">Snap a Photo of its Journey (Optional):</label>
-                <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
-                <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()">📷 Take a Picture</button>
+            <!-- TAB: LOG NEW STOP -->
+            <div id="stop-log-container">
+                <div class="input-group" id="poi-input-group" style="margin-top: 12px;">
+                    <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
+                    <select id="poi-selector" class="select-poi" disabled>
+                        <option value="">-- Not near any landmarks (Must be within 500m) --</option>
+                    </select>
+                </div>
+
+                <div class="input-group" id="photo-input-group" style="margin-top: 12px;">
+                    <label class="label">Snap a Photo of its Journey (Optional):</label>
+                    <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
+                    <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()">📷 Take a Picture</button>
+                </div>
+
+                <div class="input-group" id="notes-input-group">
+                    <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
+                    <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
+                </div>
+                
+                <div class="glass-card-inner">
+                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
+                </div>
             </div>
 
-            <div class="input-group" id="notes-input-group">
-                <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
-                <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
-            </div>
-            
-            <div class="glass-card-inner">
-                <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
+            <!-- TAB: ALL STOPS HISTORY -->
+            <div id="stop-history-container" style="display: none;">
+                <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
+                </ul>
+                
+                <div class="pagination-container" id="all-stops-pagination" style="display: none;">
+                    <button class="page-arrow" id="all-stops-prev-btn" onclick="changeAllStopsPage(-1)">←</button>
+                    <span class="page-indicator" id="all-stops-page-indicator">Page 1 of 1</span>
+                    <button class="page-arrow" id="all-stops-next-btn" onclick="changeAllStopsPage(1)">→</button>
+                </div>
             </div>
         </div>
 
@@ -670,42 +696,36 @@
             </ul>
         </div>
 
-        <!-- PROXIMITY NEARBY POI DISCOVERY PANEL -->
-        <div class="glass-card" id="nearby-landmarks-card">
+        <!-- CONSOLIDATED LANDMARKS CARD -->
+        <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
-                <h2>🏛️ Nearby Historic Landmarks</h2>
+                <h2>🏛️ Landmarks</h2>
                 <button type="button" class="btn-inline-refresh" id="manual-refresh-poi-btn" onclick="triggerManualProximityRefresh()">🔄 Refresh List</button>
             </div>
-            <ul class="poi-proximity-list" id="poi-proximity-output">
-                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
-            </ul>
-        </div>
-
-        <!-- PAGINATED MONUMENT HISTORY PASSPORT LOG -->
-        <div class="glass-card" id="passport-history-card">
-            <h2>📜 Landmark Passport History</h2>
-            <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
-                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
-            </ul>
             
-            <div class="pagination-container" id="passport-pagination" style="display: none;">
-                <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
-                <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
-                <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-landmark-nearby" onclick="switchLandmarkTab('nearby')">📍 Nearby</button>
+                <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
             </div>
-        </div>
 
-        <!-- PAGINATED ALL STOPS HISTORY LOG -->
-        <div class="glass-card" id="all-stops-history-card">
-            <h2>📜 All Journey Stops History</h2>
-            <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
-                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
-            </ul>
-            
-            <div class="pagination-container" id="all-stops-pagination" style="display: none;">
-                <button class="page-arrow" id="all-stops-prev-btn" onclick="changeAllStopsPage(-1)">←</button>
-                <span class="page-indicator" id="all-stops-page-indicator">Page 1 of 1</span>
-                <button class="page-arrow" id="all-stops-next-btn" onclick="changeAllStopsPage(1)">→</button>
+            <!-- TAB: NEARBY LANDMARKS -->
+            <div id="landmark-nearby-container">
+                <ul class="poi-proximity-list" id="poi-proximity-output">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
+                </ul>
+            </div>
+
+            <!-- TAB: LANDMARK PASSPORT HISTORY -->
+            <div id="landmark-history-container" style="display: none;">
+                <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
+                </ul>
+                
+                <div class="pagination-container" id="passport-pagination" style="display: none;">
+                    <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
+                    <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
+                    <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+                </div>
             </div>
         </div>
 
@@ -718,7 +738,7 @@
 
     <!-- VERSION IDENTIFIER FOOTER -->
     <div class="app-footer">
-        Arctic Game Engine • Version 2.7.0
+        Arctic Game Engine • Version 2.8.0
     </div>
 
 </div>
@@ -752,6 +772,9 @@
     let activeAllStopsPage = 1;
     const ITEMS_PER_PAGE = 10;
     
+    let activeStopsTab = "log";
+    let activeLandmarkTab = "nearby";
+
     let computedPassportStampsArray = [];
     let computedAllStopsArray = [];
     let discoveredMonumentsSet = new Set(); 
@@ -769,6 +792,10 @@
     let poiMarkersMap = {}; 
     let verifiedLat = null;
     let verifiedLng = null;
+    
+    // Modal Map Pointers
+    let modalMap = null;
+    let modalMarker = null;
 
     // DOM hooks
     const coordinatesDisplay = document.getElementById("coordinates-display");
@@ -806,6 +833,79 @@
     function closeWelcomeModal() {
         const modal = document.getElementById('welcome-modal');
         if (modal) modal.style.display = 'none';
+    }
+
+    // ===================================================
+    // SECONDARY MAP MODAL LOGIC
+    // ===================================================
+    function openMapModal(lat, lng, popupContent) {
+        document.getElementById('map-modal').style.display = 'flex';
+        
+        if (!modalMap) {
+            modalMap = L.map('modal-map').setView([lat, lng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
+            
+            const historicalIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>",
+                iconSize: [12, 12], iconAnchor: [6, 6]
+            });
+            modalMarker = L.marker([lat, lng], { icon: historicalIcon }).addTo(modalMap);
+        } else {
+            modalMap.setView([lat, lng], 14);
+            modalMarker.setLatLng([lat, lng]);
+        }
+        
+        setTimeout(() => {
+            modalMap.invalidateSize();
+            modalMarker.bindPopup(popupContent).openPopup();
+        }, 50);
+    }
+
+    function closeMapModal() {
+        document.getElementById('map-modal').style.display = 'none';
+    }
+
+    // ===================================================
+    // TAB SWITCHING LOGIC
+    // ===================================================
+    function switchStopsTab(tabName) {
+        if (activeStopsTab === tabName) return;
+        activeStopsTab = tabName;
+        
+        const logTab = document.getElementById('tab-stop-log');
+        if (logTab) logTab.classList.toggle('active', tabName === 'log');
+        
+        const histTab = document.getElementById('tab-stop-history');
+        if (histTab) histTab.classList.toggle('active', tabName === 'history');
+        
+        const logCont = document.getElementById('stop-log-container');
+        if (logCont) logCont.style.display = (tabName === 'log') ? 'block' : 'none';
+        
+        const histCont = document.getElementById('stop-history-container');
+        if (histCont) histCont.style.display = (tabName === 'history') ? 'block' : 'none';
+    }
+
+    function switchLandmarkTab(tabName) {
+        if (activeLandmarkTab === tabName) return;
+        activeLandmarkTab = tabName;
+        
+        const nearbyTab = document.getElementById('tab-landmark-nearby');
+        if (nearbyTab) nearbyTab.classList.toggle('active', tabName === 'nearby');
+        
+        const histTab = document.getElementById('tab-landmark-history');
+        if (histTab) histTab.classList.toggle('active', tabName === 'history');
+        
+        const nearbyCont = document.getElementById('landmark-nearby-container');
+        if (nearbyCont) nearbyCont.style.display = (tabName === 'nearby') ? 'block' : 'none';
+        
+        const histCont = document.getElementById('landmark-history-container');
+        if (histCont) histCont.style.display = (tabName === 'history') ? 'block' : 'none';
+        
+        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
+        if (refreshBtn) {
+            refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
+        }
     }
 
     // ===================================================
@@ -924,14 +1024,16 @@
 
         safeShow('view-mode-banner');
         safeHide('instruction-panel');
-        safeHide('input-fields-card');
         safeHide('safety-disclaimer-notice');
-        safeHide('manual-refresh-poi-btn');
         safeHide('map-location-refresh-btn');
         safeHide('location-text-elements');
         safeHide('edit-profile-btn');
         
-        safeText('tracking-card-title', "Adventure Portfolio History");
+        // Hide the Log New tab entirely in view-only mode
+        safeHide('tab-stop-log');
+        switchStopsTab('history');
+        
+        safeText('tracking-card-title', "Location History");
         
         if (marker) { marker.remove(); marker = null; }
     }
@@ -1193,7 +1295,7 @@
     // ===================================================
     // LANDMARK HISTORY PASSPORT SYSTEM
     // ===================================================
-    function compilePassportLogsHistory(logs) {
+    function compilePassportLogsHistory(logs, markersArray) {
         computedPassportStampsArray = [];
         discoveredMonumentsSet.clear(); 
         
@@ -1212,7 +1314,10 @@
 
                 computedPassportStampsArray.push({
                     name: monumentName,
-                    date: new Date(entry.created_at).toLocaleDateString()
+                    date: new Date(entry.created_at).toLocaleDateString(),
+                    lat: entry.latitude,
+                    lng: entry.longitude,
+                    markerReference: markersArray[i]
                 });
             }
         }
@@ -1252,6 +1357,14 @@
             rowLi.innerHTML = `
                 <div><span class="passport-icon-badge">🏅</span><span class="p-name">${stamp.name}</span></div>
                 <div><span class="passport-list-date">${stamp.date}</span></div>`;
+            
+            rowLi.onclick = function() {
+                if (stamp.markerReference) {
+                    const popupContent = stamp.markerReference.getPopup().getContent();
+                    openMapModal(stamp.lat, stamp.lng, popupContent);
+                }
+            };
+
             passportHistoryOutput.appendChild(rowLi);
         });
     }
@@ -1259,7 +1372,7 @@
     function changePassportPage(directionOffset) {
         activePassportPage += directionOffset;
         renderPassportPageLayout();
-        const card = document.getElementById('passport-history-card');
+        const card = document.getElementById('landmarks-card');
         if (card) card.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -1334,10 +1447,9 @@
                 </div>`;
             
             rowLi.onclick = function() {
-                if (map && stop.markerReference) {
-                    map.setView([stop.lat, stop.lng], 14);
-                    stop.markerReference.openPopup();
-                    document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                if (stop.markerReference) {
+                    const popupContent = stop.markerReference.getPopup().getContent();
+                    openMapModal(stop.lat, stop.lng, popupContent);
                 }
             };
             outputEl.appendChild(rowLi);
@@ -1347,7 +1459,8 @@
     function changeAllStopsPage(directionOffset) {
         activeAllStopsPage += directionOffset;
         renderAllStopsPageLayout();
-        document.getElementById('all-stops-history-card').scrollIntoView({ behavior: 'smooth' });
+        const card = document.getElementById('journey-stops-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth' });
     }
 
     // ===================================================
@@ -1386,8 +1499,6 @@
         }
 
         if (firstFindModal) firstFindModal.style.display = 'none';
-
-        compilePassportLogsHistory(logs);
 
         let resolvedDisplayName = targetId;
         const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
@@ -1434,6 +1545,7 @@
             markersArray.push(newMarker);
         });
 
+        compilePassportLogsHistory(logs, markersArray);
         compileAllStopsHistory(logs, markersArray);
 
         if (pathCoordinates.length > 0 && map) {
