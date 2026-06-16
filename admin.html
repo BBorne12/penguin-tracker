@@ -10,179 +10,80 @@
 
     <style>
         /* Base Setup & CSS Resets */
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
         
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #02060d;
-            color: #ffffff;
-            font-size: 11pt;
-            line-height: 1.5;
+            background: #02060d; color: #ffffff;
+            font-size: 11pt; line-height: 1.5;
         }
 
         .app-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 16px;
+            width: 100%; max-width: 900px; margin: 0 auto; padding: 16px;
             background: radial-gradient(circle at 50% 0%, #1a102f 0%, #09071e 60%, #02060d 100%);
             min-height: 100vh;
         }
 
-        h1, h2, h3 {
-            margin: 0;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
+        h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+        h1 { font-size: 18pt; color: #fae8ff; text-shadow: 0 0 15px rgba(217, 70, 239, 0.4); }
+        h2 { font-size: 12pt; color: #d946ef; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         
-        h1 {
-            font-size: 18pt;
-            color: #fae8ff;
-            text-shadow: 0 0 15px rgba(217, 70, 239, 0.4);
-        }
-
-        h2 {
-            font-size: 12pt;
-            color: #d946ef;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-
         .subtitle {
-            color: #f5d0fe;
-            font-size: 8pt;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 3px;
-            opacity: 0.8;
+            color: #f5d0fe; font-size: 8pt; text-transform: uppercase;
+            letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8;
         }
 
-        .layout-section {
-            width: 100%;
-            margin-top: 16px;
-        }
+        .layout-section { width: 100%; margin-top: 16px; }
 
         /* Command Card Styles */
         .glass-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(217, 70, 239, 0.15);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(217, 70, 239, 0.15);
+            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
             margin-bottom: 16px;
         }
 
         /* Form Inputs */
         .admin-input {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(217, 70, 239, 0.2);
-            border-radius: 8px;
-            padding: 12px;
-            color: #ffffff;
-            font-size: 11pt;
-            outline: none;
-            margin-bottom: 12px;
+            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 70, 239, 0.2);
+            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 11pt;
+            outline: none; margin-bottom: 12px;
         }
 
         .admin-input:focus {
-            border-color: #d946ef;
-            box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
+            border-color: #d946ef; box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
         }
 
         /* Buttons */
         .btn-command {
-            display: inline-block;
-            padding: 10px 16px;
+            display: inline-block; padding: 10px 16px;
             background: linear-gradient(135deg, rgba(217, 70, 239, 0.2) 0%, rgba(162, 28, 175, 0.2) 100%);
-            border: 1px solid rgba(217, 70, 239, 0.4);
-            border-radius: 6px;
-            color: #ffffff;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            cursor: pointer;
-            font-size: 9pt;
-            transition: all 0.2s ease;
+            border: 1px solid rgba(217, 70, 239, 0.4); border-radius: 6px;
+            color: #ffffff; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.5px; cursor: pointer; font-size: 9pt; transition: all 0.2s ease;
         }
 
-        .btn-command:hover {
-            background: rgba(217, 70, 239, 0.3);
-            box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
-        }
+        .btn-command:hover { background: rgba(217, 70, 239, 0.3); box-shadow: 0 0 10px rgba(217, 70, 239, 0.2); }
 
-        .btn-danger {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%);
-            border-color: rgba(239, 68, 68, 0.4);
-        }
-
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.3);
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
-        }
+        .btn-danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%); border-color: rgba(239, 68, 68, 0.4); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
 
         /* Tables & Lists Matrices */
-        .matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-            font-size: 10pt;
-        }
+        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
+        .matrix-table th, .matrix-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .matrix-table th { color: #f5d0fe; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; }
+        .matrix-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); }
 
-        .matrix-table th, .matrix-table td {
-            text-align: left;
-            padding: 12px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .matrix-table th {
-            color: #f5d0fe;
-            font-transform: uppercase;
-            font-size: 8pt;
-            letter-spacing: 0.5px;
-        }
-
-        .matrix-table tbody tr {
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .matrix-table tbody tr:hover {
-            background: rgba(217, 70, 239, 0.05);
-        }
-
-        .badge-count {
-            font-weight: bold;
-            color: #a21caf;
-            background: rgba(217, 70, 239, 0.15);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .log-audit-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 12px 6px;
-        }
-
-        .log-audit-item:last-child {
-            border-bottom: none;
-        }
+        .badge-count { font-weight: bold; color: #a21caf; background: rgba(217, 70, 239, 0.15); padding: 2px 6px; border-radius: 4px; }
+        .log-audit-item { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 6px; }
+        .log-audit-item:last-child { border-bottom: none; }
 
         /* Auth Screen Cover */
         #auth-lock-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #02060d;
-            z-index: 99999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #02060d; z-index: 99999; display: flex;
+            align-items: center; justify-content: center; padding: 20px;
         }
     </style>
 </head>
@@ -194,7 +95,7 @@
         <h2>Operations Gatekeeper</h2>
         <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
         <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
-        <button onclick="verifyAccessLock()" class="btn-command" style="width: 100%;">Authorize Session</button>
+        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
     </div>
 </div>
 
@@ -212,18 +113,23 @@
         
         <div class="glass-card">
             <h2>🏭 Fleet Production Line</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, unique QR code and register a new penguin in the database simultaneously.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, formatted QR code sticker and register a new penguin simultaneously.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
-                <input type="text" id="new-penguin-id" class="admin-input" placeholder="Penguin ID (e.g., 066)" style="margin-bottom: 0;">
+                <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
                 <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Generate & Register</button>
             </div>
             
-            <div id="qrcode-container" style="display: none; align-items: center; gap: 16px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
-                <div id="qrcode" style="background: white; padding: 10px; border-radius: 4px;"></div>
+            <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
+                <div id="hidden-qrcode" style="display: none;"></div>
+                <canvas id="composite-canvas" style="display: none;"></canvas>
+                
+                <img id="final-sticker-img" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
+                
                 <div style="flex: 1;">
-                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Secure URL Generated:</strong>
-                    <code id="qr-url-display" style="font-size: 8.5pt; color: #00e5ff; word-break: break-all; margin-top: 4px; display: block;"></code>
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Production Success!</strong>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image to save or copy it. It is perfectly formatted for printing as a sticker.</p>
+                    <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
         </div>
@@ -234,16 +140,17 @@
                 <table class="matrix-table" id="inventory-table">
                     <thead>
                         <tr>
-                            <th>Penguin Identity</th>
+                            <th>Identity</th>
                             <th>Active Name</th>
                             <th>Total Pings</th>
                             <th>Landmarks</th>
                             <th>Est. Mileage</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="inventory-tbody">
                         <tr>
-                            <td colspan="5" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
+                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -256,7 +163,6 @@
                     <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
                     <span style="font-size: 8.5pt; color: #cbd5e1;" id="audit-title-custom">Custom Name Pointer</span>
                 </div>
-                <button class="btn-command btn-danger" id="master-reset-btn" style="font-size: 8pt; padding: 6px 12px;">⚠️ Master Reset Piece</button>
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
@@ -276,10 +182,17 @@
     let activeAuditedPenguinId = null;
     let globalCachedLogsArray = [];
 
+    // --- AUTO-POPULATE PREFIX LOGIC ---
+    const idInputField = document.getElementById('new-penguin-id');
+    idInputField.addEventListener('input', function(e) {
+        if (!this.value.startsWith('Penguin-')) {
+            this.value = 'Penguin-';
+        }
+    });
+
     // Simple client-side auth memory lock sequence
     function verifyAccessLock() {
         const inputPass = document.getElementById('admin-password-field').value;
-        // You can change your secret admin passcode key here
         if (inputPass === "borne2track") {
             sessionStorage.setItem("admin_verified", "true");
             document.getElementById('auth-lock-screen').style.display = "none";
@@ -303,65 +216,97 @@
     }
 
     // ===================================================
-    // NEW: FLEET PRODUCTION LINE (QR GENERATOR)
+    // FLEET PRODUCTION LINE (QR STICKER GENERATOR)
     // ===================================================
     async function generateNewPenguin() {
         const idInput = document.getElementById('new-penguin-id');
         const id = idInput.value.trim();
         
-        if (!id) {
-            alert("Please enter a Penguin ID to generate.");
+        if (id === 'Penguin-' || !id) {
+            alert("Please enter a valid Penguin ID number after the prefix.");
             return;
         }
 
-        // Generate a random 8-character alphanumeric string for the secret tag
         const secretTag = Math.random().toString(36).substring(2, 10);
-
-        // Register the new penguin in Supabase
+        
+        // Register in Supabase
         const { error } = await supabaseClient
             .from('penguin_logs')
             .insert([{ 
                 penguin_id: id, 
                 secret_tag: secretTag, 
                 finder_note: 'Initial Factory Registration',
-                latitude: 39.9783, // Carmel IN approximate starting latitude
-                longitude: -86.1180 // Carmel IN approximate starting longitude
+                latitude: 39.9783, 
+                longitude: -86.1180 
             }]);
 
         if (error) {
             alert("Registration failed. Have you added the 'secret_tag' column to your Supabase table yet?\n\nError: " + error.message);
-            console.error("DB Error:", error);
             return;
         }
 
-        // Generate the secure URL (assuming your GitHub Pages repo is bborne12.github.io/penguin-tracker)
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${id}&tag=${secretTag}`;
+        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
+        const baseIdNumber = id.replace("Penguin-", ""); // Extracts just the number
         
-        // Render the QR Code
-        const qrContainer = document.getElementById("qrcode");
-        qrContainer.innerHTML = ""; // Clear any previous QR code
-        
-        new QRCode(qrContainer, {
+        // 1. Generate Raw QR Code into a hidden div
+        const hiddenQr = document.getElementById("hidden-qrcode");
+        hiddenQr.innerHTML = ""; 
+        new QRCode(hiddenQr, {
             text: secureUrl,
-            width: 150,
-            height: 150,
+            width: 200,
+            height: 200,
             colorDark : "#000000",
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        // Display the URL and container
-        document.getElementById("qr-url-display").innerText = secureUrl;
-        document.getElementById("qrcode-container").style.display = "flex";
+        // 2. Wait a split second for QRCode.js to finish drawing, then composite it
+        setTimeout(() => {
+            const qrCanvas = hiddenQr.querySelector('canvas');
+            const finalCanvas = document.getElementById('composite-canvas');
+            const ctx = finalCanvas.getContext('2d');
 
-        alert(`Success! Penguin ${id} registered with Secret Tag: ${secretTag}`);
-        idInput.value = ""; // Clear the input field for the next one
-        
-        // Refresh the inventory matrix to show the newly born penguin
-        loadAdminInventoryMatrix();
+            // Setup dimensions for the sticker
+            finalCanvas.width = 240;
+            finalCanvas.height = 320; 
+
+            // Fill white background
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+            // Draw "TRACK ME"
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 24px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("TRACK ME", 120, 32);
+
+            // Draw the QR Code image
+            ctx.drawImage(qrCanvas, 20, 45, 200, 200);
+
+            // Draw "SCAN ME"
+            ctx.font = "bold 20px sans-serif";
+            ctx.fillText("SCAN ME", 120, 275);
+
+            // Draw the ID text (stripped of the prefix)
+            ctx.font = "bold 16px monospace";
+            ctx.fillStyle = "#d946ef"; // Match the admin theme purple
+            ctx.fillText(`ID: ${baseIdNumber}`, 120, 300);
+
+            // Convert canvas to a real image tag so the user can easily right-click & save
+            const dataUrl = finalCanvas.toDataURL("image/png");
+            document.getElementById('final-sticker-img').src = dataUrl;
+
+            // Display UI
+            document.getElementById("qr-url-display").innerText = secureUrl;
+            document.getElementById("qrcode-container").style.display = "flex";
+
+            idInput.value = "Penguin-"; // Reset field
+            loadAdminInventoryMatrix(); // Refresh table
+            
+        }, 150);
     }
 
-    // Mathematical Haversine calculator for inventory summary aggregation rows
+    // Mathematical Haversine calculator
     function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
         const R = 3958.8; 
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -382,31 +327,21 @@
             .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
             .order('created_at', { ascending: true });
 
-        if (error || !rawLogs) {
-            document.getElementById('inventory-tbody').innerHTML = `<tr><td colspan="5" style="color:#ef4444;text-align:center;">Database error encountered. Data retrieval failed.</td></tr>`;
-            return;
-        }
+        if (error || !rawLogs) return;
 
-        globalCachedLogsArray = rawLogs; // Push records to global runtime scope memory mapping
+        globalCachedLogsArray = rawLogs; 
 
-        // Process data clusters using plural structural grammar conventions
         const fleetClusters = {};
         rawLogs.forEach(log => {
             const id = log.penguin_id;
             if (!fleetClusters[id]) {
-                fleetClusters[id] = {
-                    id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id
-                };
+                fleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id };
             }
             fleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
             fleetClusters[id].pingsCount++;
             
-            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) {
-                fleetClusters[id].landmarksCount++;
-            }
-            if (log.custom_name && log.custom_name.trim() !== "") {
-                fleetClusters[id].activeName = log.custom_name;
-            }
+            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) fleetClusters[id].landmarksCount++;
+            if (log.custom_name && log.custom_name.trim() !== "") fleetClusters[id].activeName = log.custom_name;
         });
 
         const tbody = document.getElementById('inventory-tbody');
@@ -414,14 +349,13 @@
 
         const dynamicFleetKeys = Object.keys(fleetClusters);
         if (dynamicFleetKeys.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No records were found in the target data store pipeline.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No records were found.</td></tr>`;
             return;
         }
 
         dynamicFleetKeys.forEach(key => {
             const summaryNode = fleetClusters[key];
             
-            // Calculate aggregate mileage
             let compiledMiles = 0;
             for (let i = 0; i < summaryNode.points.length - 1; i++) {
                 compiledMiles += getDistanceBetweenPoints(
@@ -431,43 +365,36 @@
             }
 
             const tr = document.createElement('tr');
+            tr.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
+            
             tr.innerHTML = `
                 <td style="font-weight:bold;color:#f5d0fe;">🐧 ${summaryNode.id}</td>
                 <td><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
                 <td><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
                 <td><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
-                <td><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>`;
+                <td><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
+                <td><button class="btn-command btn-danger" style="padding: 4px 8px; font-size: 8pt;" onclick="deleteEntirePenguin(event, '${summaryNode.id}')">Delete</button></td>`;
             
-            // Hook row interaction to trigger simultaneous timeline file audit display
-            tr.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
             tbody.appendChild(tr);
         });
     }
 
     // ===================================================
-    // AUDITING ENGINE: CHRONOLOGICAL RECORD SURGERY
+    // AUDITING & DELETION ENGINE
     // ===================================================
     function launchSurgicalAuditDeck(targetId, displayName) {
         activeAuditedPenguinId = targetId;
         document.getElementById('audit-panel-card').style.display = "block";
         document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
         document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
-        
-        // Setup master reset binding anchor cleanly
-        document.getElementById('master-reset-btn').onclick = () => invokeMasterResetSequence(targetId);
-
         renderSurgicalLogsFeed();
     }
 
     function renderSurgicalLogsFeed() {
         const feedContainer = document.getElementById('audit-logs-feed');
         feedContainer.innerHTML = "";
-
-        // Sift global cached matrix and isolate logs matching selection criteria
         const operationalSlice = globalCachedLogsArray.filter(log => log.penguin_id === activeAuditedPenguinId);
         
-        // Render chronological history rows matching the target selection arrays
-        // Displays newest entries at top of audit scrolling deck layout viewport
         for (let i = operationalSlice.length - 1; i >= 0; i--) {
             const logItem = operationalSlice[i];
             const timestampText = new Date(logItem.created_at).toLocaleString();
@@ -477,7 +404,6 @@
             
             if (logItem.photo_url) {
                 photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
-                // Operational task button: Wipe photo parameters while preserving coordinate entry metadata logs
                 stripPhotoActionButtonHTML = `<button onclick="stripPhotoLink('${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
             }
 
@@ -501,59 +427,13 @@
         }
     }
 
-    // ===================================================
-    // MUTATION ENGINES: EXECUTING STORAGE OVERRIDES
-    // ===================================================
+    // ACTION: Total master clearance deletion of an entire penguin
+    async function deleteEntirePenguin(event, targetId) {
+        // Stop the row click from triggering the audit panel open
+        if(event) event.stopPropagation();
 
-    // ACTION A: Purge a single record safely based on row unique ISO timestamp metrics matches
-    async function purgeSingleLog(createdAtISOString) {
-        if (!confirm("Are you certain you want to purge this record entry? This action cannot be revoked.")) return;
-
-        const { error } = await supabaseClient
-            .from('penguin_logs')
-            .delete()
-            .eq('penguin_id', activeAuditedPenguinId)
-            .eq('created_at', createdAtISOString);
-
-        if (error) {
-            alert("Database processing exception encountered. Record purge was denied.");
-            return;
-        }
-
-        alert("Record row purged completely.");
-        // Refresh local memory matrix states seamlessly
-        await loadAdminInventoryMatrix();
-        renderSurgicalLogsFeed();
-    }
-
-    // ACTION B: Wipe attached photo elements parameters link while retaining base telemetry logs rows structure
-    async function stripPhotoLink(createdAtISOString) {
-        if (!confirm("Remove the photo file string location token from this row record payload?")) return;
-
-        const { error } = await supabaseClient
-            .from('penguin_logs')
-            .update({ photo_url: null })
-            .eq('penguin_id', activeAuditedPenguinId)
-            .eq('created_at', createdAtISOString);
-
-        if (error) {
-            alert("Database processing override faulted.");
-            return;
-        }
-
-        alert("Image pointer reference stripped successfully.");
-        await loadAdminInventoryMatrix();
-        renderSurgicalLogsFeed();
-    }
-
-    // ACTION C: Total master clearance overhaul sequence mutation command
-    async function invokeMasterResetSequence(targetId) {
-        const doubleCheckVerificationPhrase = prompt(`🚨 MASTER RESET HAZARD DECK ACTIVATED 🚨\n\nThis operation destroys EVERY logging marker record row associated with "${targetId}".\n\nTo proceed with this file structure overhaul, type out the reset token key string phrase exactly: "OVERHAUL FLEET DATA"`);
-        
-        if (doubleCheckVerificationPhrase !== "OVERHAUL FLEET DATA") {
-            alert("Verification key signature validation failed. Master reset sequence aborted.");
-            return;
-        }
+        const doubleCheck = confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently erase all tracking data, photos, and passport logs for this game piece. This action cannot be undone.`);
+        if (!doubleCheck) return;
 
         const { error } = await supabaseClient
             .from('penguin_logs')
@@ -561,15 +441,37 @@
             .eq('penguin_id', targetId);
 
         if (error) {
-            alert("Mass structural overwrite operation was rejected by server schemas safeguards configurations.");
+            alert("Delete operation failed. Please try again.");
             return;
         }
 
-        alert(`Success! Data records for "${targetId}" were overwritten and wiped completely. The piece has returned to standard factory tracking defaults status templates configuration settings.`);
-        document.getElementById('audit-panel-card').style.display = "none";
-        activeAuditedPenguinId = null;
+        alert(`Success. ${targetId} has been purged from the active inventory matrix.`);
+        
+        // Hide the audit panel if they deleted the penguin they were currently looking at
+        if (activeAuditedPenguinId === targetId) {
+            document.getElementById('audit-panel-card').style.display = "none";
+            activeAuditedPenguinId = null;
+        }
         
         await loadAdminInventoryMatrix();
+    }
+
+    // ACTION: Purge a single log
+    async function purgeSingleLog(createdAtISOString) {
+        if (!confirm("Are you certain you want to purge this specific record entry?")) return;
+        const { error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString);
+        if (error) { alert("Delete failed."); return; }
+        await loadAdminInventoryMatrix();
+        renderSurgicalLogsFeed();
+    }
+
+    // ACTION: Wipe attached photo
+    async function stripPhotoLink(createdAtISOString) {
+        if (!confirm("Remove the photo file location token from this record?")) return;
+        const { error } = await supabaseClient.from('penguin_logs').update({ photo_url: null }).eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString);
+        if (error) { alert("Override faulted."); return; }
+        await loadAdminInventoryMatrix();
+        renderSurgicalLogsFeed();
     }
 </script>
 
