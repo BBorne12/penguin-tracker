@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Antarctic Adventure Mode</title>
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -174,6 +175,7 @@
 </head>
 <body>
 
+<!-- WELCOME STORY MODAL OVERLAY -->
 <div class="modal-overlay" id="welcome-modal">
     <div class="modal-card" style="text-align: left;">
         <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! 🐧</h2>
@@ -187,6 +189,7 @@
     </div>
 </div>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -199,6 +202,7 @@
     </div>
 </div>
 
+<!-- EDIT PROFILE MODAL OVERLAY -->
 <div class="modal-overlay" id="edit-profile-modal">
     <div class="modal-card">
         <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
@@ -206,13 +210,27 @@
         
         <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
         <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
-            </div>
+            <!-- Dynamic Avatars Injected Here -->
+        </div>
         
         <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
 
+<!-- MANUAL COLONY AUTHENTICATION MODAL -->
+<div class="modal-overlay" id="auth-colony-modal">
+    <div class="modal-card">
+        <h2 style="color: #00e5ff; margin-bottom: 15px;">Verify Identity</h2>
+        <p style="font-size: 11pt; color: #94a3b8; margin-bottom: 12px; line-height: 1.4;">Enter your Penguin ID and Secret Tag to authorize adding this penguin to your colony.</p>
+        <input type="text" id="auth-penguin-id" class="modal-input" placeholder="Your Penguin ID (e.g., Penguin-007)">
+        <input type="password" id="auth-secret-tag" class="modal-input" placeholder="Your Secret Tag">
+        <button class="btn-glow" onclick="submitColonyAuth()">Verify & Add</button>
+        <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeColonyAuthModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- DEDICATED MAP POPUP MODAL -->
 <div class="modal-overlay" id="map-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
@@ -221,6 +239,7 @@
     </div>
 </div>
 
+<!-- FULLSCREEN IMAGE MODAL -->
 <div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -230,10 +249,12 @@
 
 <div class="app-container">
     
+    <!-- BACK TO MY PENGUIN BUTTON (Hidden by default) -->
     <div id="back-to-my-penguin-container" style="display:none; margin-bottom: 12px;">
-        <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Scanned Penguin</button>
+        <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Penguin</button>
     </div>
 
+    <!-- HEADER SECTION -->
     <div class="app-header" style="position: relative; padding-right: 40px;">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -245,6 +266,7 @@
         <button id="help-btn" onclick="openWelcomeModal()" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
@@ -258,18 +280,24 @@
             </div>
         </div>
 
+        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
             
+            <!-- STRANGER ACTION ROW (Hidden unless looking at someone else's penguin) -->
             <div id="stranger-action-row" style="display: none; justify-content: flex-end; margin-bottom: 12px;">
-                </div>
+                <!-- Add to colony button dynamically injected here -->
+            </div>
 
+            <!-- UNIVERSAL TABS -->
             <div class="tab-bar" id="profile-tabs" style="display: flex; margin-bottom: 16px;">
                 <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')">🐧 My Penguin</button>
                 <button class="tab-btn" id="tab-my-colony" onclick="switchProfileTab('colony')">🧊 My Colony</button>
             </div>
 
+            <!-- PENGUIN PROFILE CONTAINER -->
             <div id="my-penguin-container">
                 
+                <!-- Avatar & Identity Box -->
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     <button id="edit-profile-btn" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -277,6 +305,7 @@
                     <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
                 </div>
 
+                <!-- Stats List -->
                 <ul class="data-list">
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Current Status</span></div>
@@ -296,13 +325,15 @@
                 </ul>
             </div>
 
+            <!-- MY COLONY CONTENT CONTAINER -->
             <div id="colony-container" style="display: none;">
                 <ul class="leaderboard-list" id="colony-list-output">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Loading your colony...</li>
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Loading colony...</li>
                 </ul>
             </div>
         </div>
 
+        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
@@ -328,6 +359,7 @@
             </div>
         </div>
         
+        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Journey Stops</h2>
             
@@ -336,6 +368,7 @@
                 <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
             </div>
 
+            <!-- TAB: LOG NEW STOP -->
             <div id="stop-log-container">
                 <div class="input-group" id="notes-input-group">
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
@@ -348,6 +381,7 @@
                 </div>
             </div>
 
+            <!-- TAB: ALL STOPS HISTORY -->
             <div id="stop-history-container" style="display: none;">
                 <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
@@ -360,6 +394,7 @@
             </div>
         </div>
 
+        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -379,6 +414,7 @@
             </div>
         </div>
 
+        <!-- CONSOLIDATED LANDMARKS CARD -->
         <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Landmarks</h2>
@@ -408,16 +444,18 @@
             </div>
         </div>
 
+        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.3.0</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.4.0 (Stateless URL Core)</div>
 
 </div>
 
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -426,10 +464,15 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let urlParams = new URLSearchParams(window.location.search);
-    let initialParamId = urlParams.get('id') || "Mystery Penguin";
+    let penguinId = urlParams.get('id') || "Mystery Penguin";
     let securityTagParam = urlParams.get('tag') || null; 
-    let penguinId = initialParamId; 
-    let isViewOnlyMode = (initialParamId === "Mystery Penguin");
+    
+    // STATELESS IDENTITY VARIABLES
+    let viewerId = urlParams.get('viewer') || null;
+    let viewerTagParam = urlParams.get('vtag') || null;
+    let myId = null;
+    let myTag = null;
+    let isViewOnlyMode = true;
     
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
@@ -464,55 +507,60 @@
     if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
 
     // ===================================================
-    // HYBRID SECURITY GATEWAY LOGIC
+    // STATELESS SECURITY GATEWAY LOGIC
     // ===================================================
     async function verifyPenguinSecurity(id, tag) {
         let parsedId = id;
-        if(id.startsWith("Penguin-")) parsedId = id.replace("Penguin-", "");
+        if(!id.startsWith("Penguin-")) parsedId = `Penguin-${id}`;
         
-        const numericId = parseInt(parsedId, 10);
-        if (isNaN(numericId) || numericId < 66) return true; 
         if (!tag) return false;
 
-        const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', id).not('secret_tag', 'is', null);
-        if (error || !data || data.length === 0) return false;
+        const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', parsedId);
+        
+        // LAZY MINTING: If zero rows exist, the DB is clean. 
+        // If the URL has a tag, they scanned the physical virgin QR code. Trust it.
+        if (!data || data.length === 0) {
+            return tag ? true : false;
+        }
+
         return data.some(log => log.secret_tag === tag);
     }
 
     window.addEventListener("DOMContentLoaded", async function() {
-        // ID BADGE SETUP (Local Storage Identity)
-        let myId = localStorage.getItem('my_penguin_id');
-        let myTag = localStorage.getItem('my_penguin_tag');
-        
-        // BUG FIX: Detect if we got here by clicking a link inside the app (Leaderboard/Colony list)
-        let isInternalLink = urlParams.get('ref') === 'lb';
-
         initializeLiveMap();
         updateProfileAvatar(activeAvatarColor); 
         
-        if (!isViewOnlyMode) {
-            const isAuthorized = await verifyPenguinSecurity(penguinId, securityTagParam);
-            if (!isAuthorized) {
-                isViewOnlyMode = true;
-                const viewBanner = document.getElementById('view-mode-banner');
-                if (viewBanner) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
-                activateViewOnlyUI();
-                const poiOutput = document.getElementById("poi-proximity-output");
-                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
-            } else {
-                // BUG FIX: Only adopt this penguin as your identity if:
-                // 1. You don't already have one AND
-                // 2. You didn't just click on it from the Leaderboard.
-                if (!myId && !isInternalLink) {
-                    localStorage.setItem('my_penguin_id', penguinId);
-                    if(securityTagParam) localStorage.setItem('my_penguin_tag', securityTagParam);
-                    myId = penguinId;
-                    myTag = securityTagParam;
-                }
-                verifyCurrentGPS(); 
-            }
+        // 1. Check if the user is the owner of the CURRENT page they are viewing.
+        let isOwner = false;
+        if (penguinId !== "Mystery Penguin" && securityTagParam) {
+            isOwner = await verifyPenguinSecurity(penguinId, securityTagParam);
+        }
+
+        // 2. Check if the user is an authorized viewer (clicked from Leaderboard).
+        let isViewerAuthorized = false;
+        if (viewerId && viewerTagParam) {
+            isViewerAuthorized = await verifyPenguinSecurity(viewerId, viewerTagParam);
+        }
+
+        // 3. Resolve internal identity state.
+        if (isOwner) {
+            myId = penguinId;
+            myTag = securityTagParam;
+            isViewOnlyMode = false;
+            verifyCurrentGPS(); 
+        } else if (isViewerAuthorized) {
+            myId = viewerId;
+            myTag = viewerTagParam;
+            isViewOnlyMode = true;
         } else {
-            activateViewOnlyUI(); 
+            // Anonymous / Unverified scan
+            isViewOnlyMode = true;
+        }
+
+        if (isViewOnlyMode) {
+            const viewBanner = document.getElementById('view-mode-banner');
+            if (viewBanner) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
+            activateViewOnlyUI();
             const poiOutput = document.getElementById("poi-proximity-output");
             if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
         }
@@ -524,9 +572,8 @@
         const strangerActionRow = document.getElementById('stranger-action-row');
 
         if (myId && myId !== penguinId) {
-            // I am viewing someone else's penguin!
+            // I am an authorized viewer looking at someone else's penguin!
             if(backBtnContainer) backBtnContainer.style.display = 'block';
-            
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
                 // Check if this penguin is already in my colony
@@ -539,6 +586,12 @@
 
                 strangerActionRow.innerHTML = inColonyHTML;
             }
+        } else if (!myId && isViewOnlyMode && penguinId !== "Mystery Penguin") {
+            // I am an anonymous viewer scanning a stranger's penguin. Show Auth button.
+            if(strangerActionRow) {
+                strangerActionRow.style.display = 'flex';
+                strangerActionRow.innerHTML = `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="openColonyAuthModal()">➕ Add to My Colony</button>`;
+            }
         }
 
         setTimeout(function() {
@@ -548,13 +601,40 @@
     });
 
     // ===================================================
-    // COLONY FEATURES & ROUTING LOGIC
+    // COLONY FEATURES & MANUAL AUTH MODAL
     // ===================================================
+    function openColonyAuthModal() { document.getElementById('auth-colony-modal').style.display = 'flex'; }
+    function closeColonyAuthModal() { document.getElementById('auth-colony-modal').style.display = 'none'; }
+
+    async function submitColonyAuth() {
+        let authId = document.getElementById('auth-penguin-id').value.trim();
+        const authTag = document.getElementById('auth-secret-tag').value.trim();
+
+        if (!authId || !authTag) return alert("Please enter both your Penguin ID and Secret Tag.");
+        if (!authId.startsWith('Penguin-')) authId = `Penguin-${authId}`;
+
+        const isValid = await verifyPenguinSecurity(authId, authTag);
+        if (!isValid) return alert("Invalid Identity or Secret Tag. Please try again.");
+
+        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', authId).limit(1);
+        let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
+
+        if (!currentList.includes(penguinId)) {
+            currentList.push(penguinId);
+            await supabaseClient.from('penguin_logs').update({ colony_list: currentList.join(',') }).eq('penguin_id', authId);
+        }
+
+        // Reload the page, but inject the viewer credentials into the URL so state persists cleanly!
+        let targetUrl = `?id=${penguinId}`;
+        if (securityTagParam) targetUrl += `&tag=${securityTagParam}`;
+        targetUrl += `&viewer=${authId}&vtag=${authTag}`;
+        
+        window.location.href = targetUrl;
+    }
+
     function goBackToMyPenguin() {
-        let myId = localStorage.getItem('my_penguin_id');
-        let myTag = localStorage.getItem('my_penguin_tag');
-        if (myId) {
-            window.location.href = `?id=${myId}${myTag ? '&tag='+myTag : ''}`;
+        if (myId && myTag) {
+            window.location.href = `?id=${myId}&tag=${myTag}`;
         }
     }
 
@@ -564,12 +644,10 @@
         const contPenguin = document.getElementById('my-penguin-container');
         const contColony = document.getElementById('colony-container');
         const editBtn = document.getElementById('edit-profile-btn');
-        let myId = localStorage.getItem('my_penguin_id');
         
         if(tabName === 'penguin') {
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
-            // Only show edit button if it's MY penguin
             if(editBtn && !isViewOnlyMode && myId === penguinId) editBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
@@ -580,7 +658,6 @@
     }
 
     async function addToColony() {
-        let myId = localStorage.getItem('my_penguin_id');
         if (!myId) return;
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
@@ -600,7 +677,7 @@
 
     async function loadColonyList() {
         const listEl = document.getElementById('colony-list-output');
-        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying your colony data...</li>`;
+        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying colony data...</li>`;
         
         const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId).limit(1);
         let colonyIds = myLogs && myLogs.length > 0 && myLogs[0].colony_list ? myLogs[0].colony_list.split(',').filter(id => id.trim() !== '') : [];
@@ -622,21 +699,25 @@
             allLogs.forEach(log => {
                 if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
                 if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
-                if(log.latitude && log.longitude && log.finder_note !== 'Initial Factory Registration' && !log.finder_note.includes('Penguin Hatched!')) {
+                if(log.latitude && log.longitude && !log.finder_note.includes('Penguin Hatched!')) {
                     colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
                 }
             });
         }
         
         listEl.innerHTML = "";
-        let myId = localStorage.getItem('my_penguin_id');
+
+        let viewerParams = "";
+        if (myId && myTag) {
+            viewerParams = `&viewer=${myId}&vtag=${myTag}`;
+        }
 
         colonyIds.forEach(id => {
             let miles = 0;
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
             
-            let removeButtonHTML = (myId === penguinId) 
+            let removeButtonHTML = (myId === penguinId && !isViewOnlyMode) 
                 ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
                 : "";
 
@@ -655,16 +736,15 @@
                     ${removeButtonHTML}
                 </div>
             `;
-            // Appended &ref=lb so Leaderboard shield protects identity
-            li.onclick = () => { window.location.href = `?id=${id}&ref=lb`; }
+            // Securely pass viewer credentials into the link if authorized
+            li.onclick = () => { window.location.href = `?id=${id}${viewerParams}`; }
             listEl.appendChild(li);
         });
     }
 
     async function removeFromColony(targetId, event) {
         event.stopPropagation();
-        let myId = localStorage.getItem('my_penguin_id');
-        if (myId !== penguinId) {
+        if (myId !== penguinId || isViewOnlyMode) {
             alert("You can only remove penguins from your own colony.");
             return;
         }
@@ -811,7 +891,6 @@
 
         await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName, avatar_color: activeAvatarColor }).eq('penguin_id', penguinId);
         
-        let myId = localStorage.getItem('my_penguin_id');
         let possessiveSuffix = activeCustomName.toLowerCase().endsWith('s') ? "'" : "'s";
         const btnPenguin = document.getElementById('tab-my-penguin');
         const btnColony = document.getElementById('tab-my-colony');
@@ -1019,7 +1098,7 @@
     }
 
     // ===================================================
-    // BIRTH CERTIFICATE & IDENTITY LOCK FIX
+    // LAZY MINTING HATCH FIX 
     // ===================================================
     async function saveCustomNameFromModal() {
         const nameInput = document.getElementById('modal-custom-name').value.trim();
@@ -1029,30 +1108,21 @@
             if (pIdEl) pIdEl.innerText = `ID: ${penguinId} (${activeCustomName})`;
             const pNameEl = document.getElementById('penguin-name-display');
             if (pNameEl) pNameEl.innerText = activeCustomName;
-            
-            // 🚨 BUG FIX: Force identity assignment when they explicitly name/hatch a penguin
-            localStorage.setItem('my_penguin_id', penguinId);
-            if (securityTagParam) localStorage.setItem('my_penguin_tag', securityTagParam);
-            
-            let possessiveSuffix = activeCustomName.toLowerCase().endsWith('s') ? "'" : "'s";
-            const btnPenguin = document.getElementById('tab-my-penguin');
-            const btnColony = document.getElementById('tab-my-colony');
-            
-            if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
-            if (btnColony) btnColony.innerText = `🧊 My Colony`;
 
             if (globalLogData.length === 0) {
+                // Completely new scan logic: Write the first entry directly to the database.
                 await supabaseClient.from('penguin_logs').insert([{
                     penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                     finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
                 }]);
+                
+                // Force a hard reload to establish pure proper stateless identity from the DB
+                location.reload();
             } else {
                 await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
             }
         }
         const modal = document.getElementById('first-find-modal'); if (modal) modal.style.display = 'none';
-        
-        // Ensure UI updates properly after hatching
         const editBtn = document.getElementById('edit-profile-btn');
         if (editBtn) editBtn.style.display = 'block';
     }
@@ -1074,7 +1144,7 @@
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
 
         allLogs.forEach(log => {
-            if (log.finder_note === 'Initial Factory Registration' || log.finder_note === 'Penguin Hatched! 🥚') return;
+            if (log.finder_note === 'Penguin Hatched! 🥚') return;
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
@@ -1120,6 +1190,12 @@
         const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
         const pageItemsSlice = computedLeaderboardArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
 
+        // Dynamically build viewer passing URL params if authorized
+        let viewerParams = "";
+        if (myId && myTag) {
+            viewerParams = `&viewer=${myId}&vtag=${myTag}`;
+        }
+
         pageItemsSlice.forEach((item, index) => {
             const li = document.createElement('li'); li.className = 'leaderboard-row';
             let absoluteRank = startIdx + index + 1; let rankClass = ""; let medal = `#${absoluteRank}`;
@@ -1131,8 +1207,8 @@
 
             li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
             
-            // BUG FIX: Appended ref=lb so the app knows we clicked a leaderboard link
-            li.onclick = () => { window.location.href = `?id=${item.id}&ref=lb`; };
+            // Pass authorization natively through the URL
+            li.onclick = () => { window.location.href = `?id=${item.id}${viewerParams}`; };
             listOutput.appendChild(li);
         });
     }
@@ -1199,7 +1275,7 @@
 
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
-            if(entry.finder_note === 'Initial Factory Registration' || entry.finder_note === 'Penguin Hatched! 🥚') continue;
+            if(entry.finder_note === 'Penguin Hatched! 🥚') continue;
             
             let cleanNote = entry.finder_note || "";
             if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
@@ -1262,8 +1338,7 @@
 
         if (error) return;
 
-        const logs = rawLogs.filter(log => log.finder_note !== 'Initial Factory Registration');
-
+        const logs = rawLogs;
         discoveredMonumentsSet.clear();
         globalLogData = logs || []; 
 
@@ -1271,6 +1346,7 @@
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
+        // The DB is totally empty! Unhatched! Let the scanner claim it.
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 if (firstFindModal) firstFindModal.style.display = 'flex';
@@ -1303,8 +1379,6 @@
 
         updateProfileAvatar(activeAvatarColor);
 
-        // --- NEW DYNAMIC STRANGER HEADER & COLONY TAB NAME LOGIC ---
-        let myId = localStorage.getItem('my_penguin_id');
         let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
         const btnPenguin = document.getElementById('tab-my-penguin');
         const btnColony = document.getElementById('tab-my-colony');
