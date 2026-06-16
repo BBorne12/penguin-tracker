@@ -72,7 +72,7 @@
         .matrix-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
         .matrix-table th, .matrix-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .matrix-table th { color: #f5d0fe; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; }
-        .matrix-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .matrix-table tbody tr { transition: background 0.2s; }
         .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); }
 
         .badge-count { font-weight: bold; color: #a21caf; background: rgba(217, 70, 239, 0.15); padding: 2px 6px; border-radius: 4px; }
@@ -89,18 +89,20 @@
 </head>
 <body>
 
+<!-- GATEKEEPER AUTHORIZATION SHIELD -->
 <div id="auth-lock-screen">
     <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
         <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
         <h2>Operations Gatekeeper</h2>
         <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
         <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
-        <button onclick="verifyAccessLock()" class="btn-command" style="width: 100%;">Authorize Session</button>
+        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
     </div>
 </div>
 
 <div class="app-container" id="admin-main-ui" style="display: none;">
     
+    <!-- HEADER -->
     <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <div class="subtitle">Back-Office Fleet Control</div>
@@ -109,8 +111,10 @@
         <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
     </div>
 
+    <!-- MAIN DASHBOARD HUB -->
     <div class="layout-section">
         
+        <!-- ROW: FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🏭 Fleet Production Line</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact QR code sticker and register a new penguin entry parameter loop simultaneously.</p>
@@ -121,6 +125,7 @@
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
+                <!-- Containers for construction pipeline logic steps -->
                 <div id="hidden-qrcode" style="display: none;"></div>
                 <canvas id="composite-canvas" style="display: none;"></canvas>
                 
@@ -134,6 +139,7 @@
             </div>
         </div>
 
+        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
         <div class="glass-card">
             <h2>Active Game Piece Inventory Matrix</h2>
             <div style="overflow-x: auto;">
@@ -157,6 +163,7 @@
             </div>
         </div>
 
+        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
                 <div>
@@ -166,7 +173,8 @@
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                </div>
+                <!-- Chronological history steps inject here -->
+            </div>
         </div>
 
     </div>
@@ -362,16 +370,30 @@
             }
 
             const tr = document.createElement('tr');
-            tr.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
             
+            // Build the row layout WITHOUT an inline onclick attribute
             tr.innerHTML = `
-                <td style="font-weight:bold;color:#f5d0fe;">🐧 ${summaryNode.id}</td>
-                <td><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
-                <td><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
-                <td><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
-                <td><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
-                <td><button class="btn-command btn-danger" style="padding: 4px 8px; font-size: 8pt;" onclick="deleteEntirePenguin(event, '${summaryNode.id}')">Delete</button></td>`;
+                <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
+                <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
+                <td style="cursor:pointer;"><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
+                <td style="cursor:pointer;"><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
+                <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
+                <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Delete</button></td>`;
             
+            // Attach row click (only on data cells so it doesn't overlap the button)
+            Array.from(tr.children).forEach((td, idx) => {
+                if (idx < 5) { // Only first 5 columns open the audit panel
+                    td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
+                }
+            });
+
+            // Bind explicitly hardened DOM Event Listener
+            const deleteBtn = tr.querySelector('.delete-btn');
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation(); 
+                deleteEntirePenguin(summaryNode.id);
+            };
+
             tbody.appendChild(tr);
         });
     }
@@ -401,7 +423,7 @@
             
             if (logItem.photo_url) {
                 photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
-                stripPhotoActionButtonHTML = `<button onclick="stripPhotoLink(event, '${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
+                stripPhotoActionButtonHTML = `<button class="btn-command btn-danger strip-btn" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
             }
 
             const itemBlock = document.createElement('div');
@@ -411,7 +433,7 @@
                     <span style="font-family:monospace; color:#00e5ff; font-size:8.5pt;">⏱️ ${timestampText}</span>
                     <div style="margin-left:auto;">
                         ${stripPhotoActionButtonHTML}
-                        <button onclick="purgeSingleLog(event, '${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
+                        <button class="btn-command btn-danger delete-log-btn" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
                     </div>
                 </div>
                 <div style="font-size:9pt; color:#cbd5e1; margin-top:4px;">
@@ -420,64 +442,92 @@
                     ${photoElementHTML}
                 </div>`;
             
+            // Hardened DOM Listener bindings for logs
+            const stripBtn = itemBlock.querySelector('.strip-btn');
+            if (stripBtn) {
+                stripBtn.onclick = (e) => { e.stopPropagation(); stripPhotoLink(logItem.created_at); };
+            }
+
+            const deleteLogBtn = itemBlock.querySelector('.delete-log-btn');
+            if (deleteLogBtn) {
+                deleteLogBtn.onclick = (e) => { e.stopPropagation(); purgeSingleLog(logItem.created_at); };
+            }
+
             feedContainer.appendChild(itemBlock);
         }
     }
 
-    // FIXED: Wipes entire target row sequences cleanly across index clusters
-    async function deleteEntirePenguin(event, targetId) {
-        if(event) event.stopPropagation();
-
-        const doubleCheck = confirm(`🚨 MASTER ERASE SELECTION ACTIVATED: Delete all entries for ${targetId}?`);
+    // Wipes entire target row sequences cleanly
+    async function deleteEntirePenguin(targetId) {
+        const doubleCheck = confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently erase all tracking data, photos, and passport logs for this game piece. This action cannot be undone.`);
         if (!doubleCheck) return;
 
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('penguin_logs')
             .delete()
-            .eq('penguin_id', targetId);
+            .eq('penguin_id', targetId)
+            .select(); // .select() forces Supabase to return the deleted rows!
 
         if (error) {
-            alert("Erase script execution rejected: " + error.message);
+            alert("Delete operation failed. Please try again. " + error.message);
             return;
         }
 
-        alert(`Purged ${targetId} successfully.`);
+        // 🚨 RLS BLOCK DETECTION:
+        if (!data || data.length === 0) {
+            alert("⚠️ DELETE FAILED!\n\nYour Supabase database Row Level Security (RLS) is quietly blocking deletions.\n\nTo fix this:\n1. Go to your Supabase Dashboard -> Authentication -> Policies.\n2. Create a new Policy on the 'penguin_logs' table.\n3. Enable the 'DELETE' operation for 'anon' users.");
+            return;
+        }
+
+        alert(`Success. ${targetId} has been purged from the active inventory matrix.`);
+        
         if (activeAuditedPenguinId === targetId) {
             document.getElementById('audit-panel-card').style.display = "none";
             activeAuditedPenguinId = null;
         }
+        
         await loadAdminInventoryMatrix();
     }
 
-    // FIXED: Strips single record arrays matching timestamp index points
-    async function purgeSingleLog(event, createdAtISOString) {
-        if(event) event.stopPropagation();
-        if (!confirm("Are you certain you want to purge this structural milestone marker?")) return;
+    // Strips single record arrays matching timestamp
+    async function purgeSingleLog(createdAtISOString) {
+        if (!confirm("Are you certain you want to purge this specific record entry?")) return;
 
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('penguin_logs')
             .delete()
             .eq('penguin_id', activeAuditedPenguinId)
-            .eq('created_at', createdAtISOString);
+            .eq('created_at', createdAtISOString)
+            .select();
 
         if (error) { alert("Delete failed: " + error.message); return; }
+        
+        if (!data || data.length === 0) {
+            alert("⚠️ DELETE FAILED!\nSupabase Row Level Security (RLS) is blocking deletions. Please enable DELETE policies for 'anon' in Supabase.");
+            return;
+        }
         
         await loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
     }
 
-    // FIXED: Nullifies image payload parameters
-    async function stripPhotoLink(event, createdAtISOString) {
-        if(event) event.stopPropagation();
+    // Nullifies image payload parameters
+    async function stripPhotoLink(createdAtISOString) {
         if (!confirm("Remove the image reference token location link parameter?")) return;
 
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('penguin_logs')
             .update({ photo_url: null })
             .eq('penguin_id', activeAuditedPenguinId)
-            .eq('created_at', createdAtISOString);
+            .eq('created_at', createdAtISOString)
+            .select();
 
         if (error) { alert("Override faulted: " + error.message); return; }
+
+        if (!data || data.length === 0) {
+            alert("⚠️ UPDATE FAILED!\nSupabase Row Level Security (RLS) is blocking updates. Please check your policies.");
+            return;
+        }
         
         await loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
