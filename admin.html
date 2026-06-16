@@ -95,7 +95,7 @@
         <h2>Operations Gatekeeper</h2>
         <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
         <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
-        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
+        <button onclick="verifyAccessLock()" class="btn-command" style="width: 100%;">Authorize Session</button>
     </div>
 </div>
 
@@ -113,7 +113,7 @@
         
         <div class="glass-card">
             <h2>🏭 Fleet Production Line</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, formatted QR code sticker and register a new penguin simultaneously.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact QR code sticker and register a new penguin entry parameter loop simultaneously.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
@@ -124,11 +124,11 @@
                 <div id="hidden-qrcode" style="display: none;"></div>
                 <canvas id="composite-canvas" style="display: none;"></canvas>
                 
-                <img id="final-sticker-img" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
+                <img id="final-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
                 
                 <div style="flex: 1;">
-                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Production Success!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image to save or copy it. It is perfectly formatted for printing as a sticker.</p>
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Sticker Rendering Complete!</strong>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image matrix to copy or store the output asset stream payload.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
@@ -178,11 +178,10 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Operational memory allocation scopes
     let activeAuditedPenguinId = null;
     let globalCachedLogsArray = [];
 
-    // --- AUTO-POPULATE PREFIX LOGIC ---
+    // --- AUTO-POPULATE PREFIX ENFORCEMENT ---
     const idInputField = document.getElementById('new-penguin-id');
     idInputField.addEventListener('input', function(e) {
         if (!this.value.startsWith('Penguin-')) {
@@ -190,7 +189,6 @@
         }
     });
 
-    // Simple client-side auth memory lock sequence
     function verifyAccessLock() {
         const inputPass = document.getElementById('admin-password-field').value;
         if (inputPass === "borne2track") {
@@ -203,7 +201,6 @@
         }
     }
 
-    // Retain auth state if window is refreshed
     if (sessionStorage.getItem("admin_verified") === "true") {
         document.getElementById('auth-lock-screen').style.display = "none";
         document.getElementById('admin-main-ui').style.display = "block";
@@ -216,20 +213,19 @@
     }
 
     // ===================================================
-    // FLEET PRODUCTION LINE (QR STICKER GENERATOR)
+    // FLEET PRODUCTION LINE (COMPACT VERTICAL QR GENERATOR)
     // ===================================================
     async function generateNewPenguin() {
         const idInput = document.getElementById('new-penguin-id');
         const id = idInput.value.trim();
         
         if (id === 'Penguin-' || !id) {
-            alert("Please enter a valid Penguin ID number after the prefix.");
+            alert("Please provide an initialization parameter extension sequence after the template layout prefix.");
             return;
         }
 
         const secretTag = Math.random().toString(36).substring(2, 10);
         
-        // Register in Supabase
         const { error } = await supabaseClient
             .from('penguin_logs')
             .insert([{ 
@@ -241,72 +237,70 @@
             }]);
 
         if (error) {
-            alert("Registration failed. Have you added the 'secret_tag' column to your Supabase table yet?\n\nError: " + error.message);
+            alert("Registration fault generated: " + error.message);
             return;
         }
 
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
-        const baseIdNumber = id.replace("Penguin-", ""); // Extracts just the number
+        const baseIdNumber = id.replace("Penguin-", ""); 
         
-        // 1. Generate Raw QR Code into a hidden div
         const hiddenQr = document.getElementById("hidden-qrcode");
         hiddenQr.innerHTML = ""; 
         new QRCode(hiddenQr, {
             text: secureUrl,
-            width: 200,
-            height: 200,
+            width: 160,
+            height: 160,
             colorDark : "#000000",
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        // 2. Wait a split second for QRCode.js to finish drawing, then composite it
         setTimeout(() => {
             const qrCanvas = hiddenQr.querySelector('canvas');
             const finalCanvas = document.getElementById('composite-canvas');
             const ctx = finalCanvas.getContext('2d');
 
-            // Setup dimensions for the sticker
-            finalCanvas.width = 240;
-            finalCanvas.height = 320; 
+            // Set up ultra-compact dimensions
+            finalCanvas.width = 205;
+            finalCanvas.height = 185; 
 
-            // Fill white background
+            // Base Background fill
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-            // Draw "TRACK ME"
+            // Draw QR Code shifted right to accommodate the sideways vertical text column
+            ctx.drawImage(qrCanvas, 35, 5, 160, 160);
+
+            // COMPACT LAYOUT SIDEWAYS TEXT RENDERING LAYER
+            ctx.save();
+            ctx.translate(22, 165); // Move origin point anchor left of the code matrix
+            ctx.rotate(-Math.PI / 2); // Pivot text alignment stack 90 degrees counter-clockwise
             ctx.fillStyle = "#000000";
-            ctx.font = "bold 24px sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText("TRACK ME", 120, 32);
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "left";
+            
+            // Draw tracking indicator sequence parameters horizontally onto the vertical axis
+            ctx.fillText(`TRACK ME #${baseIdNumber}`, 0, 0);
+            ctx.restore();
 
-            // Draw the QR Code image
-            ctx.drawImage(qrCanvas, 20, 45, 200, 200);
+            // COMPACT BOTTOM-RIGHT ANCHOR FOR "SCAN ME" Text layout
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 11px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText("SCAN ME", 195, 178);
 
-            // Draw "SCAN ME"
-            ctx.font = "bold 20px sans-serif";
-            ctx.fillText("SCAN ME", 120, 275);
-
-            // Draw the ID text (stripped of the prefix)
-            ctx.font = "bold 16px monospace";
-            ctx.fillStyle = "#d946ef"; // Match the admin theme purple
-            ctx.fillText(`ID: ${baseIdNumber}`, 120, 300);
-
-            // Convert canvas to a real image tag so the user can easily right-click & save
             const dataUrl = finalCanvas.toDataURL("image/png");
             document.getElementById('final-sticker-img').src = dataUrl;
 
-            // Display UI
             document.getElementById("qr-url-display").innerText = secureUrl;
             document.getElementById("qrcode-container").style.display = "flex";
 
-            idInput.value = "Penguin-"; // Reset field
-            loadAdminInventoryMatrix(); // Refresh table
+            idInput.value = "Penguin-"; 
+            loadAdminInventoryMatrix(); 
             
         }, 150);
     }
 
-    // Mathematical Haversine calculator
     function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
         const R = 3958.8; 
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -337,6 +331,9 @@
             if (!fleetClusters[id]) {
                 fleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id };
             }
+            // Skip counting structural setup parameters inside telemetry tracking math clusters
+            if (log.finder_note === 'Initial Factory Registration') return;
+
             fleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
             fleetClusters[id].pingsCount++;
             
@@ -349,7 +346,7 @@
 
         const dynamicFleetKeys = Object.keys(fleetClusters);
         if (dynamicFleetKeys.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No records were found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No active pieces mapped.</td></tr>`;
             return;
         }
 
@@ -380,7 +377,7 @@
     }
 
     // ===================================================
-    // AUDITING & DELETION ENGINE
+    // AUDITING & CRITICAL DELETION ACTIONS FIXES
     // ===================================================
     function launchSurgicalAuditDeck(targetId, displayName) {
         activeAuditedPenguinId = targetId;
@@ -404,17 +401,17 @@
             
             if (logItem.photo_url) {
                 photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
-                stripPhotoActionButtonHTML = `<button onclick="stripPhotoLink('${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
+                stripPhotoActionButtonHTML = `<button onclick="stripPhotoLink(event, '${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
             }
 
             const itemBlock = document.createElement('div');
             itemBlock.className = "log-audit-item";
             itemBlock.innerHTML = `
-                <div style="display:flex; justify-content:between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-family:monospace; color:#00e5ff; font-size:8.5pt;">⏱️ ${timestampText}</span>
                     <div style="margin-left:auto;">
                         ${stripPhotoActionButtonHTML}
-                        <button onclick="purgeSingleLog('${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
+                        <button onclick="purgeSingleLog(event, '${logItem.created_at}')" class="btn-command btn-danger" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
                     </div>
                 </div>
                 <div style="font-size:9pt; color:#cbd5e1; margin-top:4px;">
@@ -427,12 +424,11 @@
         }
     }
 
-    // ACTION: Total master clearance deletion of an entire penguin
+    // FIXED: Wipes entire target row sequences cleanly across index clusters
     async function deleteEntirePenguin(event, targetId) {
-        // Stop the row click from triggering the audit panel open
         if(event) event.stopPropagation();
 
-        const doubleCheck = confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently erase all tracking data, photos, and passport logs for this game piece. This action cannot be undone.`);
+        const doubleCheck = confirm(`🚨 MASTER ERASE SELECTION ACTIVATED: Delete all entries for ${targetId}?`);
         if (!doubleCheck) return;
 
         const { error } = await supabaseClient
@@ -441,35 +437,48 @@
             .eq('penguin_id', targetId);
 
         if (error) {
-            alert("Delete operation failed. Please try again.");
+            alert("Erase script execution rejected: " + error.message);
             return;
         }
 
-        alert(`Success. ${targetId} has been purged from the active inventory matrix.`);
-        
-        // Hide the audit panel if they deleted the penguin they were currently looking at
+        alert(`Purged ${targetId} successfully.`);
         if (activeAuditedPenguinId === targetId) {
             document.getElementById('audit-panel-card').style.display = "none";
             activeAuditedPenguinId = null;
         }
-        
         await loadAdminInventoryMatrix();
     }
 
-    // ACTION: Purge a single log
-    async function purgeSingleLog(createdAtISOString) {
-        if (!confirm("Are you certain you want to purge this specific record entry?")) return;
-        const { error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString);
-        if (error) { alert("Delete failed."); return; }
+    // FIXED: Strips single record arrays matching timestamp index points
+    async function purgeSingleLog(event, createdAtISOString) {
+        if(event) event.stopPropagation();
+        if (!confirm("Are you certain you want to purge this structural milestone marker?")) return;
+
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .delete()
+            .eq('penguin_id', activeAuditedPenguinId)
+            .eq('created_at', createdAtISOString);
+
+        if (error) { alert("Delete failed: " + error.message); return; }
+        
         await loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
     }
 
-    // ACTION: Wipe attached photo
-    async function stripPhotoLink(createdAtISOString) {
-        if (!confirm("Remove the photo file location token from this record?")) return;
-        const { error } = await supabaseClient.from('penguin_logs').update({ photo_url: null }).eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString);
-        if (error) { alert("Override faulted."); return; }
+    // FIXED: Nullifies image payload parameters
+    async function stripPhotoLink(event, createdAtISOString) {
+        if(event) event.stopPropagation();
+        if (!confirm("Remove the image reference token location link parameter?")) return;
+
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .update({ photo_url: null })
+            .eq('penguin_id', activeAuditedPenguinId)
+            .eq('created_at', createdAtISOString);
+
+        if (error) { alert("Override faulted: " + error.message); return; }
+        
         await loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
     }
