@@ -89,7 +89,6 @@
 </head>
 <body>
 
-<!-- GATEKEEPER AUTHORIZATION SHIELD -->
 <div id="auth-lock-screen">
     <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
         <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
@@ -102,7 +101,6 @@
 
 <div class="app-container" id="admin-main-ui" style="display: none;">
     
-    <!-- HEADER -->
     <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <div class="subtitle">Back-Office Fleet Control</div>
@@ -111,13 +109,12 @@
         <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
     </div>
 
-    <!-- MAIN DASHBOARD HUB -->
     <div class="layout-section">
         
-        <!-- ROW: FLEET PRODUCTION LINE -->
+        <!-- FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🏭 Fleet Production Line</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, circular low-density QR code seal and register a new penguin entry simultaneously.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact low-density QR code sticker and register a new penguin entry simultaneously.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
@@ -125,21 +122,17 @@
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
-                <!-- Containers for construction pipeline logic steps -->
-                <div id="hidden-qrcode" style="display: none;"></div>
-                <canvas id="composite-canvas" style="display: none;"></canvas>
-                
-                <img id="final-sticker-img" style="border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
+                <img id="final-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
                 
                 <div style="flex: 1;">
-                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Circular Seal Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the circular badge to copy or save it. This is perfectly optimized for a small, round physical sticker format.</p>
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Square Sticker Rendering Complete!</strong>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image matrix to copy or save. Density optimized for small physical printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
         </div>
 
-        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
+        <!-- ACTIVE INVENTORY -->
         <div class="glass-card">
             <h2>Active Game Piece Inventory Matrix</h2>
             <div style="overflow-x: auto;">
@@ -163,17 +156,22 @@
             </div>
         </div>
 
-        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL -->
+        <!-- AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-                <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
+                <div style="flex: 1;">
                     <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
-                    <span style="font-size: 8.5pt; color: #cbd5e1;" id="audit-title-custom">Custom Name Pointer</span>
+                    <span style="font-size: 8.5pt; color: #cbd5e1; display:block; margin-bottom: 8px;" id="audit-title-custom">Custom Name Pointer</span>
+                    <code id="audit-url-display" style="font-size: 7.5pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 4px; border-radius: 4px; word-break: break-all; display:none;"></code>
+                </div>
+                <div style="margin-left: 16px; text-align: right;">
+                    <!-- Dynamic QR Sticker renders right here when audited -->
+                    <img id="audit-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none; max-width: 120px;" alt="QR Sticker">
                 </div>
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                <!-- Chronological history steps inject here -->
+                <!-- Logs inject here -->
             </div>
         </div>
 
@@ -181,7 +179,6 @@
 </div>
 
 <script>
-    // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -189,7 +186,6 @@
     let activeAuditedPenguinId = null;
     let globalCachedLogsArray = [];
 
-    // --- AUTO-POPULATE PREFIX ENFORCEMENT ---
     const idInputField = document.getElementById('new-penguin-id');
     idInputField.addEventListener('input', function(e) {
         if (!this.value.startsWith('Penguin-')) {
@@ -221,8 +217,67 @@
     }
 
     // ===================================================
-    // FLEET PRODUCTION LINE (CIRCULAR BADGE QR GENERATOR)
+    // MASTER STICKER GENERATOR (Reusable Engine)
     // ===================================================
+    function generateStickerImage(penguinId, secretTag, targetImgElementId) {
+        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
+        const baseIdNumber = penguinId.replace("Penguin-", ""); 
+        
+        // Use a temporary off-screen div to generate the code array
+        const tempDiv = document.createElement("div");
+        new QRCode(tempDiv, {
+            text: secureUrl,
+            width: 160,
+            height: 160,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.L // Low error correction = larger, clearer dots
+        });
+
+        setTimeout(() => {
+            const qrCanvas = tempDiv.querySelector('canvas');
+            if(!qrCanvas) return;
+            
+            const tempComposite = document.createElement("canvas");
+            const ctx = tempComposite.getContext('2d');
+
+            // Tight canvas dimensions
+            tempComposite.width = 190;
+            tempComposite.height = 185; 
+
+            // White background
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
+
+            // Draw QR Code tight to the top right corner
+            ctx.drawImage(qrCanvas, 26, 4, 160, 160);
+
+            // Left sideways text
+            ctx.save();
+            ctx.translate(18, 162); // Move origin point tight to the left edge of the code
+            ctx.rotate(-Math.PI / 2); // Pivot text 90 degrees
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`TRACK ME #${baseIdNumber}`, 0, 0);
+            ctx.restore();
+
+            // Bottom right text
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "right";
+            
+            // X=186 pushes it exactly flush with the right side of the QR code block
+            ctx.fillText("SCAN ME", 186, 180);
+
+            const imgEl = document.getElementById(targetImgElementId);
+            if(imgEl) {
+                imgEl.src = tempComposite.toDataURL("image/png");
+                imgEl.style.display = "block";
+            }
+        }, 150);
+    }
+
     async function generateNewPenguin() {
         const idInput = document.getElementById('new-penguin-id');
         const id = idInput.value.trim();
@@ -249,99 +304,14 @@
             return;
         }
 
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
-        const baseIdNumber = id.replace("Penguin-", ""); 
+        generateStickerImage(id, secretTag, 'final-sticker-img');
         
-        const hiddenQr = document.getElementById("hidden-qrcode");
-        hiddenQr.innerHTML = ""; 
-        new QRCode(hiddenQr, {
-            text: secureUrl,
-            width: 140, // Scaled for the center of the circle
-            height: 140,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.L // Low error correction = larger, clearer dots!
-        });
+        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
+        document.getElementById("qr-url-display").innerText = secureUrl;
+        document.getElementById("qrcode-container").style.display = "flex";
 
-        setTimeout(() => {
-            const qrCanvas = hiddenQr.querySelector('canvas');
-            const finalCanvas = document.getElementById('composite-canvas');
-            const ctx = finalCanvas.getContext('2d');
-
-            // Dimensions for the perfect circular sticker
-            const size = 220;
-            finalCanvas.width = size;
-            finalCanvas.height = size; 
-            const center = size / 2; // 110
-
-            // Fill solid white background square
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, size, size);
-
-            // Optional: Draw a thin circular border line to help you cut the sticker
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = "#cccccc";
-            ctx.beginPath();
-            ctx.arc(center, center, center - 1, 0, 2 * Math.PI);
-            ctx.stroke();
-
-            // Draw QR Code perfectly centered
-            const qrSize = 130;
-            const qrOffset = center - (qrSize / 2); // 45
-            ctx.drawImage(qrCanvas, qrOffset, qrOffset, qrSize, qrSize);
-
-            // ==========================================
-            // CIRCULAR TEXT MATH
-            // ==========================================
-            ctx.fillStyle = "#000000";
-            ctx.font = "bold 16px monospace"; // Monospace curves beautifully evenly
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            const radius = 93; // Perfect distance pushing text tight to the outer edge
-            const topText = `TRACK ME #${baseIdNumber}`;
-            const bottomText = "SCAN ME";
-            const angleStep = 0.13; // Distance spacing between characters in radians
-
-            // --- DRAW TOP ARC ---
-            let topStartAngle = -Math.PI/2 - ((topText.length - 1) * angleStep) / 2;
-            for (let i = 0; i < topText.length; i++) {
-                ctx.save();
-                ctx.translate(center, center);
-                ctx.rotate(topStartAngle + (i * angleStep));
-                ctx.translate(0, -radius);
-                ctx.fillText(topText[i], 0, 0);
-                ctx.restore();
-            }
-
-            // --- DRAW BOTTOM ARC (Flipped to read upright) ---
-            let bottomStartAngle = Math.PI/2 - ((bottomText.length - 1) * angleStep) / 2;
-            for (let i = 0; i < bottomText.length; i++) {
-                ctx.save();
-                ctx.translate(center, center);
-                ctx.rotate(bottomStartAngle + (i * angleStep));
-                ctx.translate(0, radius); // Move down
-                ctx.rotate(Math.PI); // Flip 180 degrees so it faces inward/upward
-                ctx.fillText(bottomText[i], 0, 0);
-                ctx.restore();
-            }
-
-            // --- DRAW DIVIDING DOTS ---
-            ctx.font = "bold 18px sans-serif";
-            ctx.fillText("•", center - radius, center); // 9 o'clock
-            ctx.fillText("•", center + radius, center); // 3 o'clock
-
-            // Final Output handling
-            const dataUrl = finalCanvas.toDataURL("image/png");
-            document.getElementById('final-sticker-img').src = dataUrl;
-
-            document.getElementById("qr-url-display").innerText = secureUrl;
-            document.getElementById("qrcode-container").style.display = "flex";
-
-            idInput.value = "Penguin-"; 
-            loadAdminInventoryMatrix(); 
-            
-        }, 150);
+        idInput.value = "Penguin-"; 
+        loadAdminInventoryMatrix(); 
     }
 
     function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
@@ -355,13 +325,10 @@
         return R * c;
     }
 
-    // ===================================================
-    // PIPELINE ENGINE: CORE DATABASE REGISTRY INVENTORY
-    // ===================================================
     async function loadAdminInventoryMatrix() {
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag') // Included secret_tag!
             .order('created_at', { ascending: true });
 
         if (error || !rawLogs) return;
@@ -372,9 +339,13 @@
         rawLogs.forEach(log => {
             const id = log.penguin_id;
             if (!fleetClusters[id]) {
-                fleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id };
+                fleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id, secretTag: log.secret_tag || null };
             }
-            // Skip counting structural setup parameters inside telemetry tracking math clusters
+            // Capture the secret tag if we find it (handles older logic beautifully)
+            if (!fleetClusters[id].secretTag && log.secret_tag) {
+                fleetClusters[id].secretTag = log.secret_tag;
+            }
+
             if (log.finder_note === 'Initial Factory Registration') return;
 
             fleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
@@ -395,7 +366,6 @@
 
         dynamicFleetKeys.forEach(key => {
             const summaryNode = fleetClusters[key];
-            
             let compiledMiles = 0;
             for (let i = 0; i < summaryNode.points.length - 1; i++) {
                 compiledMiles += getDistanceBetweenPoints(
@@ -405,7 +375,6 @@
             }
 
             const tr = document.createElement('tr');
-            
             tr.innerHTML = `
                 <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
                 <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
@@ -416,7 +385,8 @@
             
             Array.from(tr.children).forEach((td, idx) => {
                 if (idx < 5) { 
-                    td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
+                    // Pass the secret tag directly into the audit panel click handler
+                    td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName, summaryNode.secretTag);
                 }
             });
 
@@ -430,14 +400,26 @@
         });
     }
 
-    // ===================================================
-    // AUDITING & CRITICAL DELETION ACTIONS FIXES
-    // ===================================================
-    function launchSurgicalAuditDeck(targetId, displayName) {
+    function launchSurgicalAuditDeck(targetId, displayName, secretTag) {
         activeAuditedPenguinId = targetId;
         document.getElementById('audit-panel-card').style.display = "block";
         document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
         document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
+        
+        // Dynamically spin up the QR sticker for the Audit Panel!
+        const urlDisplay = document.getElementById('audit-url-display');
+        const stickerImg = document.getElementById('audit-sticker-img');
+
+        if (secretTag) {
+            const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(targetId)}&tag=${secretTag}`;
+            urlDisplay.innerText = secureUrl;
+            urlDisplay.style.display = "inline-block";
+            generateStickerImage(targetId, secretTag, 'audit-sticker-img');
+        } else {
+            urlDisplay.style.display = "none";
+            stickerImg.style.display = "none";
+        }
+
         renderSurgicalLogsFeed();
     }
 
@@ -489,72 +471,40 @@
     }
 
     async function deleteEntirePenguin(targetId) {
-        const doubleCheck = confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently erase all tracking data, photos, and passport logs for this game piece. This action cannot be undone.`);
-        if (!doubleCheck) return;
+        if (!confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?`)) return;
 
-        const { data, error } = await supabaseClient
-            .from('penguin_logs')
-            .delete()
-            .eq('penguin_id', targetId)
-            .select(); 
+        const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', targetId).select(); 
 
-        if (error) {
-            alert("Delete operation failed. Please try again. " + error.message);
-            return;
-        }
+        if (error) return alert("Delete operation failed: " + error.message);
+        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\n\nSupabase RLS is quietly blocking deletions. Please enable 'DELETE' policies for 'anon' users.");
 
-        if (!data || data.length === 0) {
-            alert("⚠️ DELETE FAILED!\n\nYour Supabase database Row Level Security (RLS) is quietly blocking deletions.\n\nTo fix this:\n1. Go to your Supabase Dashboard -> Authentication -> Policies.\n2. Create a new Policy on the 'penguin_logs' table.\n3. Enable the 'DELETE' operation for 'anon' users.");
-            return;
-        }
-
-        alert(`Success. ${targetId} has been purged from the active inventory matrix.`);
-        
+        alert(`Success. ${targetId} purged.`);
         if (activeAuditedPenguinId === targetId) {
             document.getElementById('audit-panel-card').style.display = "none";
             activeAuditedPenguinId = null;
         }
-        
         await loadAdminInventoryMatrix();
     }
 
     async function purgeSingleLog(createdAtISOString) {
-        if (!confirm("Are you certain you want to purge this specific record entry?")) return;
+        if (!confirm("Are you certain you want to purge this record entry?")) return;
 
-        const { data, error } = await supabaseClient
-            .from('penguin_logs')
-            .delete()
-            .eq('penguin_id', activeAuditedPenguinId)
-            .eq('created_at', createdAtISOString)
-            .select();
+        const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString).select();
 
-        if (error) { alert("Delete failed: " + error.message); return; }
-        
-        if (!data || data.length === 0) {
-            alert("⚠️ DELETE FAILED!\nSupabase Row Level Security (RLS) is blocking deletions. Please enable DELETE policies for 'anon' in Supabase.");
-            return;
-        }
+        if (error) return alert("Delete failed: " + error.message);
+        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\nSupabase RLS is blocking deletions.");
         
         await loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
     }
 
     async function stripPhotoLink(createdAtISOString) {
-        if (!confirm("Remove the image reference token location link parameter?")) return;
+        if (!confirm("Remove the image token parameter?")) return;
 
-        const { data, error } = await supabaseClient
-            .from('penguin_logs')
-            .update({ photo_url: null })
-            .eq('penguin_id', activeAuditedPenguinId)
-            .eq('created_at', createdAtISOString)
-            .select();
+        const { data, error } = await supabaseClient.from('penguin_logs').update({ photo_url: null }).eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString).select();
 
-        if (error) { alert("Override faulted: " + error.message); return; }
-
-        if (!data || data.length === 0) {
-            alert("⚠️ UPDATE FAILED!\nSupabase Row Level Security (RLS) is blocking updates. Please check your policies.");
-            return;
-        }
+        if (error) return alert("Override faulted: " + error.message);
+        if (!data || data.length === 0) return alert("⚠️ UPDATE FAILED!\nSupabase RLS is blocking updates.");
         
         await loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
