@@ -89,7 +89,6 @@
 </head>
 <body>
 
-<!-- GATEKEEPER AUTHORIZATION SHIELD -->
 <div id="auth-lock-screen">
     <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
         <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
@@ -102,7 +101,6 @@
 
 <div class="app-container" id="admin-main-ui" style="display: none;">
     
-    <!-- HEADER -->
     <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <div class="subtitle">Back-Office Fleet Control</div>
@@ -111,13 +109,11 @@
         <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
     </div>
 
-    <!-- MAIN DASHBOARD HUB -->
     <div class="layout-section">
         
-        <!-- ROW: FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🏭 Fleet Production Line</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact QR code sticker and register a new penguin entry parameter loop simultaneously.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact low-density QR code sticker and register a new penguin entry simultaneously.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
@@ -125,7 +121,6 @@
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
-                <!-- Containers for construction pipeline logic steps -->
                 <div id="hidden-qrcode" style="display: none;"></div>
                 <canvas id="composite-canvas" style="display: none;"></canvas>
                 
@@ -133,13 +128,12 @@
                 
                 <div style="flex: 1;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image matrix to copy or store the output asset stream payload.</p>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image matrix to copy or store the output asset stream payload. Density optimized for small physical printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
         </div>
 
-        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
         <div class="glass-card">
             <h2>Active Game Piece Inventory Matrix</h2>
             <div style="overflow-x: auto;">
@@ -163,7 +157,6 @@
             </div>
         </div>
 
-        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
                 <div>
@@ -173,8 +166,7 @@
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                <!-- Chronological history steps inject here -->
-            </div>
+                </div>
         </div>
 
     </div>
@@ -221,7 +213,7 @@
     }
 
     // ===================================================
-    // FLEET PRODUCTION LINE (COMPACT VERTICAL QR GENERATOR)
+    // FLEET PRODUCTION LINE (ULTRA-COMPACT L-DENSITY QR GENERATOR)
     // ===================================================
     async function generateNewPenguin() {
         const idInput = document.getElementById('new-penguin-id');
@@ -260,7 +252,7 @@
             height: 160,
             colorDark : "#000000",
             colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+            correctLevel : QRCode.CorrectLevel.L // LOWER ERROR CORRECTION = MUCH LARGER DOTS
         });
 
         setTimeout(() => {
@@ -268,34 +260,35 @@
             const finalCanvas = document.getElementById('composite-canvas');
             const ctx = finalCanvas.getContext('2d');
 
-            // Set up ultra-compact dimensions
-            finalCanvas.width = 205;
+            // Set up ultra-compact dimensions allowing zero wasted space
+            finalCanvas.width = 195;
             finalCanvas.height = 185; 
 
             // Base Background fill
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-            // Draw QR Code shifted right to accommodate the sideways vertical text column
-            ctx.drawImage(qrCanvas, 35, 5, 160, 160);
+            // Draw QR Code larger and tighter to the edges
+            // Pushed right slightly to X=28 to make room for the sideways text
+            ctx.drawImage(qrCanvas, 28, 4, 165, 165);
 
-            // COMPACT LAYOUT SIDEWAYS TEXT RENDERING LAYER
+            // COMPACT SIDEWAYS TEXT RENDERING LAYER
             ctx.save();
-            ctx.translate(22, 165); // Move origin point anchor left of the code matrix
-            ctx.rotate(-Math.PI / 2); // Pivot text alignment stack 90 degrees counter-clockwise
+            ctx.translate(22, 169); // Origin sits flush left and exactly level with bottom of QR code
+            ctx.rotate(-Math.PI / 2); // Pivot text 90 degrees counter-clockwise
             ctx.fillStyle = "#000000";
-            ctx.font = "bold 13px sans-serif";
+            ctx.font = "bold 18px sans-serif"; // Significantly larger font
             ctx.textAlign = "left";
-            
-            // Draw tracking indicator sequence parameters horizontally onto the vertical axis
             ctx.fillText(`TRACK ME #${baseIdNumber}`, 0, 0);
             ctx.restore();
 
-            // COMPACT BOTTOM-RIGHT ANCHOR FOR "SCAN ME" Text layout
+            // COMPACT BOTTOM-RIGHT ANCHOR FOR "SCAN ME"
             ctx.fillStyle = "#000000";
-            ctx.font = "bold 11px sans-serif";
+            ctx.font = "bold 18px sans-serif"; // Significantly larger font
             ctx.textAlign = "right";
-            ctx.fillText("SCAN ME", 195, 178);
+            
+            // Pressed exactly under the right edge of the QR code (X=193) and snug to the bottom (Y=183)
+            ctx.fillText("SCAN ME", 193, 183);
 
             const dataUrl = finalCanvas.toDataURL("image/png");
             document.getElementById('final-sticker-img').src = dataUrl;
@@ -371,7 +364,6 @@
 
             const tr = document.createElement('tr');
             
-            // Build the row layout WITHOUT an inline onclick attribute
             tr.innerHTML = `
                 <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
                 <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
@@ -380,14 +372,12 @@
                 <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
                 <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Delete</button></td>`;
             
-            // Attach row click (only on data cells so it doesn't overlap the button)
             Array.from(tr.children).forEach((td, idx) => {
-                if (idx < 5) { // Only first 5 columns open the audit panel
+                if (idx < 5) { 
                     td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
                 }
             });
 
-            // Bind explicitly hardened DOM Event Listener
             const deleteBtn = tr.querySelector('.delete-btn');
             deleteBtn.onclick = (e) => {
                 e.stopPropagation(); 
@@ -442,7 +432,6 @@
                     ${photoElementHTML}
                 </div>`;
             
-            // Hardened DOM Listener bindings for logs
             const stripBtn = itemBlock.querySelector('.strip-btn');
             if (stripBtn) {
                 stripBtn.onclick = (e) => { e.stopPropagation(); stripPhotoLink(logItem.created_at); };
@@ -457,7 +446,6 @@
         }
     }
 
-    // Wipes entire target row sequences cleanly
     async function deleteEntirePenguin(targetId) {
         const doubleCheck = confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently erase all tracking data, photos, and passport logs for this game piece. This action cannot be undone.`);
         if (!doubleCheck) return;
@@ -466,14 +454,13 @@
             .from('penguin_logs')
             .delete()
             .eq('penguin_id', targetId)
-            .select(); // .select() forces Supabase to return the deleted rows!
+            .select(); 
 
         if (error) {
             alert("Delete operation failed. Please try again. " + error.message);
             return;
         }
 
-        // 🚨 RLS BLOCK DETECTION:
         if (!data || data.length === 0) {
             alert("⚠️ DELETE FAILED!\n\nYour Supabase database Row Level Security (RLS) is quietly blocking deletions.\n\nTo fix this:\n1. Go to your Supabase Dashboard -> Authentication -> Policies.\n2. Create a new Policy on the 'penguin_logs' table.\n3. Enable the 'DELETE' operation for 'anon' users.");
             return;
@@ -489,7 +476,6 @@
         await loadAdminInventoryMatrix();
     }
 
-    // Strips single record arrays matching timestamp
     async function purgeSingleLog(createdAtISOString) {
         if (!confirm("Are you certain you want to purge this specific record entry?")) return;
 
@@ -511,7 +497,6 @@
         renderSurgicalLogsFeed();
     }
 
-    // Nullifies image payload parameters
     async function stripPhotoLink(createdAtISOString) {
         if (!confirm("Remove the image reference token location link parameter?")) return;
 
