@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penguin Tracker - Antarctic Adventure Mode</title>
+    <title>Penguin Tracker - Central Command Operations</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         /* Base Setup & CSS Resets */
@@ -16,1399 +15,549 @@
         body {
             margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #02060d; color: #ffffff; font-size: 12pt; line-height: 1.5;
+            background: #02060d; color: #ffffff;
+            font-size: 11pt; line-height: 1.5;
         }
 
         .app-container {
-            width: 100%; max-width: 600px; margin: 0 auto; padding: 16px;
-            background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
-            min-height: 100vh; display: flex; flex-direction: column;
+            width: 100%; max-width: 900px; margin: 0 auto; padding: 16px;
+            background: radial-gradient(circle at 50% 0%, #1a102f 0%, #09071e 60%, #02060d 100%);
+            min-height: 100vh;
         }
 
-        h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
-        h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
-        h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-        .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
+        h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+        h1 { font-size: 18pt; color: #fae8ff; text-shadow: 0 0 15px rgba(217, 70, 239, 0.4); }
+        h2 { font-size: 12pt; color: #d946ef; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        
+        .subtitle {
+            color: #f5d0fe; font-size: 8pt; text-transform: uppercase;
+            letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8;
+        }
 
-        .layout-section { width: 100%; margin-top: 16px; flex: 1; }
+        .layout-section { width: 100%; margin-top: 16px; }
 
+        /* Command Card Styles */
         .glass-card {
-            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(56, 189, 248, 0.15);
-            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            margin-bottom: 16px; position: relative;
+            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(217, 70, 239, 0.15);
+            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            margin-bottom: 16px;
         }
 
-        .glass-card-inner { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px; margin-top: 12px; }
-        .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-
-        .aurora-glow { color: #39ff14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.6); font-weight: bold; }
-        .ice-glow { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); font-weight: bold; }
-
-        .status-badge {
-            display: inline-block; padding: 4px 10px; background: rgba(57, 255, 20, 0.1);
-            border: 1px solid rgba(57, 255, 20, 0.3); color: #39ff14; border-radius: 20px;
-            font-size: 10pt; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(57, 255, 20, 0.4); white-space: nowrap;
+        /* Form Inputs */
+        .admin-input {
+            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 70, 239, 0.2);
+            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 11pt;
+            outline: none; margin-bottom: 12px;
         }
 
-        .tagged-badge {
-            display: inline-block; padding: 2px 6px; background: rgba(57, 255, 20, 0.15);
-            border: 1px solid rgba(57, 255, 20, 0.4); color: #39ff14; font-size: 9pt; font-weight: bold;
-            border-radius: 4px; margin-left: 6px; vertical-align: middle;
+        .admin-input:focus {
+            border-color: #d946ef; box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
         }
 
-        .warning-badge {
-            display: block; padding: 12px; background: rgba(239, 68, 68, 0.07);
-            border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; border-radius: 8px;
-            font-size: 11pt; margin-top: 12px; line-height: 1.4;
+        /* Buttons */
+        .btn-command {
+            display: inline-block; padding: 10px 16px;
+            background: linear-gradient(135deg, rgba(217, 70, 239, 0.2) 0%, rgba(162, 28, 175, 0.2) 100%);
+            border: 1px solid rgba(217, 70, 239, 0.4); border-radius: 6px;
+            color: #ffffff; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.5px; cursor: pointer; font-size: 9pt; transition: all 0.2s ease;
         }
 
-        .note-textarea, .select-poi {
-            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px; padding: 10px; color: #ffffff; font-family: inherit; font-size: 12pt;
-            outline: none; transition: border-color 0.2s ease; box-sizing: border-box;
-        }
+        .btn-command:hover { background: rgba(217, 70, 239, 0.3); box-shadow: 0 0 10px rgba(217, 70, 239, 0.2); }
 
-        .note-textarea { height: 80px; resize: none; margin-top: 4px; margin-bottom: 8px; }
-        .select-poi { margin-top: 6px; margin-bottom: 12px; cursor: pointer; }
-        .select-poi:disabled { color: #6b7280; border-color: rgba(255, 255, 255, 0.05); background: rgba(0, 0, 0, 0.2); cursor: not-allowed; }
-        .select-poi option { background: #07111e; color: #ffffff; }
-        .note-textarea:focus, .select-poi:focus { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 10px rgba(0, 229, 255, 0.1); }
+        .btn-danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%); border-color: rgba(239, 68, 68, 0.4); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
 
-        .hidden-file-input { display: none !important; }
+        /* Tables & Lists Matrices */
+        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
+        .matrix-table th, .matrix-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .matrix-table th { color: #f5d0fe; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; }
+        .matrix-table tbody tr { transition: background 0.2s; }
+        .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); }
 
-        .btn-glow {
-            display: block; width: 100%; text-align: center; padding: 14px;
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
-            border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; color: #ffffff;
-            font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); transition: opacity 0.2s ease, border-color 0.2s ease;
-        }
-        .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+        .badge-count { font-weight: bold; color: #a21caf; background: rgba(217, 70, 239, 0.15); padding: 2px 6px; border-radius: 4px; }
+        .log-audit-item { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 6px; }
+        .log-audit-item:last-child { border-bottom: none; }
 
-        .btn-camera {
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
-            border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; font-size: 16pt;
-        }
-        .btn-camera.photo-attached {
-            border-color: #39ff14; color: #39ff14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
-            background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
-        }
-
-        .btn-inline-refresh {
-            background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);
-            color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 5px 10px; border-radius: 6px;
-            cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease;
-        }
-        .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
-
-        .tab-bar {
-            display: flex; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.15);
-            border-radius: 8px; padding: 4px; margin-bottom: 12px;
-        }
-        .tab-btn {
-            flex: 1; padding: 8px; background: transparent; border: none; color: #94a3b8;
-            font-weight: 600; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.5px;
-            cursor: pointer; border-radius: 6px; transition: all 0.2s ease;
-        }
-        .tab-btn.active { background: rgba(56, 189, 248, 0.15); color: #00e5ff; text-shadow: 0 0 8px rgba(0, 229, 255, 0.3); }
-
-        .pagination-container {
-            display: flex; justify-content: space-between; align-items: center; margin-top: 14px;
-            padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .page-arrow {
-            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); color: #00e5ff;
-            font-weight: bold; font-size: 14pt; padding: 4px 14px; border-radius: 6px; cursor: pointer;
-        }
-        .page-arrow:disabled { color: #4b5563; border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; background: transparent; }
-        .page-indicator { font-size: 10.5pt; color: #94a3b8; font-weight: 500; }
-
-        .data-list, .leaderboard-list, .poi-proximity-list, .passport-history-list { margin: 0; padding: 0; list-style: none; }
-        .data-item { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .data-item:last-child { border-bottom: none; }
-
-        .leaderboard-row, .poi-proximity-row, .passport-history-row {
-            display: flex; justify-content: space-between; align-items: center; padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; border-radius: 6px; transition: background 0.2s;
-        }
-        .leaderboard-row:hover, .poi-proximity-row:hover, .passport-history-row:hover { background: rgba(255, 255, 255, 0.05); }
-        .leaderboard-row:last-child, .poi-proximity-row:last-child, .passport-history-row:last-child { border-bottom: none; }
-
-        .rank-badge, .poi-icon-badge, .passport-icon-badge { display: inline-block; width: 28px; font-weight: bold; color: #7dd3fc; }
-        .p-name, .poi-list-name, .passport-list-name { font-weight: 600; color: #f8fafc; }
-        .p-dist, .poi-list-dist, .passport-list-date { font-weight: bold; color: #00e5ff; font-size: 11.5pt; }
-        .passport-list-date { color: #cc00ff; text-shadow: 0 0 8px rgba(204,0,255,0.3); }
-
-        .label { font-size: 10pt; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 2px; }
-        .value { font-size: 12pt; color: #f8fafc; }
-        .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
-
-        #map {
-            width: 100% !important; height: 220px !important; background: #030712 !important;
-            border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
-        }
-        .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
-
-        .modal-overlay {
+        /* Auth Screen Cover */
+        #auth-lock-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+            background: #02060d; z-index: 99999; display: flex;
+            align-items: center; justify-content: center; padding: 20px;
         }
-        .modal-card {
-            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
-            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 24px;
-            width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center;
-        }
-        .modal-input {
-            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 12pt; margin: 16px 0; outline: none; text-align: center;
-        }
-        .modal-input:focus { border-color: #00e5ff; }
-
-        .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
-        .app-footer {
-            text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
-            letter-spacing: 1px; font-weight: 500; text-transform: uppercase; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
-        }
-        @media(min-width: 480px) { .app-header { display: flex; justify-content: space-between; align-items: flex-end; } }
     </style>
 </head>
 <body>
 
-<!-- WELCOME STORY MODAL OVERLAY -->
-<div class="modal-overlay" id="welcome-modal">
-    <div class="modal-card" style="text-align: left;">
-        <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! 🐧</h2>
-        <p style="font-size: 11.5pt; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
-            Hi, my name is Ben Borne. I'm a product engineer from Carmel, IN and I 3D printed this little penguin. We're treating it like a modern-day Flat Stanley to see how far he can travel just by being passed from person to person.
-        </p>
-        <p style="font-size: 11.5pt; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
-            You don’t need to download anything or make an account. Log his location here, snap a quick picture of the view, and then hand him off to a friend or coworker who might get a kick out of taking him somewhere new.
-        </p>
-        <button class="btn-glow" onclick="closeWelcomeModal()">Continue to Game</button>
+<!-- GATEKEEPER AUTHORIZATION SHIELD -->
+<div id="auth-lock-screen">
+    <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
+        <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
+        <h2>Operations Gatekeeper</h2>
+        <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
+        <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
+        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
     </div>
 </div>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
-<div class="modal-overlay" id="first-find-modal">
-    <div class="modal-card">
-        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
-        <h2 style="color: #39ff14; font-size: 16pt; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">First Discovery!</h2>
-        <p style="font-size: 11.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 0 0;">
-            You found a completely new penguin! Give it a custom name below to hatch it and officially launch its adventure.
-        </p>
-        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles...">
-        <button onclick="saveCustomNameFromModal()" class="btn-glow">Save Name & Start Journey!</button>
-    </div>
-</div>
-
-<!-- EDIT PROFILE MODAL OVERLAY -->
-<div class="modal-overlay" id="edit-profile-modal">
-    <div class="modal-card">
-        <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
-        <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
-        
-        <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
-        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
-            <!-- Dynamic Avatars Injected Here -->
-        </div>
-        
-        <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
-        <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
-    </div>
-</div>
-
-<!-- DEDICATED MAP POPUP MODAL -->
-<div class="modal-overlay" id="map-modal">
-    <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
-        <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
-        <div id="modal-map" style="width: 100%; height: 60vh; min-height: 400px; max-height: 600px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"></div>
-        <button class="btn-glow" style="margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
-    </div>
-</div>
-
-<!-- FULLSCREEN IMAGE MODAL -->
-<div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="closeImageModal()">
-    <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
-        <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-        <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;" onclick="closeImageModal()">×</button>
-    </div>
-</div>
-
-<div class="app-container">
+<div class="app-container" id="admin-main-ui" style="display: none;">
     
-    <!-- BACK TO MY PENGUIN BUTTON (Hidden by default) -->
-    <div id="back-to-my-penguin-container" style="display:none; margin-bottom: 12px;">
-        <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Scanned Penguin</button>
-    </div>
-
-    <!-- HEADER SECTION -->
-    <div class="app-header" style="position: relative; padding-right: 40px;">
+    <!-- HEADER -->
+    <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
-            <div class="subtitle">The Traveling Penguin Game</div>
-            <h1>PENGUIN TRACKER</h1>
+            <div class="subtitle">Back-Office Fleet Control</div>
+            <h1>Central Command Portal</h1>
         </div>
-        <div style="margin-top: 8px;">
-            <span class="status-badge" id="penguin-id">Detecting Tag...</span>
-        </div>
-        <button id="help-btn" onclick="openWelcomeModal()" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
+        <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
-    <div class="layout-section" id="game-panel">
+    <!-- MAIN DASHBOARD HUB -->
+    <div class="layout-section">
         
-        <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
-            🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only.
-        </div>
-
-        <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <span style="font-size: 20pt;">🎒</span>
-                <p style="margin: 0; font-size: 11.5pt; color: #cbd5e1; line-height: 1.4;"><strong style="color: #e0f2fe; display: block; margin-bottom: 2px;">Your New Travel Buddy!</strong> Take this penguin on fun adventures, snap photos, and pass it along to friends!</p>
-            </div>
-        </div>
-
-        <!-- CURRENT PENGUIN STATUS BOX -->
-        <div class="glass-card" id="profile-card-block">
-            
-            <!-- HEADER LOGIC (Dynamic Title + Add to Colony OR Tab Bar) -->
-            <div class="card-header-flex" id="profile-static-title" style="margin-bottom: 0;">
-                <h2 id="dynamic-stranger-title">Viewing...</h2>
-            </div>
-
-            <div class="tab-bar" id="profile-tabs" style="display: none; margin-bottom: 16px;">
-                <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')">🐧 My Penguin</button>
-                <button class="tab-btn" id="tab-my-colony" onclick="switchProfileTab('colony')">🧊 My Colony</button>
-            </div>
-
-            <!-- MY PENGUIN CONTENT CONTAINER -->
-            <div id="my-penguin-container">
-                <button id="edit-profile-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 10pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
-                
-                <div style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
-                    <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
-                </div>
-                <ul class="data-list">
-                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div><span class="label">Current Status</span></div>
-                        <div><span class="value aurora-glow" id="current-status-display">On an Adventure</span></div>
-                    </li>
-                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div><span class="label">Total Stops So Far</span></div>
-                        <div><span class="value ice-glow" id="total-stops-counter">0 Passport Stops Logged</span></div>
-                    </li>
-                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div><span class="label">Last Stop</span></div>
-                        <div style="text-align: right;">
-                            <span class="value" id="last-stop-city" style="color: #f8fafc; font-size: 11pt;">Awaiting first stop</span>
-                            <span class="stat-subtext" id="last-stop-distance">--</span>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- MY COLONY CONTENT CONTAINER -->
-            <div id="colony-container" style="display: none;">
-                <ul class="leaderboard-list" id="colony-list-output">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Loading your colony...</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
-        <div class="glass-card" id="tracking-card-block">
-            <div class="card-header-flex" style="margin-bottom: 6px;">
-                <h2 id="tracking-card-title">Location</h2>
-                <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh</button>
-            </div>
-            <ul class="data-list" id="location-text-elements">
-                <li class="data-item">
-                    <span class="label">Current Coordinates</span>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-                        <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 11pt;">Detecting Location...</span>
-                        <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 11pt;">WAITING</span>
-                    </div>
-                </li>
-            </ul>
-            <div id="map"></div>
-            <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
-            
-            <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
-                <select id="poi-selector" class="select-poi" disabled>
-                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
-                </select>
-            </div>
-        </div>
-        
-        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
-        <div class="glass-card" id="journey-stops-card">
-            <h2>📍 Journey Stops</h2>
-            
-            <div class="tab-bar">
-                <button class="tab-btn active" id="tab-stop-log" onclick="switchStopsTab('log')">✍️ Log New</button>
-                <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
-            </div>
-
-            <!-- TAB: LOG NEW STOP -->
-            <div id="stop-log-container">
-                <div class="input-group" id="notes-input-group">
-                    <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
-                    <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
-                </div>
-                <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
-                <div class="glass-card-inner" style="display: flex; gap: 8px;">
-                    <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
-                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
-                </div>
-            </div>
-
-            <!-- TAB: ALL STOPS HISTORY -->
-            <div id="stop-history-container" style="display: none;">
-                <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
-                </ul>
-                <div class="pagination-container" id="all-stops-pagination" style="display: none;">
-                    <button class="page-arrow" id="all-stops-prev-btn" onclick="changeAllStopsPage(-1)">←</button>
-                    <span class="page-indicator" id="all-stops-page-indicator">Page 1 of 1</span>
-                    <button class="page-arrow" id="all-stops-next-btn" onclick="changeAllStopsPage(1)">→</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- LEADERBOARD CARD BLOCK -->
+        <!-- ROW: FLEET PRODUCTION LINE -->
         <div class="glass-card">
-            <h2>🏆 Game Center Standings</h2>
+            <h2>🏭 Fleet Production Line</h2>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, circular low-density QR code seal and register a new penguin entry simultaneously.</p>
             
-            <div class="tab-bar">
-                <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
-                <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button>
-            </div>
-
-            <ul class="leaderboard-list" id="leaderboard-output">
-                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Calculating distances...</li>
-            </ul>
-            
-            <div class="pagination-container" id="leaderboard-pagination" style="display: none;">
-                <button class="page-arrow" id="leaderboard-prev-btn" onclick="changeLeaderboardPage(-1)">←</button>
-                <span class="page-indicator" id="leaderboard-page-indicator">Page 1 of 10</span>
-                <button class="page-arrow" id="leaderboard-next-btn" onclick="changeLeaderboardPage(1)">→</button>
-            </div>
-        </div>
-
-        <!-- CONSOLIDATED LANDMARKS CARD -->
-        <div class="glass-card" id="landmarks-card">
-            <div class="card-header-flex">
-                <h2>🏛️ Landmarks</h2>
-                <button type="button" class="btn-inline-refresh" id="manual-refresh-poi-btn" onclick="triggerManualProximityRefresh()">🔄 Refresh List</button>
+            <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
+                <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
+                <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Generate & Register</button>
             </div>
             
-            <div class="tab-bar">
-                <button class="tab-btn active" id="tab-landmark-nearby" onclick="switchLandmarkTab('nearby')">📍 Nearby</button>
-                <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
-            </div>
-
-            <div id="landmark-nearby-container">
-                <ul class="poi-proximity-list" id="poi-proximity-output">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
-                </ul>
-            </div>
-
-            <div id="landmark-history-container" style="display: none;">
-                <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
-                </ul>
-                <div class="pagination-container" id="passport-pagination" style="display: none;">
-                    <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
-                    <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
-                    <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+            <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
+                <!-- Containers for construction pipeline logic steps -->
+                <div id="hidden-qrcode" style="display: none;"></div>
+                <canvas id="composite-canvas" style="display: none;"></canvas>
+                
+                <img id="final-sticker-img" style="border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
+                
+                <div style="flex: 1;">
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Circular Seal Rendering Complete!</strong>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the circular badge to copy or save it. This is perfectly optimized for a small, round physical sticker format.</p>
+                    <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
-        <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
-            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
+        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
+        <div class="glass-card">
+            <h2>Active Game Piece Inventory Matrix</h2>
+            <div style="overflow-x: auto;">
+                <table class="matrix-table" id="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Identity</th>
+                            <th>Active Name</th>
+                            <th>Total Pings</th>
+                            <th>Landmarks</th>
+                            <th>Est. Mileage</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        
+
+        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL -->
+        <div class="glass-card" id="audit-panel-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                <div>
+                    <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
+                    <span style="font-size: 8.5pt; color: #cbd5e1;" id="audit-title-custom">Custom Name Pointer</span>
+                </div>
+            </div>
+
+            <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                <!-- Chronological history steps inject here -->
+            </div>
+        </div>
+
     </div>
-
-    <div class="app-footer">Antarctic Game Engine • Version 4.1.0</div>
-
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let urlParams = new URLSearchParams(window.location.search);
-    let initialParamId = urlParams.get('id') || "Mystery Penguin";
-    let securityTagParam = urlParams.get('tag') || null; 
-    let penguinId = initialParamId; 
-    let isViewOnlyMode = (initialParamId === "Mystery Penguin");
-    
-    let activeCustomName = "";
-    let activeAvatarColor = "#38bdf8"; 
-    let activeTab = "distance"; 
+    let activeAuditedPenguinId = null;
+    let globalCachedLogsArray = [];
 
-    // AVATAR SYSTEM CONFIGURATION
-    const AVATAR_COLORS = [
-        '#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', 
-        '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'
-    ];
-    let selectedAvatarColor = '#38bdf8'; 
-
-    let activePassportPage = 1; let activeAllStopsPage = 1; const ITEMS_PER_PAGE = 10;
-    let activeLeaderboardPage = 1; let computedLeaderboardArray = []; const LEADERBOARD_ITEMS_PER_PAGE = 5;
-    let activeStopsTab = "log"; let activeLandmarkTab = "nearby";
-
-    let computedPassportStampsArray = []; let computedAllStopsArray = [];
-    let discoveredMonumentsSet = new Set(); 
-    let globalLogData = []; let globalNamedEntry = "";
-
-    // Location Trackers
-    let verifiedLat = null; let verifiedLng = null;
-    let lastLogLat = null; let lastLogLng = null;
-
-    const penguinIdHeader = document.getElementById('penguin-id');
-    if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
-
-    let map = null; let marker = null; let historyLayerGroup = null; let poiLayerGroup = null; 
-    let currentJourneyLine = null; let poiMarkersMap = {}; 
-    let modalMap = null; let modalLayerGroup = null;
-
-    const coordinatesDisplay = document.getElementById("coordinates-display");
-    const lockBadge = document.getElementById("lock-badge");
-    const customCameraBtn = document.getElementById("custom-camera-btn");
-    const penguinNameDisplayEl = document.getElementById("penguin-name-display");
-    if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
-
-    // ===================================================
-    // HYBRID SECURITY GATEWAY LOGIC
-    // ===================================================
-    async function verifyPenguinSecurity(id, tag) {
-        let parsedId = id;
-        if(id.startsWith("Penguin-")) parsedId = id.replace("Penguin-", "");
-        
-        const numericId = parseInt(parsedId, 10);
-        if (isNaN(numericId) || numericId < 66) return true; 
-        if (!tag) return false;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', id).not('secret_tag', 'is', null);
-        if (error || !data || data.length === 0) return false;
-        return data.some(log => log.secret_tag === tag);
-    }
-
-    window.addEventListener("DOMContentLoaded", async function() {
-        // ID BADGE SETUP (Local Storage Identity)
-        let myId = localStorage.getItem('my_penguin_id');
-        let myTag = localStorage.getItem('my_penguin_tag');
-
-        initializeLiveMap();
-        updateProfileAvatar(activeAvatarColor); 
-        
-        if (!isViewOnlyMode) {
-            const isAuthorized = await verifyPenguinSecurity(penguinId, securityTagParam);
-            if (!isAuthorized) {
-                isViewOnlyMode = true;
-                const viewBanner = document.getElementById('view-mode-banner');
-                if (viewBanner) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
-                activateViewOnlyUI();
-                const poiOutput = document.getElementById("poi-proximity-output");
-                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
-            } else {
-                // AUTHORIZED! Update the local ID Badge to claim ownership
-                localStorage.setItem('my_penguin_id', penguinId);
-                if(securityTagParam) localStorage.setItem('my_penguin_tag', securityTagParam);
-                myId = penguinId;
-                myTag = securityTagParam;
-                verifyCurrentGPS(); 
-            }
-        } else {
-            activateViewOnlyUI(); 
-            const poiOutput = document.getElementById("poi-proximity-output");
-            if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
+    // --- AUTO-POPULATE PREFIX ENFORCEMENT ---
+    const idInputField = document.getElementById('new-penguin-id');
+    idInputField.addEventListener('input', function(e) {
+        if (!this.value.startsWith('Penguin-')) {
+            this.value = 'Penguin-';
         }
-
-        // ==========================================
-        // UI Adjustments for "My Colony" Routing
-        // ==========================================
-        const backBtnContainer = document.getElementById('back-to-my-penguin-container');
-        const profileTabs = document.getElementById('profile-tabs');
-        const profileTitle = document.getElementById('profile-static-title');
-
-        if (myId && myId !== penguinId) {
-            // I am viewing someone else's penguin!
-            if(backBtnContainer) backBtnContainer.style.display = 'block';
-            if(profileTitle) {
-                // Check if this penguin is already in my colony
-                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', myId).limit(1);
-                let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
-                
-                let inColonyHTML = currentList.includes(penguinId)
-                    ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold;">✓ In Colony</span>`
-                    : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
-
-                profileTitle.innerHTML = `<h2 id="dynamic-stranger-title">Viewing...</h2>${inColonyHTML}`;
-            }
-        } else if (myId && myId === penguinId) {
-            // I am viewing my OWN penguin! Show the tabs.
-            if(profileTabs) profileTabs.style.display = 'flex';
-            if(profileTitle) profileTitle.style.display = 'none';
-        }
-
-        setTimeout(function() {
-            loadPenguinHistory(penguinId);
-            buildLeaderboard();
-        }, 150);
     });
 
-    // ===================================================
-    // COLONY FEATURES & ROUTING LOGIC
-    // ===================================================
-    function goBackToMyPenguin() {
-        let myId = localStorage.getItem('my_penguin_id');
-        let myTag = localStorage.getItem('my_penguin_tag');
-        if (myId) {
-            window.location.href = `?id=${myId}${myTag ? '&tag='+myTag : ''}`;
-        }
-    }
-
-    function switchProfileTab(tabName) {
-        const btnPenguin = document.getElementById('tab-my-penguin');
-        const btnColony = document.getElementById('tab-my-colony');
-        const contPenguin = document.getElementById('my-penguin-container');
-        const contColony = document.getElementById('colony-container');
-        const editBtn = document.getElementById('edit-profile-btn');
-        
-        if(tabName === 'penguin') {
-            btnPenguin.classList.add('active'); btnColony.classList.remove('active');
-            contPenguin.style.display = 'block'; contColony.style.display = 'none';
-            if(editBtn && !isViewOnlyMode) editBtn.style.display = 'block';
+    function verifyAccessLock() {
+        const inputPass = document.getElementById('admin-password-field').value;
+        if (inputPass === "borne2track") {
+            sessionStorage.setItem("admin_verified", "true");
+            document.getElementById('auth-lock-screen').style.display = "none";
+            document.getElementById('admin-main-ui').style.display = "block";
+            loadAdminInventoryMatrix();
         } else {
-            btnPenguin.classList.remove('active'); btnColony.classList.add('active');
-            contPenguin.style.display = 'none'; contColony.style.display = 'block';
-            if(editBtn) editBtn.style.display = 'none';
-            loadColonyList();
+            alert("Authorization token signature mismatch. Access denied.");
         }
     }
 
-    async function addToColony() {
-        let myId = localStorage.getItem('my_penguin_id');
-        if (!myId) return;
-        const btn = document.getElementById('add-colony-btn');
-        if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
-
-        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', myId).limit(1);
-        let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
-        
-        if (!currentList.includes(penguinId)) {
-            currentList.push(penguinId);
-            await supabaseClient.from('penguin_logs').update({ colony_list: currentList.join(',') }).eq('penguin_id', myId);
-        }
-        
-        if(btn) {
-            btn.outerHTML = `<span style="color:#a3e635; font-size:10pt; font-weight:bold;">✓ In Colony</span>`;
-        }
+    if (sessionStorage.getItem("admin_verified") === "true") {
+        document.getElementById('auth-lock-screen').style.display = "none";
+        document.getElementById('admin-main-ui').style.display = "block";
+        loadAdminInventoryMatrix();
     }
 
-    async function loadColonyList() {
-        const listEl = document.getElementById('colony-list-output');
-        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying your colony data...</li>`;
+    function logoutAdmin() {
+        sessionStorage.removeItem("admin_verified");
+        location.reload();
+    }
+
+    // ===================================================
+    // FLEET PRODUCTION LINE (CIRCULAR BADGE QR GENERATOR)
+    // ===================================================
+    async function generateNewPenguin() {
+        const idInput = document.getElementById('new-penguin-id');
+        const id = idInput.value.trim();
         
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId).limit(1);
-        let colonyIds = myLogs && myLogs.length > 0 && myLogs[0].colony_list ? myLogs[0].colony_list.split(',').filter(id => id.trim() !== '') : [];
-        
-        if (colonyIds.length === 0) {
-            listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Your colony is currently empty! Explore the leaderboard and add friends here.</li>`;
+        if (id === 'Penguin-' || !id) {
+            alert("Please provide an initialization parameter extension sequence after the template layout prefix.");
             return;
         }
 
-        const { data: allLogs } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note')
-            .in('penguin_id', colonyIds)
-            .order('created_at', { ascending: true });
-            
-        const colonyStats = {};
-        colonyIds.forEach(id => colonyStats[id] = { name: id, avatar: '#38bdf8', points: [] });
+        const secretTag = Math.random().toString(36).substring(2, 10);
         
-        if (allLogs) {
-            allLogs.forEach(log => {
-                if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
-                if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
-                // Exclude the factory/birth logs from mile counts
-                if(log.latitude && log.longitude && log.finder_note !== 'Initial Factory Registration' && !log.finder_note.includes('Penguin Hatched!')) {
-                    colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
-                }
-            });
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .insert([{ 
+                penguin_id: id, 
+                secret_tag: secretTag, 
+                finder_note: 'Initial Factory Registration',
+                latitude: 39.9783, 
+                longitude: -86.1180 
+            }]);
+
+        if (error) {
+            alert("Registration fault generated: " + error.message);
+            return;
         }
+
+        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
+        const baseIdNumber = id.replace("Penguin-", ""); 
         
-        listEl.innerHTML = "";
-        colonyIds.forEach(id => {
-            let miles = 0;
-            let pts = colonyStats[id].points;
-            for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
-            
-            const li = document.createElement('li');
-            li.className = 'leaderboard-row'; 
-            li.innerHTML = `
-                <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg(colonyStats[id].avatar)}</div>
-                    <span class="p-name" style="font-size:11pt;">🐧 ${colonyStats[id].name}</span>
-                </div>
-                <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="text-align:right;">
-                        <span class="p-dist" style="font-size:10pt;">${miles.toFixed(1)} mi</span>
-                        <span class="stat-subtext">${pts.length} stops</span>
-                    </div>
-                    <button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>
-                </div>
-            `;
-            li.onclick = () => { window.location.href = `?id=${id}`; }
-            listEl.appendChild(li);
-        });
-    }
-
-    async function removeFromColony(targetId, event) {
-        event.stopPropagation();
-        if(!confirm(`Remove ${targetId} from your colony?`)) return;
-        
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId).limit(1);
-        let colonyIds = myLogs && myLogs.length > 0 && myLogs[0].colony_list ? myLogs[0].colony_list.split(',').filter(id => id.trim() !== '') : [];
-        
-        colonyIds = colonyIds.filter(id => id !== targetId);
-        await supabaseClient.from('penguin_logs').update({ colony_list: colonyIds.join(',') }).eq('penguin_id', penguinId);
-        
-        loadColonyList();
-    }
-
-    // ===================================================
-    // WELCOME MODAL & IMAGE VIEWER
-    // ===================================================
-    function openWelcomeModal() { const m = document.getElementById('welcome-modal'); if (m) m.style.display = 'flex'; }
-    function closeWelcomeModal() { const m = document.getElementById('welcome-modal'); if (m) m.style.display = 'none'; }
-    
-    function openImageModal(url) {
-        const m = document.getElementById('image-modal'); const img = document.getElementById('fullscreen-image');
-        if(m && img) { img.src = url; m.style.display = 'flex'; }
-    }
-    function closeImageModal() {
-        const m = document.getElementById('image-modal');
-        if(m) { m.style.display = 'none'; document.getElementById('fullscreen-image').src = ""; }
-    }
-
-    // ===================================================
-    // MAP MODAL
-    // ===================================================
-    function openMapModal(lat, lng) {
-        document.getElementById('map-modal').style.display = 'flex';
-        if (!modalMap) {
-            modalMap = L.map('modal-map').setView([lat, lng], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
-            modalLayerGroup = L.layerGroup().addTo(modalMap);
-        } else {
-            modalMap.setView([lat, lng], 14);
-        }
-        modalLayerGroup.clearLayers();
-        const pathCoords = []; let targetMarker = null;
-
-        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
-
-        globalLogData.forEach((log, index) => {
-            if(!log.latitude || !log.longitude) return;
-            const logLatLng = [log.latitude, log.longitude];
-            pathCoords.push(logLatLng);
-
-            const dateObj = new Date(log.created_at).toLocaleDateString();
-            let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
-            const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-            const stopLabel = globalNamedEntry ? `🐧 ${globalNamedEntry}` : `Stop #${index + 1}`;
-            
-            const newMarker = L.marker(logLatLng, { icon: historicalIcon }).addTo(modalLayerGroup)
-                .bindPopup(`<b>${stopLabel} (Stop #${index + 1})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
-            
-            if (Math.abs(log.latitude - lat) < 0.0001 && Math.abs(log.longitude - lng) < 0.0001) targetMarker = newMarker;
+        const hiddenQr = document.getElementById("hidden-qrcode");
+        hiddenQr.innerHTML = ""; 
+        new QRCode(hiddenQr, {
+            text: secureUrl,
+            width: 140, // Scaled for the center of the circle
+            height: 140,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.L // Low error correction = larger, clearer dots!
         });
 
-        if (pathCoords.length > 0) L.polyline(pathCoords, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(modalLayerGroup);
-        setTimeout(() => { modalMap.invalidateSize(); if (targetMarker) targetMarker.openPopup(); }, 150);
-    }
-    function closeMapModal() { document.getElementById('map-modal').style.display = 'none'; }
+        setTimeout(() => {
+            const qrCanvas = hiddenQr.querySelector('canvas');
+            const finalCanvas = document.getElementById('composite-canvas');
+            const ctx = finalCanvas.getContext('2d');
 
-    // ===================================================
-    // TABS
-    // ===================================================
-    function switchStopsTab(tabName) {
-        if (activeStopsTab === tabName) return; activeStopsTab = tabName;
-        document.getElementById('tab-stop-log').classList.toggle('active', tabName === 'log');
-        document.getElementById('tab-stop-history').classList.toggle('active', tabName === 'history');
-        document.getElementById('stop-log-container').style.display = (tabName === 'log') ? 'block' : 'none';
-        document.getElementById('stop-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
-    }
+            // Dimensions for the perfect circular sticker
+            const size = 220;
+            finalCanvas.width = size;
+            finalCanvas.height = size; 
+            const center = size / 2; // 110
 
-    function switchLandmarkTab(tabName) {
-        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
-        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
-        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
-        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
-        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
-        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
-        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
-    }
+            // Fill solid white background square
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, size, size);
 
-    // ===================================================
-    // AVATAR SYSTEM
-    // ===================================================
-    function getPenguinSvg(bgColor) {
-        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
-            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
-            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
-            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
-            <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
-            <circle cx="36" cy="45" r="15" fill="#ffffff"/>
-            <circle cx="64" cy="45" r="15" fill="#ffffff"/>
-            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
-            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
-            <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
-            <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
-            <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
-            <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
-            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
-        </svg>`;
-    }
+            // Optional: Draw a thin circular border line to help you cut the sticker
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "#cccccc";
+            ctx.beginPath();
+            ctx.arc(center, center, center - 1, 0, 2 * Math.PI);
+            ctx.stroke();
 
-    function initAvatarGrid() {
-        const grid = document.getElementById('avatar-grid');
-        if (!grid) return; grid.innerHTML = '';
-        AVATAR_COLORS.forEach(color => {
-            const div = document.createElement('div');
-            div.style.width = '45px'; div.style.height = '45px'; div.style.cursor = 'pointer'; div.style.borderRadius = '10px';
-            div.style.border = selectedAvatarColor === color ? '3px solid #39ff14' : '2px solid transparent';
-            div.innerHTML = getPenguinSvg(color);
-            div.onclick = () => { selectedAvatarColor = color; initAvatarGrid(); };
-            grid.appendChild(div);
-        });
-    }
+            // Draw QR Code perfectly centered
+            const qrSize = 130;
+            const qrOffset = center - (qrSize / 2); // 45
+            ctx.drawImage(qrCanvas, qrOffset, qrOffset, qrSize, qrSize);
 
-    function openEditModal() {
-        document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
-        selectedAvatarColor = activeAvatarColor || '#38bdf8';
-        initAvatarGrid();
-        document.getElementById('edit-profile-modal').style.display = 'flex';
-    }
+            // ==========================================
+            // CIRCULAR TEXT MATH
+            // ==========================================
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px monospace"; // Monospace curves beautifully evenly
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
 
-    function closeEditModal() { document.getElementById('edit-profile-modal').style.display = 'none'; }
+            const radius = 93; // Perfect distance pushing text tight to the outer edge
+            const topText = `TRACK ME #${baseIdNumber}`;
+            const bottomText = "SCAN ME";
+            const angleStep = 0.13; // Distance spacing between characters in radians
 
-    async function saveProfileEdit() {
-        const newName = document.getElementById('edit-custom-name').value.trim();
-        if(!newName) return alert("Penguin name cannot be empty.");
+            // --- DRAW TOP ARC ---
+            let topStartAngle = -Math.PI/2 - ((topText.length - 1) * angleStep) / 2;
+            for (let i = 0; i < topText.length; i++) {
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(topStartAngle + (i * angleStep));
+                ctx.translate(0, -radius);
+                ctx.fillText(topText[i], 0, 0);
+                ctx.restore();
+            }
 
-        activeCustomName = newName; activeAvatarColor = selectedAvatarColor;
-        const pIdEl = document.getElementById('penguin-id');
-        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${activeCustomName}` : `ID: ${penguinId} (${activeCustomName})`;
-        const pNameEl = document.getElementById('penguin-name-display');
-        if (pNameEl) pNameEl.innerText = activeCustomName;
-        updateProfileAvatar(activeAvatarColor); closeEditModal();
+            // --- DRAW BOTTOM ARC (Flipped to read upright) ---
+            let bottomStartAngle = Math.PI/2 - ((bottomText.length - 1) * angleStep) / 2;
+            for (let i = 0; i < bottomText.length; i++) {
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(bottomStartAngle + (i * angleStep));
+                ctx.translate(0, radius); // Move down
+                ctx.rotate(Math.PI); // Flip 180 degrees so it faces inward/upward
+                ctx.fillText(bottomText[i], 0, 0);
+                ctx.restore();
+            }
 
-        await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName, avatar_color: activeAvatarColor }).eq('penguin_id', penguinId);
-        
-        // Dynamically update the colony tab text to match the new name!
-        let possessiveSuffix = activeCustomName.toLowerCase().endsWith('s') ? "'" : "'s";
-        const colonyTabEl = document.getElementById('tab-my-colony');
-        if (colonyTabEl) colonyTabEl.innerText = `🧊 ${activeCustomName}${possessiveSuffix} Colony`;
+            // --- DRAW DIVIDING DOTS ---
+            ctx.font = "bold 18px sans-serif";
+            ctx.fillText("•", center - radius, center); // 9 o'clock
+            ctx.fillText("•", center + radius, center); // 3 o'clock
 
-        buildLeaderboard(); 
+            // Final Output handling
+            const dataUrl = finalCanvas.toDataURL("image/png");
+            document.getElementById('final-sticker-img').src = dataUrl;
+
+            document.getElementById("qr-url-display").innerText = secureUrl;
+            document.getElementById("qrcode-container").style.display = "flex";
+
+            idInput.value = "Penguin-"; 
+            loadAdminInventoryMatrix(); 
+            
+        }, 150);
     }
 
-    function updateProfileAvatar(colorHex) {
-        const container = document.getElementById('profile-avatar-container');
-        if (container) container.innerHTML = getPenguinSvg(colorHex || '#38bdf8');
-    }
-
-    // ===================================================
-    // MAP INIT & GPS
-    // ===================================================
-    function initializeLiveMap() {
-        try {
-            map = L.map('map').setView([39.8283, -98.5795], 4);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-            historyLayerGroup = L.layerGroup().addTo(map);
-            poiLayerGroup = L.layerGroup().addTo(map);
-            if (!isViewOnlyMode) marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
-        } catch (e) {}
-    }
-
-    function activateViewOnlyUI() {
-        const safeHide = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
-        safeHide('safety-disclaimer-notice'); safeHide('map-location-refresh-btn'); safeHide('location-text-elements');
-        safeHide('edit-profile-btn'); safeHide('poi-input-group'); safeHide('tab-stop-log');
-        switchStopsTab('history');
-        const t = document.getElementById('tracking-card-title'); if(t) t.innerText = "Location History";
-        if (marker) { marker.remove(); marker = null; }
-    }
-
-    function verifyCurrentGPS() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
-                if (map) map.setView([verifiedLat, verifiedLng], 15);
-                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
-                if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
-                if (lockBadge) { lockBadge.innerText = "✓ LOCATION DETECTED"; lockBadge.style.color = "#39ff14"; }
-                const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
-                lookupNearbyMonuments(verifiedLat, verifiedLng);
-                updateDistanceToLastStop();
-            }, (err) => { 
-                if (coordinatesDisplay) coordinatesDisplay.innerText = "Location permission required.";
-                if (lockBadge) { lockBadge.innerText = "LOCKED"; lockBadge.style.color = "#ef4444"; }
-                const poiOutput = document.getElementById("poi-proximity-output");
-                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:11pt;">⚠️ GPS sensor locked.</li>`;
-            }, { enableHighAccuracy: true });
-        }
-    }
-
-    function triggerManualProximityRefresh() {
-        if (isViewOnlyMode) return;
-        const refreshBtnList = document.getElementById('manual-refresh-poi-btn');
-        const refreshBtnMap = document.getElementById('map-location-refresh-btn');
-        if (refreshBtnList) { refreshBtnList.innerText = "Scanning..."; refreshBtnList.disabled = true; }
-        if (refreshBtnMap) { refreshBtnMap.innerText = "Scanning..."; refreshBtnMap.disabled = true; }
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
-                if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
-                if (map) map.setView([verifiedLat, verifiedLng], 15);
-                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
-                updateDistanceToLastStop();
-
-                lookupNearbyMonuments(verifiedLat, verifiedLng).then(() => {
-                    if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
-                    if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh"; refreshBtnMap.disabled = false; }
-                });
-            }, () => {
-                if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
-                if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh"; refreshBtnMap.disabled = false; }
-            }, { enableHighAccuracy: true });
-        }
-    }
-
-    function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
-        const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
+        const R = 3958.8; 
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
 
-    async function fetchLastStopCity(lat, lng) {
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
-            const data = await response.json();
-            const city = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state || "Unknown location";
-            const cityEl = document.getElementById('last-stop-city'); if (cityEl) cityEl.innerText = city;
-        } catch (e) {
-            const cityEl = document.getElementById('last-stop-city'); if (cityEl) cityEl.innerText = "Location mapped";
-        }
-    }
-
-    function updateDistanceToLastStop() {
-        if (!verifiedLat || !verifiedLng || !lastLogLat || !lastLogLng) return;
-        const distanceMiles = calculateHaversineDistance(verifiedLat, verifiedLng, lastLogLat, lastLogLng);
-        const distEl = document.getElementById('last-stop-distance');
-        if (distEl) distEl.innerText = `${distanceMiles.toFixed(1)} miles away`;
-    }
-
     // ===================================================
-    // DUAL-RADIUS POI ENGINE
+    // PIPELINE ENGINE: CORE DATABASE REGISTRY INVENTORY
     // ===================================================
-    async function lookupNearbyMonuments(lat, lng) {
-        if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
-        const poiSelector = document.getElementById('poi-selector');
-        const poiLabelStatus = document.getElementById('poi-label-status');
-        const poiProximityOutput = document.getElementById("poi-proximity-output");
-        
-        const offset = 0.090; 
-        const minLat = lat - offset; const maxLat = lat + offset;
-        const minLng = lng - offset; const maxLng = lng + offset;
-
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
-
-        try {
-            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
-            
-            const fetchRes = await fetch(overpassUrl);
-            const resJson = await fetchRes.json();
-            
-            if (resJson && resJson.elements && resJson.elements.length > 0) {
-                if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby landmark --</option>';
-                let dynamicSortingBufferArray = []; let closeDropdownOptionsCount = 0; 
-                const poiIcon = L.divIcon({ className: 'poi-div-icon', html: "<div style='background-color:#cc00ff; width:14px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #cc00ff;'></div>", iconSize: [14, 12], iconAnchor: [7, 6] });
-
-                resJson.elements.forEach((element, internalIdx) => {
-                    if (element.tags && element.tags.name && element.lat && element.lon) {
-                        const distanceInMiles = calculateHaversineDistance(lat, lng, element.lat, element.lon);
-                        const distanceInMeters = distanceInMiles * 1609.34; 
-                        dynamicSortingBufferArray.push({ name: element.tags.name, lat: element.lat, lon: element.lon, miles: distanceInMiles, idToken: `poi_node_${internalIdx}` });
-
-                        if (distanceInMeters <= 500 && poiSelector) {
-                            closeDropdownOptionsCount++;
-                            const optionNode = document.createElement('option');
-                            optionNode.value = element.tags.name; optionNode.innerText = `🏛️ ${element.tags.name} (${distanceInMeters.toFixed(0)}m)`;
-                            poiSelector.appendChild(optionNode);
-                        }
-                        const landmarkMarkerNode = L.marker([element.lat, element.lon], { icon: poiIcon }).addTo(poiLayerGroup).bindPopup(`<b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
-                        poiMarkersMap[`poi_node_${internalIdx}`] = landmarkMarkerNode;
-                    }
-                });
-
-                dynamicSortingBufferArray.sort((a, b) => a.miles - b.miles);
-
-                if (poiSelector && poiLabelStatus) {
-                    if (closeDropdownOptionsCount > 0) {
-                        poiSelector.disabled = false; poiLabelStatus.innerText = "🏛️ Nearby Historic Landmark or Marker Found!";
-                        poiLabelStatus.style.color = "#39ff14"; poiLabelStatus.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.2)";
-                    } else {
-                        poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
-                        poiSelector.disabled = true; poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:";
-                        poiLabelStatus.style.color = "#94a3b8"; poiLabelStatus.style.textShadow = "none";
-                    }
-                }
-
-                if (dynamicSortingBufferArray.length > 0 && poiProximityOutput) {
-                    poiProximityOutput.innerHTML = ""; 
-                    const listRenderLimit = Math.min(dynamicSortingBufferArray.length, 5);
-                    for (let x = 0; x < listRenderLimit; x++) { 
-                        const landmarkItem = dynamicSortingBufferArray[x];
-                        let humanReadableDistanceText = (landmarkItem.miles < 0.1) ? `${(landmarkItem.miles * 5280).toFixed(0)} feet away` : `${landmarkItem.miles.toFixed(2)} miles away`;
-                        let isAlreadyVisitedBadgeHTML = discoveredMonumentsSet.has(landmarkItem.name.trim().toLowerCase()) ? `<span class="tagged-badge">✓ Tagged</span>` : "";
-
-                        const liNode = document.createElement('li'); liNode.className = 'poi-proximity-row';
-                        liNode.innerHTML = `<div><span class="poi-icon-badge">🏛️</span><span class="poi-list-name">${landmarkItem.name}${isAlreadyVisitedBadgeHTML}</span></div><div><span class="poi-list-dist">${humanReadableDistanceText}</span></div>`;
-                        
-                        liNode.onclick = function() {
-                            if (map && poiMarkersMap[landmarkItem.idToken]) {
-                                map.setView([landmarkItem.lat, landmarkItem.lon], 15);
-                                poiMarkersMap[landmarkItem.idToken].openPopup();
-                                document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
-                            }
-                        };
-                        poiProximityOutput.appendChild(liNode);
-                    }
-                } else if (poiProximityOutput) {
-                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic landmarks found inside this grid.</li>`;
-                }
-            } else if (poiProximityOutput) {
-                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic landmarks found inside this grid.</li>`;
-                if (poiSelector && poiLabelStatus) {
-                    poiSelector.innerHTML = '<option value="">-- Not near any landmarks --</option>'; poiSelector.disabled = true;
-                    poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:"; poiLabelStatus.style.color = "#94a3b8"; poiLabelStatus.style.textShadow = "none";
-                }
-            }
-        } catch (poiErr) { console.warn("POI fallback bypass: ", poiErr); }
-    }
-
-    function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
-    function handleFileSelectionChange() {
-        const fileInput = document.getElementById('penguin-photo'); const customCameraBtn = document.getElementById('custom-camera-btn');
-        if (fileInput && fileInput.files[0] && customCameraBtn) { customCameraBtn.innerHTML = "📸"; customCameraBtn.classList.add("photo-attached"); } 
-        else if (customCameraBtn) { customCameraBtn.innerHTML = "📷"; customCameraBtn.classList.remove("photo-attached"); }
-    }
-
-    // ===================================================
-    // BIRTH CERTIFICATE FIX 
-    // ===================================================
-    async function saveCustomNameFromModal() {
-        const nameInput = document.getElementById('modal-custom-name').value.trim();
-        if (nameInput) {
-            activeCustomName = nameInput;
-            const pIdEl = document.getElementById('penguin-id');
-            if (pIdEl) pIdEl.innerText = `ID: ${penguinId} (${activeCustomName})`;
-            const pNameEl = document.getElementById('penguin-name-display');
-            if (pNameEl) pNameEl.innerText = activeCustomName;
-            
-            // Re-render Dynamic Colony Grammar Name safely
-            let possessiveSuffix = activeCustomName.toLowerCase().endsWith('s') ? "'" : "'s";
-            const colonyTabEl = document.getElementById('tab-my-colony');
-            if (colonyTabEl) colonyTabEl.innerText = `🧊 ${activeCustomName}${possessiveSuffix} Colony`;
-
-            if (globalLogData.length === 0) {
-                await supabaseClient.from('penguin_logs').insert([{
-                    penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
-                    finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
-                }]);
-            } else {
-                await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
-            }
-        }
-        const modal = document.getElementById('first-find-modal'); if (modal) modal.style.display = 'none';
-    }
-
-    // ===================================================
-    // LEADERBOARD LOGIC
-    // ===================================================
-    function switchLeaderboardTab(tabName) {
-        if (activeTab === tabName) return; activeTab = tabName;
-        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
-        activeLeaderboardPage = 1; buildLeaderboard();
-    }
-
-    async function buildLeaderboard() {
-        const { data: allLogs, error } = await supabaseClient.from('penguin_logs').select('penguin_id, latitude, longitude, created_at, custom_name, finder_note').order('created_at', { ascending: true });
-        if (error || !allLogs) return;
-
-        const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
-
-        allLogs.forEach(log => {
-            if (log.finder_note === 'Initial Factory Registration' || log.finder_note === 'Penguin Hatched! 🥚') return;
-            if (log.penguin_id) {
-                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
-                if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
-                
-                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
-                if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
-                if (log.custom_name && log.custom_name.trim() !== "") namesMap[log.penguin_id] = log.custom_name;
-            }
-        });
-
-        const leaderboardData = [];
-        Object.keys(tracks).forEach(id => {
-            let totalDistanceMeters = 0; const points = tracks[id];
-            for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
-            const totalMiles = totalDistanceMeters * 0.000621371; 
-            leaderboardData.push({ id: id, displayName: namesMap[id] ? `${namesMap[id]}` : id, miles: totalMiles, stopsCount: logsCountMap[id] || 1, monumentsCount: monumentTagsCountMap[id] || 0 });
-        });
-
-        if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
-        else { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
-
-        computedLeaderboardArray = leaderboardData.slice(0, 50); activeLeaderboardPage = 1; renderLeaderboardPage();
-    }
-
-    function renderLeaderboardPage() {
-        const listOutput = document.getElementById('leaderboard-output'); const paginationEl = document.getElementById('leaderboard-pagination');
-        if (!listOutput) return; listOutput.innerHTML = "";
-
-        if (computedLeaderboardArray.length === 0) {
-            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No logs logged yet!</li>`;
-            if (paginationEl) paginationEl.style.display = "none";
-            return;
-        }
-
-        const totalPages = Math.ceil(computedLeaderboardArray.length / LEADERBOARD_ITEMS_PER_PAGE);
-        if (paginationEl) {
-            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
-            document.getElementById('leaderboard-page-indicator').innerText = `Page ${activeLeaderboardPage} of ${totalPages}`;
-            document.getElementById('leaderboard-prev-btn').disabled = (activeLeaderboardPage === 1);
-            document.getElementById('leaderboard-next-btn').disabled = (activeLeaderboardPage === totalPages);
-        }
-
-        const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
-        const pageItemsSlice = computedLeaderboardArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
-
-        pageItemsSlice.forEach((item, index) => {
-            const li = document.createElement('li'); li.className = 'leaderboard-row';
-            let absoluteRank = startIdx + index + 1; let rankClass = ""; let medal = `#${absoluteRank}`;
-            if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
-
-            let rightSideValueMetricsHTML = (activeTab === "distance") 
-                ? `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`
-                : `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
-
-            li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
-            
-            li.onclick = () => { window.location.href = `?id=${item.id}`; };
-            listOutput.appendChild(li);
-        });
-    }
-
-    function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
-
-    // ===================================================
-    // LANDMARK HISTORY PASSPORT SYSTEM
-    // ===================================================
-    function compilePassportLogsHistory(logs) {
-        computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
-        if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
-
-        for (let i = logs.length - 1; i >= 0; i--) {
-            const entry = logs[i];
-            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:')) {
-                const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
-                const monumentName = matchString ? matchString[1] : "Unknown Landmark";
-                discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
-                computedPassportStampsArray.push({ name: monumentName, date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude });
-            }
-        }
-        activePassportPage = 1; renderPassportPageLayout();
-    }
-
-    function renderPassportPageLayout() {
-        const passportHistoryOutput = document.getElementById('passport-history-output'); const passportPagination = document.getElementById('passport-pagination');
-        if (!passportHistoryOutput) return; passportHistoryOutput.innerHTML = "";
-
-        if (computedPassportStampsArray.length === 0) {
-            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This penguin hasn't collected any landmark passport stamps yet!</li>`;
-            if (passportPagination) passportPagination.style.display = "none"; return;
-        }
-
-        const totalPages = Math.ceil(computedPassportStampsArray.length / ITEMS_PER_PAGE);
-        if (passportPagination) {
-            passportPagination.style.display = totalPages > 1 ? "flex" : "none";
-            document.getElementById('passport-page-indicator').innerText = `Page ${activePassportPage} of ${totalPages}`;
-            document.getElementById('passport-prev-btn').disabled = (activePassportPage === 1);
-            document.getElementById('passport-next-btn').disabled = (activePassportPage === totalPages);
-        }
-
-        const startIdx = (activePassportPage - 1) * ITEMS_PER_PAGE;
-        const pageItemsSlice = computedPassportStampsArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
-
-        pageItemsSlice.forEach(stamp => {
-            const rowLi = document.createElement('li'); rowLi.className = 'passport-history-row';
-            rowLi.innerHTML = `<div><span class="passport-icon-badge">🏅</span><span class="p-name">${stamp.name}</span></div><div><span class="passport-list-date">${stamp.date}</span></div>`;
-            rowLi.onclick = function() { openMapModal(stamp.lat, stamp.lng); };
-            passportHistoryOutput.appendChild(rowLi);
-        });
-    }
-
-    function changePassportPage(directionOffset) { activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
-
-    // ===================================================
-    // ALL STOPS HISTORY SYSTEM
-    // ===================================================
-    function compileAllStopsHistory(logs) {
-        computedAllStopsArray = [];
-        if (!logs || logs.length === 0) { renderAllStopsPageLayout(); return; }
-        
-        let validStopIndex = 1;
-
-        for (let i = 0; i < logs.length; i++) {
-            const entry = logs[i];
-            if(entry.finder_note === 'Initial Factory Registration' || entry.finder_note === 'Penguin Hatched! 🥚') continue;
-            
-            let cleanNote = entry.finder_note || "";
-            if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
-
-            computedAllStopsArray.push({
-                stopNumber: validStopIndex, note: cleanNote || "No adventure notes left.",
-                date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude
-            });
-            validStopIndex++;
-        }
-        
-        computedAllStopsArray.reverse();
-        activeAllStopsPage = 1; renderAllStopsPageLayout();
-    }
-
-    function renderAllStopsPageLayout() {
-        const outputEl = document.getElementById('all-stops-history-output'); const paginationEl = document.getElementById('all-stops-pagination');
-        if (!outputEl) return; outputEl.innerHTML = "";
-
-        if (computedAllStopsArray.length === 0) {
-            outputEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No stops logged yet!</li>`;
-            if (paginationEl) paginationEl.style.display = "none"; return;
-        }
-
-        const totalPages = Math.ceil(computedAllStopsArray.length / ITEMS_PER_PAGE);
-        if (paginationEl) {
-            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
-            document.getElementById('all-stops-page-indicator').innerText = `Page ${activeAllStopsPage} of ${totalPages}`;
-            document.getElementById('all-stops-prev-btn').disabled = (activeAllStopsPage === 1);
-            document.getElementById('all-stops-next-btn').disabled = (activeAllStopsPage === totalPages);
-        }
-
-        const startIdx = (activeAllStopsPage - 1) * ITEMS_PER_PAGE;
-        const pageItemsSlice = computedAllStopsArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
-
-        pageItemsSlice.forEach(stop => {
-            const rowLi = document.createElement('li'); rowLi.className = 'passport-history-row';
-            rowLi.innerHTML = `
-                <div><span class="passport-icon-badge">📍</span><span class="p-name">Stop #${stop.stopNumber}</span><span style="display:block; font-size:10.5pt; color:#cbd5e1; font-style:italic; font-weight:normal; margin-top:2px;">"${stop.note}"</span></div>
-                <div style="text-align:right;"><span class="passport-list-date" style="color:#00e5ff; text-shadow:none;">${stop.date}</span><span style="display:block; font-size:9pt; color:#4b5563; font-family:monospace;">${stop.lat.toFixed(3)}°, ${stop.lng.toFixed(3)}°</span></div>`;
-            rowLi.onclick = function() { openMapModal(stop.lat, stop.lng); };
-            outputEl.appendChild(rowLi);
-        });
-    }
-
-    function changeAllStopsPage(directionOffset) { activeAllStopsPage += directionOffset; renderAllStopsPageLayout(); const card = document.getElementById('journey-stops-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
-
-    // ===================================================
-    // MAIN DATA ENGINE
-    // ===================================================
-    async function loadPenguinHistory(targetId) {
-        if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
-        if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
-
+    async function loadAdminInventoryMatrix() {
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color')
-            .eq('penguin_id', targetId)
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
             .order('created_at', { ascending: true });
 
-        if (error) return;
+        if (error || !rawLogs) return;
 
-        // FILTER: Hide the Admin factory registration from the game
-        const logs = rawLogs.filter(log => log.finder_note !== 'Initial Factory Registration');
+        globalCachedLogsArray = rawLogs; 
 
-        discoveredMonumentsSet.clear();
-        globalLogData = logs || []; 
-
-        const firstFindModal = document.getElementById('first-find-modal');
-        const passportHistoryOutput = document.getElementById("passport-history-output");
-        const allStopsOutput = document.getElementById("all-stops-history-output");
-
-        if (!logs || logs.length === 0) {
-            if (!isViewOnlyMode) {
-                if (firstFindModal) firstFindModal.style.display = 'flex';
-                openWelcomeModal(); 
+        const fleetClusters = {};
+        rawLogs.forEach(log => {
+            const id = log.penguin_id;
+            if (!fleetClusters[id]) {
+                fleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id };
             }
-            if (passportHistoryOutput) passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
-            if (allStopsOutput) allStopsOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
+            // Skip counting structural setup parameters inside telemetry tracking math clusters
+            if (log.finder_note === 'Initial Factory Registration') return;
+
+            fleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
+            fleetClusters[id].pingsCount++;
+            
+            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) fleetClusters[id].landmarksCount++;
+            if (log.custom_name && log.custom_name.trim() !== "") fleetClusters[id].activeName = log.custom_name;
+        });
+
+        const tbody = document.getElementById('inventory-tbody');
+        tbody.innerHTML = "";
+
+        const dynamicFleetKeys = Object.keys(fleetClusters);
+        if (dynamicFleetKeys.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No active pieces mapped.</td></tr>`;
             return;
         }
 
-        if (logs.length > 0) {
-            const instPanel = document.getElementById('instruction-panel'); const safetyNotice = document.getElementById('safety-disclaimer-notice');
-            if (instPanel && safetyNotice && instPanel.parentNode) { instPanel.parentNode.insertBefore(instPanel, safetyNotice); instPanel.style.marginBottom = "16px"; }
-        }
-
-        if (firstFindModal) firstFindModal.style.display = 'none';
-
-        let resolvedDisplayName = targetId;
-        const namedEntry = logs.find(log => log.custom_name && log.custom_name.trim() !== "");
-        if (namedEntry) resolvedDisplayName = namedEntry.custom_name;
-        
-        activeCustomName = resolvedDisplayName; globalNamedEntry = resolvedDisplayName;
-        const avatarEntry = logs.find(log => log.avatar_color && log.avatar_color.trim() !== "");
-        activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
-        
-        const pIdEl = document.getElementById('penguin-id');
-        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
-        const pNameEl = document.getElementById("penguin-name-display");
-        if (pNameEl) pNameEl.innerText = resolvedDisplayName;
-
-        updateProfileAvatar(activeAvatarColor);
-
-        // --- NEW DYNAMIC STRANGER HEADER & COLONY TAB NAME LOGIC ---
-        const dynamicStrangerTitleEl = document.getElementById('dynamic-stranger-title');
-        if (dynamicStrangerTitleEl) {
-            dynamicStrangerTitleEl.innerText = `Viewing: ${resolvedDisplayName}`;
-        }
-
-        let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
-        const colonyTabEl = document.getElementById('tab-my-colony');
-        if (colonyTabEl) {
-            colonyTabEl.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
-        }
-
-        const validStops = logs.filter(l => l.latitude && l.longitude && l.finder_note !== 'Penguin Hatched! 🥚');
-        const totalStopsEl = document.getElementById("total-stops-counter");
-        if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
-
-        if (validStops.length > 0) {
-            const lastLog = validStops[validStops.length - 1];
-            lastLogLat = lastLog.latitude; lastLogLng = lastLog.longitude;
-            fetchLastStopCity(lastLogLat, lastLogLng); updateDistanceToLastStop();
-        }
-
-        const pathCoordinates = [];
-        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
-
-        let validStopCounterForMap = 1;
-        logs.forEach((log) => {
-            if (log.latitude && log.longitude && log.finder_note !== 'Penguin Hatched! 🥚') {
-                const latLng = [log.latitude, log.longitude];
-                pathCoordinates.push(latLng);
-
-                const dateObj = new Date(log.created_at).toLocaleDateString();
-                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
-                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                const stopLabel = namedEntry ? `🐧 ${resolvedDisplayName}` : `Stop #${validStopCounterForMap}`;
-                
-                L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${validStopCounterForMap})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
-                validStopCounterForMap++;
+        dynamicFleetKeys.forEach(key => {
+            const summaryNode = fleetClusters[key];
+            
+            let compiledMiles = 0;
+            for (let i = 0; i < summaryNode.points.length - 1; i++) {
+                compiledMiles += getDistanceBetweenPoints(
+                    summaryNode.points[i].lat, summaryNode.points[i].lng,
+                    summaryNode.points[i+1].lat, summaryNode.points[i+1].lng
+                );
             }
-        });
 
-        compilePassportLogsHistory(logs);
-        compileAllStopsHistory(logs);
+            const tr = document.createElement('tr');
+            
+            tr.innerHTML = `
+                <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
+                <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
+                <td style="cursor:pointer;"><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
+                <td style="cursor:pointer;"><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
+                <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
+                <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Delete</button></td>`;
+            
+            Array.from(tr.children).forEach((td, idx) => {
+                if (idx < 5) { 
+                    td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName);
+                }
+            });
 
-        if (pathCoordinates.length > 0 && map) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
-            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
-            if (isViewOnlyMode) { const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1]; lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]); }
-        }
-    }
-
-    async function compressImage(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image(); img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; 
-                    let width = img.width; let height = img.height;
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
-                };
+            const deleteBtn = tr.querySelector('.delete-btn');
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation(); 
+                deleteEntirePenguin(summaryNode.id);
             };
+
+            tbody.appendChild(tr);
         });
     }
 
-    async function submitDiscovery() {
-        if (!verifiedLat || !verifiedLng) return;
-        const submitBtn = document.getElementById('submit-btn');
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Uploading tracking logs..."; }
+    // ===================================================
+    // AUDITING & CRITICAL DELETION ACTIONS FIXES
+    // ===================================================
+    function launchSurgicalAuditDeck(targetId, displayName) {
+        activeAuditedPenguinId = targetId;
+        document.getElementById('audit-panel-card').style.display = "block";
+        document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
+        document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
+        renderSurgicalLogsFeed();
+    }
 
-        const finderNotesEl = document.getElementById('finder-notes'); let notes = finderNotesEl ? finderNotesEl.value.trim() : "";
-        const poiSelector = document.getElementById('poi-selector'); const selectedPoi = poiSelector ? poiSelector.value : "";
-        const photoInput = document.getElementById('penguin-photo'); const photoFile = photoInput ? photoInput.files[0] : null;
-        let uploadedPhotoUrl = null;
+    function renderSurgicalLogsFeed() {
+        const feedContainer = document.getElementById('audit-logs-feed');
+        feedContainer.innerHTML = "";
+        const operationalSlice = globalCachedLogsArray.filter(log => log.penguin_id === activeAuditedPenguinId);
+        
+        for (let i = operationalSlice.length - 1; i >= 0; i--) {
+            const logItem = operationalSlice[i];
+            const timestampText = new Date(logItem.created_at).toLocaleString();
+            
+            let photoElementHTML = "";
+            let stripPhotoActionButtonHTML = "";
+            
+            if (logItem.photo_url) {
+                photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
+                stripPhotoActionButtonHTML = `<button class="btn-command btn-danger strip-btn" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
+            }
 
-        if (photoFile) {
-            try {
-                const compressedBlob = await compressImage(photoFile);
-                const fileName = `${penguinId}_${Date.now()}.jpg`;
-                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
-                if (storageError) throw storageError;
-                const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
-                uploadedPhotoUrl = publicUrlData.publicUrl;
-            } catch (err) { alert("Photo submission bypassed safely."); }
+            const itemBlock = document.createElement('div');
+            itemBlock.className = "log-audit-item";
+            itemBlock.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-family:monospace; color:#00e5ff; font-size:8.5pt;">⏱️ ${timestampText}</span>
+                    <div style="margin-left:auto;">
+                        ${stripPhotoActionButtonHTML}
+                        <button class="btn-command btn-danger delete-log-btn" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
+                    </div>
+                </div>
+                <div style="font-size:9pt; color:#cbd5e1; margin-top:4px;">
+                    <span style="color:#94a3b8; font-size:8pt; display:block;">Coords: ${logItem.latitude.toFixed(4)}°, ${logItem.longitude.toFixed(4)}°</span>
+                    <strong>Note:</strong> <i>"${logItem.finder_note || 'No description text recorded.'}"</i>
+                    ${photoElementHTML}
+                </div>`;
+            
+            const stripBtn = itemBlock.querySelector('.strip-btn');
+            if (stripBtn) {
+                stripBtn.onclick = (e) => { e.stopPropagation(); stripPhotoLink(logItem.created_at); };
+            }
+
+            const deleteLogBtn = itemBlock.querySelector('.delete-log-btn');
+            if (deleteLogBtn) {
+                deleteLogBtn.onclick = (e) => { e.stopPropagation(); purgeSingleLog(logItem.created_at); };
+            }
+
+            feedContainer.appendChild(itemBlock);
+        }
+    }
+
+    async function deleteEntirePenguin(targetId) {
+        const doubleCheck = confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently erase all tracking data, photos, and passport logs for this game piece. This action cannot be undone.`);
+        if (!doubleCheck) return;
+
+        const { data, error } = await supabaseClient
+            .from('penguin_logs')
+            .delete()
+            .eq('penguin_id', targetId)
+            .select(); 
+
+        if (error) {
+            alert("Delete operation failed. Please try again. " + error.message);
+            return;
         }
 
-        let cleanedPoiStringValue = selectedPoi;
-        if (selectedPoi && selectedPoi.includes(' (')) cleanedPoiStringValue = selectedPoi.split(' (')[0];
-        if (cleanedPoiStringValue) notes = `[Tagged at Monument: ${cleanedPoiStringValue}] ${notes}`.trim();
+        if (!data || data.length === 0) {
+            alert("⚠️ DELETE FAILED!\n\nYour Supabase database Row Level Security (RLS) is quietly blocking deletions.\n\nTo fix this:\n1. Go to your Supabase Dashboard -> Authentication -> Policies.\n2. Create a new Policy on the 'penguin_logs' table.\n3. Enable the 'DELETE' operation for 'anon' users.");
+            return;
+        }
 
-        const submissionData = {
-            penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, 
-            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, avatar_color: activeAvatarColor, secret_tag: securityTagParam 
-        };
+        alert(`Success. ${targetId} has been purged from the active inventory matrix.`);
+        
+        if (activeAuditedPenguinId === targetId) {
+            document.getElementById('audit-panel-card').style.display = "none";
+            activeAuditedPenguinId = null;
+        }
+        
+        await loadAdminInventoryMatrix();
+    }
 
-        const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
-        if (error) { alert("Database entry rejected."); if (submitBtn) submitBtn.disabled = false; return; }
+    async function purgeSingleLog(createdAtISOString) {
+        if (!confirm("Are you certain you want to purge this specific record entry?")) return;
 
-        try {
-            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
-            const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
-            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
-            if (cleanedPoiStringValue) discordMsg += `🏛️ **Landmark Tagged:** \`${cleanedPoiStringValue}\`\n`;
-            discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
-            const message = { username: "Penguin Scout", content: discordMsg };
-            if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
-            await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
-        } catch(e) {}
+        const { data, error } = await supabaseClient
+            .from('penguin_logs')
+            .delete()
+            .eq('penguin_id', activeAuditedPenguinId)
+            .eq('created_at', createdAtISOString)
+            .select();
 
-        alert(`Success! Adventure logged for ${activeCustomName || penguinId}.`);
-        location.reload(); 
+        if (error) { alert("Delete failed: " + error.message); return; }
+        
+        if (!data || data.length === 0) {
+            alert("⚠️ DELETE FAILED!\nSupabase Row Level Security (RLS) is blocking deletions. Please enable DELETE policies for 'anon' in Supabase.");
+            return;
+        }
+        
+        await loadAdminInventoryMatrix();
+        renderSurgicalLogsFeed();
+    }
+
+    async function stripPhotoLink(createdAtISOString) {
+        if (!confirm("Remove the image reference token location link parameter?")) return;
+
+        const { data, error } = await supabaseClient
+            .from('penguin_logs')
+            .update({ photo_url: null })
+            .eq('penguin_id', activeAuditedPenguinId)
+            .eq('created_at', createdAtISOString)
+            .select();
+
+        if (error) { alert("Override faulted: " + error.message); return; }
+
+        if (!data || data.length === 0) {
+            alert("⚠️ UPDATE FAILED!\nSupabase Row Level Security (RLS) is blocking updates. Please check your policies.");
+            return;
+        }
+        
+        await loadAdminInventoryMatrix();
+        renderSurgicalLogsFeed();
     }
 </script>
 
