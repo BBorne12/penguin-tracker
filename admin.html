@@ -89,6 +89,7 @@
 </head>
 <body>
 
+<!-- GATEKEEPER AUTHORIZATION SHIELD -->
 <div id="auth-lock-screen">
     <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
         <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
@@ -101,6 +102,7 @@
 
 <div class="app-container" id="admin-main-ui" style="display: none;">
     
+    <!-- HEADER -->
     <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <div class="subtitle">Back-Office Fleet Control</div>
@@ -109,11 +111,13 @@
         <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
     </div>
 
+    <!-- MAIN DASHBOARD HUB -->
     <div class="layout-section">
         
+        <!-- ROW: FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🏭 Fleet Production Line</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact low-density QR code sticker and register a new penguin entry simultaneously.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, circular low-density QR code seal and register a new penguin entry simultaneously.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
@@ -121,19 +125,21 @@
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
+                <!-- Containers for construction pipeline logic steps -->
                 <div id="hidden-qrcode" style="display: none;"></div>
                 <canvas id="composite-canvas" style="display: none;"></canvas>
                 
-                <img id="final-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
+                <img id="final-sticker-img" style="border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="QR Sticker">
                 
                 <div style="flex: 1;">
-                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image matrix to copy or store the output asset stream payload. Density optimized for small physical printing.</p>
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Circular Seal Rendering Complete!</strong>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the circular badge to copy or save it. This is perfectly optimized for a small, round physical sticker format.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
         </div>
 
+        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
         <div class="glass-card">
             <h2>Active Game Piece Inventory Matrix</h2>
             <div style="overflow-x: auto;">
@@ -157,6 +163,7 @@
             </div>
         </div>
 
+        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
                 <div>
@@ -166,7 +173,8 @@
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                </div>
+                <!-- Chronological history steps inject here -->
+            </div>
         </div>
 
     </div>
@@ -213,7 +221,7 @@
     }
 
     // ===================================================
-    // FLEET PRODUCTION LINE (ULTRA-COMPACT L-DENSITY QR GENERATOR)
+    // FLEET PRODUCTION LINE (CIRCULAR BADGE QR GENERATOR)
     // ===================================================
     async function generateNewPenguin() {
         const idInput = document.getElementById('new-penguin-id');
@@ -248,11 +256,11 @@
         hiddenQr.innerHTML = ""; 
         new QRCode(hiddenQr, {
             text: secureUrl,
-            width: 160,
-            height: 160,
+            width: 140, // Scaled for the center of the circle
+            height: 140,
             colorDark : "#000000",
             colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.L // LOWER ERROR CORRECTION = MUCH LARGER DOTS
+            correctLevel : QRCode.CorrectLevel.L // Low error correction = larger, clearer dots!
         });
 
         setTimeout(() => {
@@ -260,36 +268,70 @@
             const finalCanvas = document.getElementById('composite-canvas');
             const ctx = finalCanvas.getContext('2d');
 
-            // Set up ultra-compact dimensions allowing zero wasted space
-            finalCanvas.width = 195;
-            finalCanvas.height = 185; 
+            // Dimensions for the perfect circular sticker
+            const size = 220;
+            finalCanvas.width = size;
+            finalCanvas.height = size; 
+            const center = size / 2; // 110
 
-            // Base Background fill
+            // Fill solid white background square
             ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+            ctx.fillRect(0, 0, size, size);
 
-            // Draw QR Code larger and tighter to the edges
-            // Pushed right slightly to X=28 to make room for the sideways text
-            ctx.drawImage(qrCanvas, 28, 4, 165, 165);
+            // Optional: Draw a thin circular border line to help you cut the sticker
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "#cccccc";
+            ctx.beginPath();
+            ctx.arc(center, center, center - 1, 0, 2 * Math.PI);
+            ctx.stroke();
 
-            // COMPACT SIDEWAYS TEXT RENDERING LAYER
-            ctx.save();
-            ctx.translate(22, 169); // Origin sits flush left and exactly level with bottom of QR code
-            ctx.rotate(-Math.PI / 2); // Pivot text 90 degrees counter-clockwise
+            // Draw QR Code perfectly centered
+            const qrSize = 130;
+            const qrOffset = center - (qrSize / 2); // 45
+            ctx.drawImage(qrCanvas, qrOffset, qrOffset, qrSize, qrSize);
+
+            // ==========================================
+            // CIRCULAR TEXT MATH
+            // ==========================================
             ctx.fillStyle = "#000000";
-            ctx.font = "bold 18px sans-serif"; // Significantly larger font
-            ctx.textAlign = "left";
-            ctx.fillText(`TRACK ME #${baseIdNumber}`, 0, 0);
-            ctx.restore();
+            ctx.font = "bold 16px monospace"; // Monospace curves beautifully evenly
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
 
-            // COMPACT BOTTOM-RIGHT ANCHOR FOR "SCAN ME"
-            ctx.fillStyle = "#000000";
-            ctx.font = "bold 18px sans-serif"; // Significantly larger font
-            ctx.textAlign = "right";
-            
-            // Pressed exactly under the right edge of the QR code (X=193) and snug to the bottom (Y=183)
-            ctx.fillText("SCAN ME", 193, 183);
+            const radius = 93; // Perfect distance pushing text tight to the outer edge
+            const topText = `TRACK ME #${baseIdNumber}`;
+            const bottomText = "SCAN ME";
+            const angleStep = 0.13; // Distance spacing between characters in radians
 
+            // --- DRAW TOP ARC ---
+            let topStartAngle = -Math.PI/2 - ((topText.length - 1) * angleStep) / 2;
+            for (let i = 0; i < topText.length; i++) {
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(topStartAngle + (i * angleStep));
+                ctx.translate(0, -radius);
+                ctx.fillText(topText[i], 0, 0);
+                ctx.restore();
+            }
+
+            // --- DRAW BOTTOM ARC (Flipped to read upright) ---
+            let bottomStartAngle = Math.PI/2 - ((bottomText.length - 1) * angleStep) / 2;
+            for (let i = 0; i < bottomText.length; i++) {
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(bottomStartAngle + (i * angleStep));
+                ctx.translate(0, radius); // Move down
+                ctx.rotate(Math.PI); // Flip 180 degrees so it faces inward/upward
+                ctx.fillText(bottomText[i], 0, 0);
+                ctx.restore();
+            }
+
+            // --- DRAW DIVIDING DOTS ---
+            ctx.font = "bold 18px sans-serif";
+            ctx.fillText("•", center - radius, center); // 9 o'clock
+            ctx.fillText("•", center + radius, center); // 3 o'clock
+
+            // Final Output handling
             const dataUrl = finalCanvas.toDataURL("image/png");
             document.getElementById('final-sticker-img').src = dataUrl;
 
