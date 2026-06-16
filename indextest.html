@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Antarctic Adventure Mode</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -500,7 +499,6 @@
 </head>
 <body>
 
-<!-- WELCOME STORY MODAL OVERLAY -->
 <div class="modal-overlay" id="welcome-modal" style="z-index: 10000;">
     <div class="modal-card" style="text-align: left;">
         <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! 🐧</h2>
@@ -517,7 +515,6 @@
     </div>
 </div>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal" style="z-index: 9999;">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -530,7 +527,6 @@
     </div>
 </div>
 
-<!-- EDIT PROFILE MODAL OVERLAY -->
 <div class="modal-overlay" id="edit-profile-modal" style="z-index: 9999;">
     <div class="modal-card">
         <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
@@ -538,15 +534,13 @@
         
         <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
         <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
-            <!-- Dynamic Avatars Injected Here -->
-        </div>
+            </div>
         
         <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
 
-<!-- DEDICATED MAP POPUP MODAL -->
 <div class="modal-overlay" id="map-modal" style="z-index: 10001;">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
@@ -555,7 +549,6 @@
     </div>
 </div>
 
-<!-- FULLSCREEN IMAGE MODAL -->
 <div class="modal-overlay" id="image-modal" style="z-index: 10002; padding: 0;" onclick="closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -565,7 +558,6 @@
 
 <div class="app-container">
     
-    <!-- HEADER SECTION -->
     <div class="app-header" style="position: relative; padding-right: 40px;">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -575,18 +567,15 @@
             <span class="status-badge" id="penguin-id">Detecting Tag...</span>
         </div>
         
-        <!-- Persistent Help Button -->
         <button id="help-btn" onclick="openWelcomeModal()" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
-            ⚠️ VIEW-ONLY MODE: Logging Disabled
+            🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only.
         </div>
 
-        <!-- GAME METHODOLOGY NOTIFICATION PANEL (Dynamically moved down later) -->
         <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <span style="font-size: 20pt;">🎒</span>
@@ -604,9 +593,7 @@
             </div>
         </div>
 
-        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
-            <!-- Edit Profile Button -->
             <button id="edit-profile-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 10pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
             
             <h2>Penguin</h2>
@@ -632,7 +619,7 @@
                 </li>
             </ul>
         </div>
-        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
+
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
@@ -650,7 +637,6 @@
             <div id="map"></div>
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
             
-            <!-- MOVED POI DROPDOWN: Now sits directly under the map -->
             <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
                 <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
                 <select id="poi-selector" class="select-poi" disabled>
@@ -659,7 +645,6 @@
             </div>
         </div>
         
-        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Journey Stops</h2>
             
@@ -668,22 +653,19 @@
                 <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
             </div>
 
-            <!-- TAB: LOG NEW STOP -->
             <div id="stop-log-container">
                 <div class="input-group" id="notes-input-group">
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
                     <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
                 </div>
                 
-                <!-- SIDE-BY-SIDE BUTTONS: Photo & Submit -->
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
-                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" style="flex: 1; margin: 0;" disabled>Log Penguin Location</button>
+                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
                 </div>
             </div>
 
-            <!-- TAB: ALL STOPS HISTORY -->
             <div id="stop-history-container" style="display: none;">
                 <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
@@ -697,7 +679,6 @@
             </div>
         </div>
 
-        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -717,7 +698,6 @@
             </div>
         </div>
 
-        <!-- CONSOLIDATED LANDMARKS CARD -->
         <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Landmarks</h2>
@@ -729,14 +709,12 @@
                 <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
             </div>
 
-            <!-- TAB: NEARBY LANDMARKS -->
             <div id="landmark-nearby-container">
                 <ul class="poi-proximity-list" id="poi-proximity-output">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
                 </ul>
             </div>
 
-            <!-- TAB: LANDMARK PASSPORT HISTORY -->
             <div id="landmark-history-container" style="display: none;">
                 <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
@@ -750,21 +728,18 @@
             </div>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
-        <div class="warning-badge" id="safety-disclaimer-notice">
+        <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
-    <!-- VERSION IDENTIFIER FOOTER -->
     <div class="app-footer">
-        Antarctic Game Engine • Version 3.1.0
+        Antarctic Game Engine • Version 3.1.1
     </div>
 
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -842,7 +817,13 @@
     // HYBRID SECURITY GATEWAY LOGIC
     // ===================================================
     async function verifyPenguinSecurity(id, tag) {
-        const numericId = parseInt(id, 10);
+        // Extract the number from "Penguin-066" or just "066"
+        let parsedId = id;
+        if(id.startsWith("Penguin-")) {
+            parsedId = id.replace("Penguin-", "");
+        }
+        const numericId = parseInt(parsedId, 10);
+        
         // If it's a legacy penguin (< 66) or unparseable, allow open access
         if (isNaN(numericId) || numericId < 66) {
             return true; 
@@ -859,11 +840,9 @@
             .not('secret_tag', 'is', null);
 
         if (error || !data || data.length === 0) {
-            // Unregistered secure penguin or DB error
             return false;
         }
 
-        // Check if the provided tag matches ANY of the stored secret tags for this piece
         return data.some(log => log.secret_tag === tag);
     }
 
@@ -878,6 +857,7 @@
                 isViewOnlyMode = true;
                 const viewBanner = document.getElementById('view-mode-banner');
                 if (viewBanner) {
+                    viewBanner.style.display = "block";
                     viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only.";
                 }
                 activateViewOnlyUI();
@@ -1151,7 +1131,6 @@
         const safeShow = (id) => { const el = document.getElementById(id); if (el) el.style.display = "block"; };
         const safeText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
 
-        safeShow('view-mode-banner');
         safeHide('safety-disclaimer-notice');
         safeHide('map-location-refresh-btn');
         safeHide('location-text-elements');
@@ -1469,6 +1448,9 @@
         const monumentTagsCountMap = {}; 
 
         allLogs.forEach(log => {
+            // Filter out factory registrations from leaderboard computation
+            if (log.finder_note === 'Initial Factory Registration') return;
+
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
@@ -1757,13 +1739,16 @@
         if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
         if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
 
-        const { data: logs, error } = await supabaseClient
+        const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
             .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
         if (error) return;
+
+        // 🚨 SECURITY FILTER: Hide the Admin factory registration from the game
+        const logs = rawLogs.filter(log => log.finder_note !== 'Initial Factory Registration');
 
         discoveredMonumentsSet.clear();
         globalLogData = logs || []; 
@@ -1772,6 +1757,7 @@
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
+        // If filtering out the factory log leaves 0 logs, pop the "First Discovery" modal!
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 if (firstFindModal) firstFindModal.style.display = 'flex';
