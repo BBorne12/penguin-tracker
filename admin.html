@@ -6,6 +6,7 @@
     <title>Penguin Tracker - Central Command Operations</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         /* Base Setup & CSS Resets */
@@ -187,20 +188,18 @@
 </head>
 <body>
 
-<!-- GATEKEEPER AUTHORIZATION SHIELD -->
 <div id="auth-lock-screen">
     <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
         <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
         <h2>Operations Gatekeeper</h2>
         <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
         <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
-        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
+        <button onclick="verifyAccessLock()" class="btn-command" style="width: 100%;">Authorize Session</button>
     </div>
 </div>
 
 <div class="app-container" id="admin-main-ui" style="display: none;">
     
-    <!-- HEADER -->
     <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <div class="subtitle">Back-Office Fleet Control</div>
@@ -209,10 +208,26 @@
         <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
     </div>
 
-    <!-- MAIN DASHBOARD HUB -->
     <div class="layout-section">
         
-        <!-- ROW 1: ACTIVE PENGUIN INVENTORY MATRIX -->
+        <div class="glass-card">
+            <h2>🏭 Fleet Production Line</h2>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, unique QR code and register a new penguin in the database simultaneously.</p>
+            
+            <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
+                <input type="text" id="new-penguin-id" class="admin-input" placeholder="Penguin ID (e.g., 066)" style="margin-bottom: 0;">
+                <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Generate & Register</button>
+            </div>
+            
+            <div id="qrcode-container" style="display: none; align-items: center; gap: 16px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
+                <div id="qrcode" style="background: white; padding: 10px; border-radius: 4px;"></div>
+                <div style="flex: 1;">
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Secure URL Generated:</strong>
+                    <code id="qr-url-display" style="font-size: 8.5pt; color: #00e5ff; word-break: break-all; margin-top: 4px; display: block;"></code>
+                </div>
+            </div>
+        </div>
+
         <div class="glass-card">
             <h2>Active Game Piece Inventory Matrix</h2>
             <div style="overflow-x: auto;">
@@ -235,7 +250,6 @@
             </div>
         </div>
 
-        <!-- ROW 2: CRITICAL SURGICAL AUDIT PANEL (CONCURRENT CONSOLE) -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
                 <div>
@@ -245,10 +259,8 @@
                 <button class="btn-command btn-danger" id="master-reset-btn" style="font-size: 8pt; padding: 6px 12px;">⚠️ Master Reset Piece</button>
             </div>
 
-            <!-- CHRONOLOGICAL HISTORY SCROLLER FEED -->
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                <!-- Chronological history steps inject here -->
-            </div>
+                </div>
         </div>
 
     </div>
@@ -288,6 +300,65 @@
     function logoutAdmin() {
         sessionStorage.removeItem("admin_verified");
         location.reload();
+    }
+
+    // ===================================================
+    // NEW: FLEET PRODUCTION LINE (QR GENERATOR)
+    // ===================================================
+    async function generateNewPenguin() {
+        const idInput = document.getElementById('new-penguin-id');
+        const id = idInput.value.trim();
+        
+        if (!id) {
+            alert("Please enter a Penguin ID to generate.");
+            return;
+        }
+
+        // Generate a random 8-character alphanumeric string for the secret tag
+        const secretTag = Math.random().toString(36).substring(2, 10);
+
+        // Register the new penguin in Supabase
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .insert([{ 
+                penguin_id: id, 
+                secret_tag: secretTag, 
+                finder_note: 'Initial Factory Registration',
+                latitude: 39.9783, // Carmel IN approximate starting latitude
+                longitude: -86.1180 // Carmel IN approximate starting longitude
+            }]);
+
+        if (error) {
+            alert("Registration failed. Have you added the 'secret_tag' column to your Supabase table yet?\n\nError: " + error.message);
+            console.error("DB Error:", error);
+            return;
+        }
+
+        // Generate the secure URL (assuming your GitHub Pages repo is bborne12.github.io/penguin-tracker)
+        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${id}&tag=${secretTag}`;
+        
+        // Render the QR Code
+        const qrContainer = document.getElementById("qrcode");
+        qrContainer.innerHTML = ""; // Clear any previous QR code
+        
+        new QRCode(qrContainer, {
+            text: secureUrl,
+            width: 150,
+            height: 150,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Display the URL and container
+        document.getElementById("qr-url-display").innerText = secureUrl;
+        document.getElementById("qrcode-container").style.display = "flex";
+
+        alert(`Success! Penguin ${id} registered with Secret Tag: ${secretTag}`);
+        idInput.value = ""; // Clear the input field for the next one
+        
+        // Refresh the inventory matrix to show the newly born penguin
+        loadAdminInventoryMatrix();
     }
 
     // Mathematical Haversine calculator for inventory summary aggregation rows
