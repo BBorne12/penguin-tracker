@@ -439,7 +439,7 @@
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.5.0 (Stateless Core)</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.6.0 (Stateless Core)</div>
 
 </div>
 
@@ -502,14 +502,17 @@
         let parsedId = id;
         if(!id.startsWith("Penguin-")) parsedId = `Penguin-${id}`;
         
+        // BUG FIX: Legacy Penguin Bypass! IDs 1-65 are instantly verified without a tag.
+        const numericId = parseInt(parsedId.replace("Penguin-", ""), 10);
+        if (!isNaN(numericId) && numericId < 66) return true; 
+
         if (!tag) return false;
 
         const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', parsedId);
         
         // LAZY MINTING: If zero rows exist, the DB is clean. 
-        // If the URL has a tag, they scanned the physical virgin QR code. Trust it.
         if (!data || data.length === 0) {
-            return tag ? true : false;
+            return true; // We already verified tag exists above
         }
 
         return data.some(log => log.secret_tag === tag);
@@ -520,12 +523,12 @@
         updateProfileAvatar(activeAvatarColor); 
         
         // 1. Check if the URL proves ownership of the CURRENT page (Physical Scan or Bookmark)
-        if (penguinId !== "Mystery Penguin" && securityTagParam) {
+        if (penguinId !== "Mystery Penguin") {
             isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
         }
 
         // 2. Check if the URL proves authorized viewer status (Clicked from Leaderboard)
-        if (viewerId && viewerTagParam) {
+        if (viewerId) {
             isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam);
         }
 
@@ -582,8 +585,10 @@
     // COLONY FEATURES & ROUTING LOGIC
     // ===================================================
     function goBackToMyPenguin() {
-        if (isAuthorizedViewer && viewerId && viewerTagParam) {
-            window.location.href = `?id=${viewerId}&tag=${viewerTagParam}`;
+        if (isAuthorizedViewer && viewerId) {
+            let url = `?id=${viewerId}`;
+            if (viewerTagParam) url += `&tag=${viewerTagParam}`;
+            window.location.href = url;
         }
     }
 
@@ -656,12 +661,14 @@
         
         listEl.innerHTML = "";
 
-        // Determine what credentials to pass to the next page
+        // Dynamically build viewer URL parameters based on legacy status
         let linkViewerParams = "";
         if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}&vtag=${securityTagParam}`;
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
         } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}&vtag=${viewerTagParam}`;
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
         colonyIds.forEach(id => {
@@ -1145,12 +1152,14 @@
         const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
         const pageItemsSlice = computedLeaderboardArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
 
-        // Statefully generate the viewer link suffix if applicable
+        // Dynamically build viewer URL parameters based on legacy status
         let linkViewerParams = "";
         if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}&vtag=${securityTagParam}`;
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
         } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}&vtag=${viewerTagParam}`;
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
         pageItemsSlice.forEach((item, index) => {
