@@ -218,18 +218,6 @@
     </div>
 </div>
 
-<!-- MANUAL COLONY AUTHENTICATION MODAL -->
-<div class="modal-overlay" id="auth-colony-modal">
-    <div class="modal-card">
-        <h2 style="color: #00e5ff; margin-bottom: 15px;">Verify Identity</h2>
-        <p style="font-size: 11pt; color: #94a3b8; margin-bottom: 12px; line-height: 1.4;">Enter your Penguin ID and Secret Tag to authorize adding this penguin to your colony.</p>
-        <input type="text" id="auth-penguin-id" class="modal-input" placeholder="Your Penguin ID (e.g., Penguin-007)">
-        <input type="password" id="auth-secret-tag" class="modal-input" placeholder="Your Secret Tag">
-        <button class="btn-glow" onclick="submitColonyAuth()">Verify & Add</button>
-        <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeColonyAuthModal()">Cancel</button>
-    </div>
-</div>
-
 <!-- DEDICATED MAP POPUP MODAL -->
 <div class="modal-overlay" id="map-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
@@ -283,7 +271,7 @@
         <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
             
-            <!-- STRANGER ACTION ROW (Hidden unless looking at someone else's penguin) -->
+            <!-- STRANGER ACTION ROW (Hidden unless authorized via Leaderboard) -->
             <div id="stranger-action-row" style="display: none; justify-content: flex-end; margin-bottom: 12px;">
                 <!-- Add to colony button dynamically injected here -->
             </div>
@@ -299,7 +287,7 @@
                 
                 <!-- Avatar & Identity Box -->
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <button id="edit-profile-btn" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
+                    <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
                     <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
                     <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
@@ -451,7 +439,7 @@
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.4.0 (Stateless URL Core)</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.5.0 (Stateless Core)</div>
 
 </div>
 
@@ -470,9 +458,10 @@
     // STATELESS IDENTITY VARIABLES
     let viewerId = urlParams.get('viewer') || null;
     let viewerTagParam = urlParams.get('vtag') || null;
-    let myId = null;
-    let myTag = null;
-    let isViewOnlyMode = true;
+    
+    let isPrimaryControl = false;
+    let isAuthorizedViewer = false;
+    let isViewOnlyMode = true; 
     
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
@@ -530,54 +519,49 @@
         initializeLiveMap();
         updateProfileAvatar(activeAvatarColor); 
         
-        // 1. Check if the user is the owner of the CURRENT page they are viewing.
-        let isOwner = false;
+        // 1. Check if the URL proves ownership of the CURRENT page (Physical Scan or Bookmark)
         if (penguinId !== "Mystery Penguin" && securityTagParam) {
-            isOwner = await verifyPenguinSecurity(penguinId, securityTagParam);
+            isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
         }
 
-        // 2. Check if the user is an authorized viewer (clicked from Leaderboard).
-        let isViewerAuthorized = false;
+        // 2. Check if the URL proves authorized viewer status (Clicked from Leaderboard)
         if (viewerId && viewerTagParam) {
-            isViewerAuthorized = await verifyPenguinSecurity(viewerId, viewerTagParam);
+            isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam);
         }
 
-        // 3. Resolve internal identity state.
-        if (isOwner) {
-            myId = penguinId;
-            myTag = securityTagParam;
+        // 3. Resolve internal interface state
+        if (isPrimaryControl) {
             isViewOnlyMode = false;
             verifyCurrentGPS(); 
-        } else if (isViewerAuthorized) {
-            myId = viewerId;
-            myTag = viewerTagParam;
-            isViewOnlyMode = true;
+        } else if (isAuthorizedViewer) {
+            isViewOnlyMode = true; // They can't edit or log stops for the stranger
         } else {
-            // Anonymous / Unverified scan
-            isViewOnlyMode = true;
+            isViewOnlyMode = true; // Anonymous physical scan without a valid tag
         }
 
+        // Apply View Only UI Restrictions
         if (isViewOnlyMode) {
             const viewBanner = document.getElementById('view-mode-banner');
-            if (viewBanner) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
+            if (viewBanner && !isAuthorizedViewer) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
             activateViewOnlyUI();
             const poiOutput = document.getElementById("poi-proximity-output");
             if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
         }
 
         // ==========================================
-        // UI Adjustments for "My Colony" Routing
+        // STATELESS COLONY UI ROUTING
         // ==========================================
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
-        if (myId && myId !== penguinId) {
-            // I am an authorized viewer looking at someone else's penguin!
+        if (isAuthorizedViewer) {
+            // Authorized Virtual Explorer viewing a stranger!
             if(backBtnContainer) backBtnContainer.style.display = 'block';
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
-                // Check if this penguin is already in my colony
-                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', myId).limit(1);
+                
+                // Check if this stranger is already in the Viewer's colony
+                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId).limit(1);
                 let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
                 
                 let inColonyHTML = currentList.includes(penguinId)
@@ -585,12 +569,6 @@
                     : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
 
                 strangerActionRow.innerHTML = inColonyHTML;
-            }
-        } else if (!myId && isViewOnlyMode && penguinId !== "Mystery Penguin") {
-            // I am an anonymous viewer scanning a stranger's penguin. Show Auth button.
-            if(strangerActionRow) {
-                strangerActionRow.style.display = 'flex';
-                strangerActionRow.innerHTML = `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="openColonyAuthModal()">➕ Add to My Colony</button>`;
             }
         }
 
@@ -601,40 +579,11 @@
     });
 
     // ===================================================
-    // COLONY FEATURES & MANUAL AUTH MODAL
+    // COLONY FEATURES & ROUTING LOGIC
     // ===================================================
-    function openColonyAuthModal() { document.getElementById('auth-colony-modal').style.display = 'flex'; }
-    function closeColonyAuthModal() { document.getElementById('auth-colony-modal').style.display = 'none'; }
-
-    async function submitColonyAuth() {
-        let authId = document.getElementById('auth-penguin-id').value.trim();
-        const authTag = document.getElementById('auth-secret-tag').value.trim();
-
-        if (!authId || !authTag) return alert("Please enter both your Penguin ID and Secret Tag.");
-        if (!authId.startsWith('Penguin-')) authId = `Penguin-${authId}`;
-
-        const isValid = await verifyPenguinSecurity(authId, authTag);
-        if (!isValid) return alert("Invalid Identity or Secret Tag. Please try again.");
-
-        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', authId).limit(1);
-        let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
-
-        if (!currentList.includes(penguinId)) {
-            currentList.push(penguinId);
-            await supabaseClient.from('penguin_logs').update({ colony_list: currentList.join(',') }).eq('penguin_id', authId);
-        }
-
-        // Reload the page, but inject the viewer credentials into the URL so state persists cleanly!
-        let targetUrl = `?id=${penguinId}`;
-        if (securityTagParam) targetUrl += `&tag=${securityTagParam}`;
-        targetUrl += `&viewer=${authId}&vtag=${authTag}`;
-        
-        window.location.href = targetUrl;
-    }
-
     function goBackToMyPenguin() {
-        if (myId && myTag) {
-            window.location.href = `?id=${myId}&tag=${myTag}`;
+        if (isAuthorizedViewer && viewerId && viewerTagParam) {
+            window.location.href = `?id=${viewerId}&tag=${viewerTagParam}`;
         }
     }
 
@@ -648,7 +597,7 @@
         if(tabName === 'penguin') {
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
-            if(editBtn && !isViewOnlyMode && myId === penguinId) editBtn.style.display = 'block';
+            if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
@@ -658,16 +607,16 @@
     }
 
     async function addToColony() {
-        if (!myId) return;
+        if (!isAuthorizedViewer || !viewerId) return;
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', myId).limit(1);
+        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId).limit(1);
         let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
         
         if (!currentList.includes(penguinId)) {
             currentList.push(penguinId);
-            await supabaseClient.from('penguin_logs').update({ colony_list: currentList.join(',') }).eq('penguin_id', myId);
+            await supabaseClient.from('penguin_logs').update({ colony_list: currentList.join(',') }).eq('penguin_id', viewerId);
         }
         
         if(btn) {
@@ -707,9 +656,12 @@
         
         listEl.innerHTML = "";
 
-        let viewerParams = "";
-        if (myId && myTag) {
-            viewerParams = `&viewer=${myId}&vtag=${myTag}`;
+        // Determine what credentials to pass to the next page
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}&vtag=${viewerTagParam}`;
         }
 
         colonyIds.forEach(id => {
@@ -717,7 +669,7 @@
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
             
-            let removeButtonHTML = (myId === penguinId && !isViewOnlyMode) 
+            let removeButtonHTML = (isPrimaryControl) 
                 ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
                 : "";
 
@@ -736,15 +688,15 @@
                     ${removeButtonHTML}
                 </div>
             `;
-            // Securely pass viewer credentials into the link if authorized
-            li.onclick = () => { window.location.href = `?id=${id}${viewerParams}`; }
+            // Securely pass viewer credentials into the link
+            li.onclick = () => { window.location.href = `?id=${id}${linkViewerParams}`; }
             listEl.appendChild(li);
         });
     }
 
     async function removeFromColony(targetId, event) {
         event.stopPropagation();
-        if (myId !== penguinId || isViewOnlyMode) {
+        if (!isPrimaryControl) {
             alert("You can only remove penguins from your own colony.");
             return;
         }
@@ -895,9 +847,12 @@
         const btnPenguin = document.getElementById('tab-my-penguin');
         const btnColony = document.getElementById('tab-my-colony');
         
-        if (myId === penguinId) {
+        if (isPrimaryControl) {
             if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
+        } else {
+            if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${activeCustomName}`;
+            if (btnColony) btnColony.innerText = `🧊 ${activeCustomName}${possessiveSuffix} Colony`;
         }
 
         buildLeaderboard(); 
@@ -1190,10 +1145,12 @@
         const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
         const pageItemsSlice = computedLeaderboardArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
 
-        // Dynamically build viewer passing URL params if authorized
-        let viewerParams = "";
-        if (myId && myTag) {
-            viewerParams = `&viewer=${myId}&vtag=${myTag}`;
+        // Statefully generate the viewer link suffix if applicable
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}&vtag=${viewerTagParam}`;
         }
 
         pageItemsSlice.forEach((item, index) => {
@@ -1207,8 +1164,8 @@
 
             li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
             
-            // Pass authorization natively through the URL
-            li.onclick = () => { window.location.href = `?id=${item.id}${viewerParams}`; };
+            // Pass authorization securely into the URL
+            li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
             listOutput.appendChild(li);
         });
     }
@@ -1384,16 +1341,16 @@
         const btnColony = document.getElementById('tab-my-colony');
         const editBtn = document.getElementById('edit-profile-btn');
         
-        if (myId && myId !== penguinId) {
+        if (isPrimaryControl) {
+            // Viewing your own
+            if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
+            if (btnColony) btnColony.innerText = `🧊 My Colony`;
+            if (editBtn) editBtn.style.display = 'block';
+        } else {
             // Viewing a stranger
             if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
-        } else {
-            // Viewing your own
-            if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
-            if (btnColony) btnColony.innerText = `🧊 My Colony`;
-            if (editBtn && !isViewOnlyMode) editBtn.style.display = 'block';
         }
 
         const validStops = logs.filter(l => l.latitude && l.longitude && l.finder_note !== 'Penguin Hatched! 🥚');
@@ -1431,7 +1388,7 @@
         if (pathCoordinates.length > 0 && map) {
             currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
             map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
-            if (isViewOnlyMode) { const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1]; lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]); }
+            if (!isViewOnlyMode) { const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1]; lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]); }
         }
     }
 
