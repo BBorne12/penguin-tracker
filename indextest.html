@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker™ - Antarctic Adventure Mode</title>
-
+    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -197,7 +197,7 @@
             You found a completely new penguin! Give it a custom name below to hatch it and officially launch its adventure.
         </p>
         <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles...">
-        <button onclick="saveCustomNameFromModal()" class="btn-glow">Save Name & Start Journey!</button>
+        <button onclick="saveCustomNameFromModal(this)" class="btn-glow">Save Name & Start Journey!</button>
     </div>
 </div>
 
@@ -263,7 +263,7 @@
         <div class="glass-card" id="profile-card-block">
             
             <div id="stranger-action-row" style="display: none; justify-content: flex-end; margin-bottom: 12px;">
-                </div>
+            </div>
 
             <div class="tab-bar" id="profile-tabs" style="display: flex; margin-bottom: 16px;">
                 <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')">🐧 My Penguin</button>
@@ -419,7 +419,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.0 (Stateless Core)</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.2 (Stateless Core)</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -434,7 +434,7 @@
 
     let urlParams = new URLSearchParams(window.location.search);
     
-    // --- GLOBAL ID NORMALIZATION (The Prefix Bug Fix) ---
+    // --- GLOBAL ID NORMALIZATION ---
     let rawId = urlParams.get('id') || "Mystery Penguin";
     let penguinId = (rawId !== "Mystery Penguin" && !rawId.startsWith("Penguin-")) ? `Penguin-${rawId}` : rawId;
     let securityTagParam = urlParams.get('tag') || null; 
@@ -482,6 +482,13 @@
     const customCameraBtn = document.getElementById("custom-camera-btn");
     const penguinNameDisplayEl = document.getElementById("penguin-name-display");
     if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
+
+    // --- BULLETPROOF FACTORY LOG FILTER ---
+    function isFactoryLog(note) {
+        if (!note) return false;
+        const lowerNote = note.toLowerCase();
+        return lowerNote.includes('initial factory registration') || lowerNote.includes('penguin hatched');
+    }
 
     // ===================================================
     // STATELESS SECURITY GATEWAY LOGIC
@@ -638,7 +645,7 @@
 
     async function loadColonyList() {
         const listEl = document.getElementById('colony-list-output');
-        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying colony data...</li>`;
+        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying database pipelines... Data are aggregating.</li>`;
         
         let queryId = penguinId; 
 
@@ -671,7 +678,7 @@
             allLogs.forEach(log => {
                 if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
                 if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
-                if(log.latitude && log.longitude && log.finder_note !== 'Penguin Hatched! 🥚' && log.finder_note !== 'Initial Factory Registration') {
+                if(log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
                     colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
                 }
             });
@@ -781,7 +788,7 @@
 
         let stopCounter = 1;
         globalLogData.forEach((log) => {
-            if(!log.latitude || !log.longitude || log.finder_note === 'Initial Factory Registration' || log.finder_note === 'Penguin Hatched! 🥚') return;
+            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note)) return;
             const logLatLng = [log.latitude, log.longitude];
             pathCoords.push(logLatLng);
 
@@ -872,30 +879,11 @@
         if(!newName) return alert("Penguin name cannot be empty.");
 
         activeCustomName = newName; activeAvatarColor = selectedAvatarColor;
-        const pIdEl = document.getElementById('penguin-id-display');
-        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${activeCustomName}` : `ID: ${penguinId} (${activeCustomName})`;
-        const pNameEl = document.getElementById('penguin-name-display');
-        if (pNameEl) pNameEl.innerText = activeCustomName;
-        updateProfileAvatar(activeAvatarColor); closeEditModal();
-
+        
         await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName, avatar_color: activeAvatarColor }).eq('penguin_id', penguinId);
         
-        let possessiveSuffix = activeCustomName.toLowerCase().endsWith('s') ? "'" : "'s";
-        const btnPenguin = document.getElementById('tab-my-penguin');
-        const btnColony = document.getElementById('tab-my-colony');
-        
-        if (isPrimaryControl) {
-            if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
-            if (btnColony) btnColony.innerText = `🧊 My Colony`;
-        } else if (isAuthorizedViewer) {
-            if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${activeCustomName}`;
-            if (btnColony) btnColony.innerText = `🧊 ${activeCustomName}${possessiveSuffix} Colony`;
-        } else {
-            if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${activeCustomName}`;
-            if (btnColony) btnColony.innerText = `🧊 ${activeCustomName}${possessiveSuffix} Colony`;
-        }
-
-        buildLeaderboard(); 
+        // Force refresh to instantly sync interface
+        location.reload();
     }
 
     function updateProfileAvatar(colorHex) {
@@ -1095,31 +1083,30 @@
     // ===================================================
     // LAZY MINTING HATCH FIX 
     // ===================================================
-    async function saveCustomNameFromModal() {
+    async function saveCustomNameFromModal(btnElement) {
         const nameInput = document.getElementById('modal-custom-name').value.trim();
         if (nameInput) {
-            activeCustomName = nameInput;
-            const pIdEl = document.getElementById('penguin-id-display');
-            if (pIdEl) pIdEl.innerText = `ID: ${penguinId} (${activeCustomName})`;
-            const pNameEl = document.getElementById('penguin-name-display');
-            if (pNameEl) pNameEl.innerText = activeCustomName;
-
-            const hasFactoryLog = globalLogData.some(l => l.finder_note === 'Initial Factory Registration');
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.innerText = "Hatching...";
+            }
             
+            activeCustomName = nameInput;
+
             if (globalLogData.length === 0) {
                 await supabaseClient.from('penguin_logs').insert([{
                     penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                     finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
                 }]);
-                location.reload();
             } else {
-                // Instantly update the factory log (and any others) with the new name
                 await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
             }
+            
+            // Force a hard reload to ensure all UI elements build perfectly
+            location.reload();
+        } else {
+            alert("Please give your penguin a name before starting its journey!");
         }
-        const modal = document.getElementById('first-find-modal'); if (modal) modal.style.display = 'none';
-        const editBtn = document.getElementById('edit-profile-btn');
-        if (editBtn) editBtn.style.display = 'block';
     }
 
     // ===================================================
@@ -1146,7 +1133,7 @@
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
 
         allLogs.forEach(log => {
-            if (log.finder_note === 'Penguin Hatched! 🥚' || log.finder_note === 'Initial Factory Registration') return;
+            if (isFactoryLog(log.finder_note)) return;
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
@@ -1240,7 +1227,7 @@
 
         for (let i = logs.length - 1; i >= 0; i--) {
             const entry = logs[i];
-            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && entry.finder_note !== 'Initial Factory Registration') {
+            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note)) {
                 const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
                 const monumentName = matchString ? matchString[1] : "Unknown Landmark";
                 discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
@@ -1291,7 +1278,7 @@
 
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
-            if(entry.finder_note === 'Penguin Hatched! 🥚' || entry.finder_note === 'Initial Factory Registration') continue;
+            if(isFactoryLog(entry.finder_note)) continue;
             
             let cleanNote = entry.finder_note || "";
             if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
@@ -1362,13 +1349,16 @@
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
-        const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "") : null;
+        // Consider it named only if it has a real name that isn't empty and isn't just its own ID
+        const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
 
+        // Smart Modal Handling
         if (!namedEntry && !isViewOnlyMode) {
             if (firstFindModal) firstFindModal.style.display = 'flex';
+            // Explicitly blocking the welcome modal here so they don't visually overlap
+        } else {
+            if (firstFindModal) firstFindModal.style.display = 'none';
             openWelcomeModal(); 
-        } else if (firstFindModal) {
-            firstFindModal.style.display = 'none';
         }
 
         if (!logs || logs.length === 0 || (!namedEntry && isViewOnlyMode)) {
@@ -1408,7 +1398,7 @@
             if (editBtn) editBtn.style.display = 'none';
         }
 
-        const validStops = logs.filter(l => l.latitude && l.longitude && l.finder_note !== 'Penguin Hatched! 🥚' && l.finder_note !== 'Initial Factory Registration');
+        const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note));
         const totalStopsEl = document.getElementById("total-stops-counter");
         if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
 
@@ -1423,7 +1413,7 @@
 
         let validStopCounterForMap = 1;
         logs.forEach((log) => {
-            if (log.latitude && log.longitude && log.finder_note !== 'Penguin Hatched! 🥚' && log.finder_note !== 'Initial Factory Registration') {
+            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
                 const latLng = [log.latitude, log.longitude];
                 pathCoordinates.push(latLng);
 
