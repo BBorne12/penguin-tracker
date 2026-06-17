@@ -439,7 +439,7 @@
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.7.0 (Stateless Core)</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.8.0 (Stateless Core)</div>
 
 </div>
 
@@ -533,8 +533,6 @@
         }
 
         // STRANGER MODE OVERRIDE FIX
-        // If you are an authorized viewer, but the ID you are viewing is NOT your own ID, 
-        // you are forced into stranger mode. (Fixes the legacy bypass logic flaw).
         if (isAuthorizedViewer && viewerId !== penguinId) {
             isPrimaryControl = false;
         }
@@ -657,8 +655,11 @@
         const listEl = document.getElementById('colony-list-output');
         listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying colony data...</li>`;
         
-        // EMPTY ROW TRAP FIX: Gather master list from all rows belonging to the penguin currently being viewed
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
+        // FIX: If you are an authorized viewer on a stranger's page, you view YOUR colony, not theirs!
+        let queryId = (isAuthorizedViewer && !isPrimaryControl && viewerId) ? viewerId : penguinId;
+
+        // EMPTY ROW TRAP FIX: Gather master list from all rows belonging to the target
+        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', queryId);
         let colonySet = new Set();
         if (myLogs) {
             myLogs.forEach(log => {
@@ -710,7 +711,9 @@
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
             
-            let removeButtonHTML = (isPrimaryControl) 
+            // Allow you to remove friends if it is YOUR colony list being displayed
+            let isMyColonyList = isPrimaryControl || (isAuthorizedViewer && !isPrimaryControl && viewerId);
+            let removeButtonHTML = isMyColonyList 
                 ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
                 : "";
 
@@ -737,7 +740,11 @@
 
     async function removeFromColony(targetId, event) {
         event.stopPropagation();
-        if (!isPrimaryControl) {
+        
+        // Define whose master list we are managing right now
+        let ownerId = isPrimaryControl ? penguinId : viewerId;
+        
+        if (!ownerId) {
             alert("You can only remove penguins from your own colony.");
             return;
         }
@@ -745,7 +752,7 @@
         if(!confirm(`Remove ${targetId} from your colony?`)) return;
         
         // EMPTY ROW TRAP FIX: Pull all rows, remove target, update all rows
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
+        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
         let colonySet = new Set();
         if (myLogs) {
             myLogs.forEach(log => {
@@ -758,7 +765,7 @@
         colonySet.delete(targetId);
         let masterListArray = Array.from(colonySet);
         
-        await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', penguinId);
+        await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
         
         loadColonyList();
     }
@@ -900,6 +907,9 @@
         
         if (isPrimaryControl) {
             if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
+            if (btnColony) btnColony.innerText = `🧊 My Colony`;
+        } else if (isAuthorizedViewer) {
+            if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${activeCustomName}`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
         } else {
             if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${activeCustomName}`;
@@ -1399,8 +1409,13 @@
             if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
             if (editBtn) editBtn.style.display = 'block';
-        } else {
+        } else if (isAuthorizedViewer) {
             // Viewing a stranger
+            if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${resolvedDisplayName}`;
+            if (btnColony) btnColony.innerText = `🧊 My Colony`;
+            if (editBtn) editBtn.style.display = 'none';
+        } else {
+            // Anonymous Handler 
             if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
