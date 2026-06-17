@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker - Antarctic Adventure Mode</title>
     
-    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -175,7 +174,6 @@
 </head>
 <body>
 
-<!-- WELCOME STORY MODAL OVERLAY -->
 <div class="modal-overlay" id="welcome-modal">
     <div class="modal-card" style="text-align: left;">
         <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! 🐧</h2>
@@ -189,7 +187,6 @@
     </div>
 </div>
 
-<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
@@ -202,7 +199,6 @@
     </div>
 </div>
 
-<!-- EDIT PROFILE MODAL OVERLAY -->
 <div class="modal-overlay" id="edit-profile-modal">
     <div class="modal-card">
         <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
@@ -210,15 +206,13 @@
         
         <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
         <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
-            <!-- Dynamic Avatars Injected Here -->
-        </div>
+            </div>
         
         <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
 
-<!-- DEDICATED MAP POPUP MODAL -->
 <div class="modal-overlay" id="map-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
@@ -227,7 +221,6 @@
     </div>
 </div>
 
-<!-- FULLSCREEN IMAGE MODAL -->
 <div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -237,24 +230,21 @@
 
 <div class="app-container">
     
-    <!-- BACK TO MY PENGUIN BUTTON (Hidden by default) -->
     <div id="back-to-my-penguin-container" style="display:none; margin-bottom: 12px;">
         <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Penguin</button>
     </div>
 
-    <!-- HEADER SECTION -->
     <div class="app-header" style="position: relative; padding-right: 40px;">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
             <h1>PENGUIN TRACKER</h1>
         </div>
         <div style="margin-top: 8px;">
-            <span class="status-badge" id="penguin-id">Detecting Tag...</span>
+            <span class="status-badge" id="penguin-id-display">Detecting Tag...</span>
         </div>
         <button id="help-btn" onclick="openWelcomeModal()" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
     </div>
 
-    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
@@ -268,24 +258,18 @@
             </div>
         </div>
 
-        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
             
-            <!-- STRANGER ACTION ROW (Hidden unless authorized via Leaderboard) -->
             <div id="stranger-action-row" style="display: none; justify-content: flex-end; margin-bottom: 12px;">
-                <!-- Add to colony button dynamically injected here -->
-            </div>
+                </div>
 
-            <!-- UNIVERSAL TABS -->
             <div class="tab-bar" id="profile-tabs" style="display: flex; margin-bottom: 16px;">
                 <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')">🐧 My Penguin</button>
                 <button class="tab-btn" id="tab-my-colony" onclick="switchProfileTab('colony')">🧊 My Colony</button>
             </div>
 
-            <!-- PENGUIN PROFILE CONTAINER -->
             <div id="my-penguin-container">
                 
-                <!-- Avatar & Identity Box -->
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -293,7 +277,6 @@
                     <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
                 </div>
 
-                <!-- Stats List -->
                 <ul class="data-list">
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Current Status</span></div>
@@ -313,7 +296,6 @@
                 </ul>
             </div>
 
-            <!-- MY COLONY CONTENT CONTAINER -->
             <div id="colony-container" style="display: none;">
                 <ul class="leaderboard-list" id="colony-list-output">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Loading colony...</li>
@@ -321,7 +303,6 @@
             </div>
         </div>
 
-        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
@@ -347,7 +328,6 @@
             </div>
         </div>
         
-        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Journey Stops</h2>
             
@@ -356,7 +336,6 @@
                 <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
             </div>
 
-            <!-- TAB: LOG NEW STOP -->
             <div id="stop-log-container">
                 <div class="input-group" id="notes-input-group">
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
@@ -369,7 +348,6 @@
                 </div>
             </div>
 
-            <!-- TAB: ALL STOPS HISTORY -->
             <div id="stop-history-container" style="display: none;">
                 <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
@@ -382,7 +360,6 @@
             </div>
         </div>
 
-        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -402,7 +379,6 @@
             </div>
         </div>
 
-        <!-- CONSOLIDATED LANDMARKS CARD -->
         <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Landmarks</h2>
@@ -432,18 +408,16 @@
             </div>
         </div>
 
-        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.8.0 (Stateless Core)</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.9.0 (Stateless Core)</div>
 
 </div>
 
-<!-- DATA PIPELINE HANDLING SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -452,11 +426,15 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let urlParams = new URLSearchParams(window.location.search);
-    let penguinId = urlParams.get('id') || "Mystery Penguin";
+    
+    // --- GLOBAL ID NORMALIZATION (The Prefix Bug Fix) ---
+    // Forces "Penguin-" prefix on all IDs instantly so database queries never miss.
+    let rawId = urlParams.get('id') || "Mystery Penguin";
+    let penguinId = (rawId !== "Mystery Penguin" && !rawId.startsWith("Penguin-")) ? `Penguin-${rawId}` : rawId;
     let securityTagParam = urlParams.get('tag') || null; 
     
-    // STATELESS IDENTITY VARIABLES
-    let viewerId = urlParams.get('viewer') || null;
+    let rawViewer = urlParams.get('viewer');
+    let viewerId = (rawViewer && !rawViewer.startsWith("Penguin-")) ? `Penguin-${rawViewer}` : rawViewer;
     let viewerTagParam = urlParams.get('vtag') || null;
     
     let isPrimaryControl = false;
@@ -482,7 +460,7 @@
     let verifiedLat = null; let verifiedLng = null;
     let lastLogLat = null; let lastLogLng = null;
 
-    const penguinIdHeader = document.getElementById('penguin-id');
+    const penguinIdHeader = document.getElementById('penguin-id-display');
     if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
 
     let map = null; let marker = null; let historyLayerGroup = null; let poiLayerGroup = null; 
@@ -499,16 +477,13 @@
     // STATELESS SECURITY GATEWAY LOGIC
     // ===================================================
     async function verifyPenguinSecurity(id, tag) {
-        let parsedId = id;
-        if(!id.startsWith("Penguin-")) parsedId = `Penguin-${id}`;
-        
         // Legacy Penguin Bypass! IDs 1-65 are instantly verified without a tag.
-        const numericId = parseInt(parsedId.replace("Penguin-", ""), 10);
+        const numericId = parseInt(id.replace("Penguin-", ""), 10);
         if (!isNaN(numericId) && numericId < 66) return true; 
 
         if (!tag) return false;
 
-        const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', parsedId);
+        const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', id);
         
         // LAZY MINTING: If zero rows exist, the DB is clean. 
         if (!data || data.length === 0) {
@@ -628,10 +603,17 @@
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        // EMPTY ROW TRAP FIX: Gather master list from all of the viewer's rows
-        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+        // Fetch master list directly matching our strictly formatted viewerId
+        const { data, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+        
+        if (selectError) {
+            alert("Connection error: " + selectError.message);
+            if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
+            return;
+        }
+
         let colonySet = new Set();
-        if (data) {
+        if (data && data.length > 0) {
             data.forEach(log => {
                 if (log.colony_list) {
                     log.colony_list.split(',').forEach(i => { if (i.trim()) colonySet.add(i.trim()); });
@@ -642,8 +624,16 @@
         if (!colonySet.has(penguinId)) {
             colonySet.add(penguinId);
             let masterListArray = Array.from(colonySet);
-            // Update every row so no data is ever lost on the newest stop
-            await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
+            
+            // Update every row safely
+            const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
+            
+            // Explicit error catch so it doesn't fail silently
+            if (updateError) {
+                alert("Database update rejected: " + updateError.message);
+                if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
+                return;
+            }
         }
         
         if(btn) {
@@ -893,7 +883,7 @@
         if(!newName) return alert("Penguin name cannot be empty.");
 
         activeCustomName = newName; activeAvatarColor = selectedAvatarColor;
-        const pIdEl = document.getElementById('penguin-id');
+        const pIdEl = document.getElementById('penguin-id-display');
         if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${activeCustomName}` : `ID: ${penguinId} (${activeCustomName})`;
         const pNameEl = document.getElementById('penguin-name-display');
         if (pNameEl) pNameEl.innerText = activeCustomName;
@@ -1120,7 +1110,7 @@
         const nameInput = document.getElementById('modal-custom-name').value.trim();
         if (nameInput) {
             activeCustomName = nameInput;
-            const pIdEl = document.getElementById('penguin-id');
+            const pIdEl = document.getElementById('penguin-id-display');
             if (pIdEl) pIdEl.innerText = `ID: ${penguinId} (${activeCustomName})`;
             const pNameEl = document.getElementById('penguin-name-display');
             if (pNameEl) pNameEl.innerText = activeCustomName;
@@ -1392,7 +1382,7 @@
         const avatarEntry = logs.find(log => log.avatar_color && log.avatar_color.trim() !== "");
         activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
         
-        const pIdEl = document.getElementById('penguin-id');
+        const pIdEl = document.getElementById('penguin-id-display');
         if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
         const pNameEl = document.getElementById("penguin-name-display");
         if (pNameEl) pNameEl.innerText = resolvedDisplayName;
