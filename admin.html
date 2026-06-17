@@ -3,513 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penguin Tracker - Central Command Operations</title>
+    <title>Iceberg Command Center | Penguin Tracker™</title>
     
+    <!-- Supabase and QRCode.js CDNs -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    
     <style>
-        /* Base Setup & CSS Resets */
-        *, *::before, *::after { box-sizing: border-box; }
-        
-        body {
-            margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #02060d; color: #ffffff;
-            font-size: 11pt; line-height: 1.5;
+        /* Thematic Dark UI for the Command Center */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #02060d; 
+            color: #e2e8f0; 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.5;
         }
-
-        .app-container {
-            width: 100%; max-width: 900px; margin: 0 auto; padding: 16px;
-            background: radial-gradient(circle at 50% 0%, #1a102f 0%, #09071e 60%, #02060d 100%);
-            min-height: 100vh;
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
         }
-
-        h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
-        h1 { font-size: 18pt; color: #fae8ff; text-shadow: 0 0 15px rgba(217, 70, 239, 0.4); }
-        h2 { font-size: 12pt; color: #d946ef; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-        
-        .subtitle {
-            color: #f5d0fe; font-size: 8pt; text-transform: uppercase;
-            letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8;
+        h1 { 
+            color: #38bdf8; 
+            text-align: center; 
+            margin-bottom: 30px; 
+            text-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
         }
-
-        .layout-section { width: 100%; margin-top: 16px; }
-
-        /* Command Card Styles */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(217, 70, 239, 0.15);
-            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-            margin-bottom: 16px;
+        h2 {
+            color: #e0f2fe;
+            margin-top: 0;
+            font-size: 16pt;
         }
-
-        /* Form Inputs */
-        .admin-input {
-            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 70, 239, 0.2);
-            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 11pt;
-            outline: none; margin-bottom: 12px;
+        .card { 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(56, 189, 248, 0.2); 
+            border-radius: 12px; 
+            padding: 24px; 
+            margin-bottom: 24px; 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
-
-        .admin-input:focus {
-            border-color: #d946ef; box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
         }
-
-        /* Buttons */
-        .btn-command {
-            display: inline-block; padding: 10px 16px;
-            background: linear-gradient(135deg, rgba(217, 70, 239, 0.2) 0%, rgba(162, 28, 175, 0.2) 100%);
-            border: 1px solid rgba(217, 70, 239, 0.4); border-radius: 6px;
-            color: #ffffff; font-weight: 600; text-transform: uppercase;
-            letter-spacing: 0.5px; cursor: pointer; font-size: 9pt; transition: all 0.2s ease;
+        input[type="text"] { 
+            flex: 1;
+            padding: 12px; 
+            border-radius: 6px; 
+            border: 1px solid rgba(56, 189, 248, 0.3); 
+            background: rgba(0, 0, 0, 0.5); 
+            color: white; 
+            font-size: 12pt;
+            outline: none;
         }
-
-        .btn-command:hover { background: rgba(217, 70, 239, 0.3); box-shadow: 0 0 10px rgba(217, 70, 239, 0.2); }
-
-        .btn-danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%); border-color: rgba(239, 68, 68, 0.4); }
-        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
-
-        /* Tables & Lists Matrices */
-        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
-        .matrix-table th, .matrix-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .matrix-table th { color: #f5d0fe; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; }
-        .matrix-table tbody tr { transition: background 0.2s; }
-        .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); }
-
-        .badge-count { font-weight: bold; color: #a21caf; background: rgba(217, 70, 239, 0.15); padding: 2px 6px; border-radius: 4px; }
-        .log-audit-item { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 6px; }
-        .log-audit-item:last-child { border-bottom: none; }
-
-        /* Auth Screen Cover */
-        #auth-lock-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #02060d; z-index: 99999; display: flex;
-            align-items: center; justify-content: center; padding: 20px;
+        input[type="text"]:focus {
+            border-color: #00e5ff;
+        }
+        button { 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            border: 1px solid rgba(0, 229, 255, 0.4); 
+            cursor: pointer; 
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
+            color: #ffffff; 
+            font-weight: bold; 
+            font-size: 11pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+        button:hover { 
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.4) 0%, rgba(0, 229, 255, 0.4) 100%); 
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-release {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            padding: 8px 12px;
+            font-size: 9pt;
+        }
+        .btn-release:hover {
+            background: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 15px; 
+        }
+        th, td { 
+            text-align: left; 
+            padding: 14px 12px; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+        }
+        th {
+            color: #94a3b8;
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        td {
+            font-weight: 500;
+        }
+        .pagination { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            gap: 15px; 
+            margin-top: 24px; 
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .page-indicator {
+            color: #94a3b8;
+            font-size: 10.5pt;
+        }
+        .footer { 
+            text-align: center; 
+            margin-top: 40px; 
+            padding-top: 20px; 
+            border-top: 1px solid rgba(255, 255, 255, 0.05); 
+            color: #4b5563; 
+            font-size: 9.5pt;
+            line-height: 1.6;
+        }
+        #sticker-container canvas {
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 100%;
         }
     </style>
 </head>
 <body>
 
-<div id="auth-lock-screen">
-    <div class="glass-card" style="width: 100%; max-width: 360px; text-align: center; border-color: #d946ef;">
-        <span style="font-size: 32pt; display: block; margin-bottom: 8px;">🔑</span>
-        <h2>Operations Gatekeeper</h2>
-        <p style="font-size: 9pt; color: #94a3b8; margin-bottom: 16px;">Provide command infrastructure access token sequence.</p>
-        <input type="password" id="admin-password-field" class="admin-input" placeholder="Enter Access Code..." style="text-align: center;">
-        <button onclick="verifyAccessLock()" class="btn-glow btn-command" style="width: 100%;">Authorize Session</button>
-    </div>
-</div>
+<div class="container">
+    <h1>🧊 Iceberg Command Center</h1>
 
-<div class="app-container" id="admin-main-ui" style="display: none;">
-    
-    <div style="border-bottom: 1px solid rgba(217, 70, 239, 0.2); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
-        <div>
-            <div class="subtitle">Back-Office Fleet Control</div>
-            <h1>Central Command Portal</h1>
+    <!-- QR CODE GENERATOR SECTION -->
+    <div class="card">
+        <h2>🥚 Hatch New Trackers</h2>
+        <p style="color: #94a3b8; font-size: 10.5pt; margin-top: 0; margin-bottom: 16px;">
+            Generate printable stickers for new penguins. This tool creates the Canvas image only—the penguin remains a ghost in the database until physically scanned and named by a player.
+        </p>
+        <div class="input-group">
+            <input type="text" id="penguin-id-input" placeholder="Enter Penguin ID (e.g. 099 or Penguin-099)">
+            <button onclick="generateTracker()">Create Sticker</button>
         </div>
-        <button onclick="logoutAdmin()" class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt;">Lock Console</button>
+        <div id="sticker-container" style="margin-top: 24px; text-align: center; min-height: 50px;"></div>
     </div>
 
-    <div class="layout-section">
-        
-        <!-- FLEET PRODUCTION LINE -->
-        <div class="glass-card">
-            <h2>🏭 Fleet Production Line</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact low-density QR code sticker and register a new penguin entry simultaneously.</p>
-            
-            <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
-                <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
-                <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Generate & Register</button>
-            </div>
-            
-            <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
-                <img id="final-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
-                
-                <div style="flex: 1;">
-                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Square Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Right-click the image matrix to copy or save. Density optimized for small physical printing.</p>
-                    <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
-                </div>
-            </div>
-        </div>
+    <!-- ROOKERY INVENTORY SECTION -->
+    <div class="card">
+        <h2>🐧 The Rookery</h2>
+        <table id="inventory-table">
+            <thead>
+                <tr>
+                    <th>Tracker Identity</th>
+                    <th style="text-align: right;">Command Action</th>
+                </tr>
+            </thead>
+            <tbody id="inventory-body">
+                <tr><td colspan="2" style="text-align: center; color: #94a3b8;">Loading colony roster...</td></tr>
+            </tbody>
+        </table>
+        <div class="pagination" id="pagination-controls"></div>
+    </div>
 
-        <!-- ACTIVE INVENTORY -->
-        <div class="glass-card">
-            <h2>Active Game Piece Inventory Matrix</h2>
-            <div style="overflow-x: auto;">
-                <table class="matrix-table" id="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Identity</th>
-                            <th>Active Name</th>
-                            <th>Total Pings</th>
-                            <th>Landmarks</th>
-                            <th>Est. Mileage</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-tbody">
-                        <tr>
-                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- AUDIT PANEL -->
-        <div class="glass-card" id="audit-panel-card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
-                <div style="flex: 1;">
-                    <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
-                    <span style="font-size: 8.5pt; color: #cbd5e1; display:block; margin-bottom: 8px;" id="audit-title-custom">Custom Name Pointer</span>
-                    <code id="audit-url-display" style="font-size: 7.5pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 4px; border-radius: 4px; word-break: break-all; display:none;"></code>
-                </div>
-                <div style="margin-left: 16px; text-align: right;">
-                    <!-- Dynamic QR Sticker renders right here when audited -->
-                    <img id="audit-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none; max-width: 120px;" alt="QR Sticker">
-                </div>
-            </div>
-
-            <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                <!-- Logs inject here -->
-            </div>
-        </div>
-
+    <!-- BRANDED FOOTER -->
+    <div class="footer">
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.0</span><br>
+        <span style="font-size: 8.5pt;">&copy; 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
 
 <script>
-    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
+    // --- SUPABASE CREDENTIALS ---
+    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let activeAuditedPenguinId = null;
-    let globalCachedLogsArray = [];
+    // --- STATE VARIABLES ---
+    let inventory = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
-    const idInputField = document.getElementById('new-penguin-id');
-    idInputField.addEventListener('input', function(e) {
-        if (!this.value.startsWith('Penguin-')) {
-            this.value = 'Penguin-';
-        }
-    });
-
-    function verifyAccessLock() {
-        const inputPass = document.getElementById('admin-password-field').value;
-        if (inputPass === "borne2track") {
-            sessionStorage.setItem("admin_verified", "true");
-            document.getElementById('auth-lock-screen').style.display = "none";
-            document.getElementById('admin-main-ui').style.display = "block";
-            loadAdminInventoryMatrix();
-        } else {
-            alert("Authorization token signature mismatch. Access denied.");
-        }
-    }
-
-    if (sessionStorage.getItem("admin_verified") === "true") {
-        document.getElementById('auth-lock-screen').style.display = "none";
-        document.getElementById('admin-main-ui').style.display = "block";
-        loadAdminInventoryMatrix();
-    }
-
-    function logoutAdmin() {
-        sessionStorage.removeItem("admin_verified");
-        location.reload();
-    }
-
-    // ===================================================
-    // MASTER STICKER GENERATOR (Reusable Engine)
-    // ===================================================
-    function generateStickerImage(penguinId, secretTag, targetImgElementId) {
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
-        const baseIdNumber = penguinId.replace("Penguin-", ""); 
+    // =========================================================
+    // 1. STICKER GENERATOR (NO DATABASE WRITES)
+    // =========================================================
+    async function generateTracker() {
+        let id = document.getElementById('penguin-id-input').value.trim();
+        if (!id) return;
         
-        // Use a temporary off-screen div to generate the code array
-        const tempDiv = document.createElement("div");
-        new QRCode(tempDiv, {
-            text: secureUrl,
-            width: 160,
-            height: 160,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.L // Low error correction = larger, clearer dots
+        // Normalize the ID formatting for the QR link
+        let formattedId = id;
+        if (!formattedId.startsWith("Penguin-")) {
+            formattedId = `Penguin-${id}`;
+        }
+
+        // Determine your live URL based on environment
+        const baseUrl = window.location.origin.includes("127.0.0.1") || window.location.origin.includes("localhost") 
+            ? window.location.origin + "/index.html" 
+            : window.location.origin;
+            
+        const fullUrl = `${baseUrl}/?id=${formattedId}`;
+        
+        // Generate the base QR Code Canvas
+        const baseCanvas = document.createElement('canvas');
+        await QRCode.toCanvas(baseCanvas, fullUrl, { 
+            width: 240, 
+            margin: 1, 
+            color: { dark: "#000000", light: "#ffffff" } 
         });
-
-        setTimeout(() => {
-            const qrCanvas = tempDiv.querySelector('canvas');
-            if(!qrCanvas) return;
-            
-            const tempComposite = document.createElement("canvas");
-            const ctx = tempComposite.getContext('2d');
-
-            // Tight canvas dimensions
-            tempComposite.width = 190;
-            tempComposite.height = 185; 
-
-            // White background
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
-
-            // Draw QR Code tight to the top right corner
-            ctx.drawImage(qrCanvas, 26, 4, 160, 160);
-
-            // Left sideways text
-            ctx.save();
-            ctx.translate(18, 162); // Move origin point tight to the left edge of the code
-            ctx.rotate(-Math.PI / 2); // Pivot text 90 degrees
-            ctx.fillStyle = "#000000";
-            ctx.font = "bold 16px sans-serif";
-            ctx.textAlign = "left";
-            ctx.fillText(`TRACK ME #${baseIdNumber}`, 0, 0);
-            ctx.restore();
-
-            // Bottom right text
-            ctx.fillStyle = "#000000";
-            ctx.font = "bold 16px sans-serif";
-            ctx.textAlign = "right";
-            
-            // X=186 pushes it exactly flush with the right side of the QR code block
-            ctx.fillText("SCAN ME", 186, 180);
-
-            const imgEl = document.getElementById(targetImgElementId);
-            if(imgEl) {
-                imgEl.src = tempComposite.toDataURL("image/png");
-                imgEl.style.display = "block";
-            }
-        }, 150);
+        
+        // Wrap it in our custom branding
+        const finalSticker = createOfficialSticker(baseCanvas, id);
+        
+        // Display it
+        const container = document.getElementById('sticker-container');
+        container.innerHTML = '';
+        container.appendChild(finalSticker);
     }
 
-    async function generateNewPenguin() {
-        const idInput = document.getElementById('new-penguin-id');
-        const id = idInput.value.trim();
+    /**
+     * Takes a base QR code canvas and draws the official Penguin Tracker borders around it.
+     */
+    function createOfficialSticker(baseQrCanvas, penguinId) {
+        const paddingBottom = 40;
+        const paddingSide = 35;
+        const paddingTop = 15;
         
-        if (id === 'Penguin-' || !id) {
-            alert("Please provide an initialization parameter extension sequence after the template layout prefix.");
-            return;
-        }
+        const canvasWidth = baseQrCanvas.width + (paddingSide * 2);
+        const canvasHeight = baseQrCanvas.height + paddingBottom + paddingTop;
+        
+        const wrapper = document.createElement('canvas');
+        wrapper.width = canvasWidth; 
+        wrapper.height = canvasHeight;
+        const ctx = wrapper.getContext('2d');
+        
+        // Fill white background for print scanning contrast
+        ctx.fillStyle = "#ffffff"; 
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        // Draw the original QR Code in the middle
+        ctx.drawImage(baseQrCanvas, paddingSide, paddingTop);
+        
+        // Formatting for text
+        ctx.fillStyle = "#000000"; 
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        // Clean ID for display (Removes prefix if user typed it)
+        const cleanId = penguinId.replace('Penguin-', '');
 
-        const secretTag = Math.random().toString(36).substring(2, 10);
+        // 1. Bottom Text
+        ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText(`PENGUIN TRACKER™ ID: ${cleanId}`, canvasWidth / 2, canvasHeight - 20);
         
-        const { error } = await supabaseClient
+        // 2. Left Side Text (Rotated)
+        ctx.save();
+        ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.translate(18, (canvasHeight - paddingBottom + paddingTop) / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("SCAN TO TRACK", 0, 0);
+        ctx.restore();
+        
+        // 3. Right Side Text (Rotated)
+        ctx.save();
+        ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.translate(canvasWidth - 18, (canvasHeight - paddingBottom + paddingTop) / 2);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText("SCAN TO TRACK", 0, 0);
+        ctx.restore();
+        
+        return wrapper;
+    }
+
+    // =========================================================
+    // 2. ROOKERY INVENTORY (READ/DELETE ONLY)
+    // =========================================================
+    async function loadRookery() {
+        // Fetch all logs to extract unique IDs, descending order from DB
+        const { data, error } = await supabase
             .from('penguin_logs')
-            .insert([{ 
-                penguin_id: id, 
-                secret_tag: secretTag, 
-                finder_note: 'Initial Factory Registration',
-                latitude: 39.9783, 
-                longitude: -86.1180 
-            }]);
+            .select('penguin_id')
+            .order('created_at', { ascending: false });
 
         if (error) {
-            alert("Registration fault generated: " + error.message);
+            console.error(error);
+            document.getElementById('inventory-body').innerHTML = `<tr><td colspan="2" style="color:#ef4444;">Error loading rookery data.</td></tr>`;
             return;
         }
 
-        generateStickerImage(id, secretTag, 'final-sticker-img');
+        // Filter out duplicates so we just have a master list of unique active penguins
+        const uniqueIds = [...new Set(data.map(d => d.penguin_id))];
+        inventory = uniqueIds;
         
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
-        document.getElementById("qr-url-display").innerText = secureUrl;
-        document.getElementById("qrcode-container").style.display = "flex";
-
-        idInput.value = "Penguin-"; 
-        loadAdminInventoryMatrix(); 
+        // Default to the very last page on load
+        const totalPages = Math.ceil(inventory.length / itemsPerPage);
+        currentPage = totalPages > 0 ? totalPages : 1; 
+        
+        renderTable();
     }
 
-    function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
-        const R = 3958.8; 
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    async function loadAdminInventoryMatrix() {
-        const { data: rawLogs, error } = await supabaseClient
-            .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag') // Included secret_tag!
-            .order('created_at', { ascending: true });
-
-        if (error || !rawLogs) return;
-
-        globalCachedLogsArray = rawLogs; 
-
-        const fleetClusters = {};
-        rawLogs.forEach(log => {
-            const id = log.penguin_id;
-            if (!fleetClusters[id]) {
-                fleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id, secretTag: log.secret_tag || null };
-            }
-            // Capture the secret tag if we find it (handles older logic beautifully)
-            if (!fleetClusters[id].secretTag && log.secret_tag) {
-                fleetClusters[id].secretTag = log.secret_tag;
-            }
-
-            if (log.finder_note === 'Initial Factory Registration') return;
-
-            fleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
-            fleetClusters[id].pingsCount++;
-            
-            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) fleetClusters[id].landmarksCount++;
-            if (log.custom_name && log.custom_name.trim() !== "") fleetClusters[id].activeName = log.custom_name;
-        });
-
-        const tbody = document.getElementById('inventory-tbody');
-        tbody.innerHTML = "";
-
-        const dynamicFleetKeys = Object.keys(fleetClusters);
-        if (dynamicFleetKeys.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No active pieces mapped.</td></tr>`;
+    function renderTable() {
+        const tbody = document.getElementById('inventory-body');
+        tbody.innerHTML = '';
+        
+        if (inventory.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #94a3b8;">The Rookery is currently empty.</td></tr>`;
+            document.getElementById('pagination-controls').innerHTML = '';
             return;
         }
 
-        dynamicFleetKeys.forEach(key => {
-            const summaryNode = fleetClusters[key];
-            let compiledMiles = 0;
-            for (let i = 0; i < summaryNode.points.length - 1; i++) {
-                compiledMiles += getDistanceBetweenPoints(
-                    summaryNode.points[i].lat, summaryNode.points[i].lng,
-                    summaryNode.points[i+1].lat, summaryNode.points[i+1].lng
-                );
-            }
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
-                <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
-                <td style="cursor:pointer;"><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
-                <td style="cursor:pointer;"><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
-                <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
-                <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Delete</button></td>`;
-            
-            Array.from(tr.children).forEach((td, idx) => {
-                if (idx < 5) { 
-                    // Pass the secret tag directly into the audit panel click handler
-                    td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName, summaryNode.secretTag);
-                }
-            });
-
-            const deleteBtn = tr.querySelector('.delete-btn');
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation(); 
-                deleteEntirePenguin(summaryNode.id);
-            };
-
-            tbody.appendChild(tr);
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const pageItems = inventory.slice(startIdx, startIdx + itemsPerPage);
+        
+        pageItems.forEach(id => {
+            tbody.innerHTML += `
+                <tr>
+                    <td style="color: #e0f2fe;">${id}</td>
+                    <td style="text-align: right;">
+                        <button class="btn-release" onclick="releaseToWild('${id}')">Release to the Wild</button>
+                    </td>
+                </tr>`;
         });
+        
+        renderPagination();
     }
 
-    function launchSurgicalAuditDeck(targetId, displayName, secretTag) {
-        activeAuditedPenguinId = targetId;
-        document.getElementById('audit-panel-card').style.display = "block";
-        document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
-        document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
+    function renderPagination() {
+        const controls = document.getElementById('pagination-controls');
+        const totalPages = Math.ceil(inventory.length / itemsPerPage);
         
-        // Dynamically spin up the QR sticker for the Audit Panel!
-        const urlDisplay = document.getElementById('audit-url-display');
-        const stickerImg = document.getElementById('audit-sticker-img');
+        if (totalPages <= 1) {
+            controls.innerHTML = '';
+            return;
+        }
 
-        if (secretTag) {
-            const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(targetId)}&tag=${secretTag}`;
-            urlDisplay.innerText = secureUrl;
-            urlDisplay.style.display = "inline-block";
-            generateStickerImage(targetId, secretTag, 'audit-sticker-img');
+        controls.innerHTML = `
+            <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+            <span class="page-indicator">Page ${currentPage} of ${totalPages}</span>
+            <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+        `;
+    }
+
+    function changePage(direction) { 
+        currentPage += direction; 
+        renderTable(); 
+    }
+
+    // Completely wipes a penguin from the database
+    async function releaseToWild(id) {
+        if (!confirm(`WARNING: Are you sure you want to release ${id} to the wild?\n\nThis will permanently delete all tracking logs and photos associated with this penguin. This cannot be undone.`)) return;
+        
+        const { error } = await supabase.from('penguin_logs').delete().eq('penguin_id', id);
+        
+        if (error) {
+            alert("Error releasing penguin: " + error.message);
         } else {
-            urlDisplay.style.display = "none";
-            stickerImg.style.display = "none";
-        }
-
-        renderSurgicalLogsFeed();
-    }
-
-    function renderSurgicalLogsFeed() {
-        const feedContainer = document.getElementById('audit-logs-feed');
-        feedContainer.innerHTML = "";
-        const operationalSlice = globalCachedLogsArray.filter(log => log.penguin_id === activeAuditedPenguinId);
-        
-        for (let i = operationalSlice.length - 1; i >= 0; i--) {
-            const logItem = operationalSlice[i];
-            const timestampText = new Date(logItem.created_at).toLocaleString();
-            
-            let photoElementHTML = "";
-            let stripPhotoActionButtonHTML = "";
-            
-            if (logItem.photo_url) {
-                photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
-                stripPhotoActionButtonHTML = `<button class="btn-command btn-danger strip-btn" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
-            }
-
-            const itemBlock = document.createElement('div');
-            itemBlock.className = "log-audit-item";
-            itemBlock.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-family:monospace; color:#00e5ff; font-size:8.5pt;">⏱️ ${timestampText}</span>
-                    <div style="margin-left:auto;">
-                        ${stripPhotoActionButtonHTML}
-                        <button class="btn-command btn-danger delete-log-btn" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
-                    </div>
-                </div>
-                <div style="font-size:9pt; color:#cbd5e1; margin-top:4px;">
-                    <span style="color:#94a3b8; font-size:8pt; display:block;">Coords: ${logItem.latitude.toFixed(4)}°, ${logItem.longitude.toFixed(4)}°</span>
-                    <strong>Note:</strong> <i>"${logItem.finder_note || 'No description text recorded.'}"</i>
-                    ${photoElementHTML}
-                </div>`;
-            
-            const stripBtn = itemBlock.querySelector('.strip-btn');
-            if (stripBtn) {
-                stripBtn.onclick = (e) => { e.stopPropagation(); stripPhotoLink(logItem.created_at); };
-            }
-
-            const deleteLogBtn = itemBlock.querySelector('.delete-log-btn');
-            if (deleteLogBtn) {
-                deleteLogBtn.onclick = (e) => { e.stopPropagation(); purgeSingleLog(logItem.created_at); };
-            }
-
-            feedContainer.appendChild(itemBlock);
+            // Reload the list from the database
+            loadRookery();
         }
     }
 
-    async function deleteEntirePenguin(targetId) {
-        if (!confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?`)) return;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', targetId).select(); 
-
-        if (error) return alert("Delete operation failed: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\n\nSupabase RLS is quietly blocking deletions. Please enable 'DELETE' policies for 'anon' users.");
-
-        alert(`Success. ${targetId} purged.`);
-        if (activeAuditedPenguinId === targetId) {
-            document.getElementById('audit-panel-card').style.display = "none";
-            activeAuditedPenguinId = null;
-        }
-        await loadAdminInventoryMatrix();
-    }
-
-    async function purgeSingleLog(createdAtISOString) {
-        if (!confirm("Are you certain you want to purge this record entry?")) return;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString).select();
-
-        if (error) return alert("Delete failed: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\nSupabase RLS is blocking deletions.");
-        
-        await loadAdminInventoryMatrix();
-        renderSurgicalLogsFeed();
-    }
-
-    async function stripPhotoLink(createdAtISOString) {
-        if (!confirm("Remove the image token parameter?")) return;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').update({ photo_url: null }).eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString).select();
-
-        if (error) return alert("Override faulted: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ UPDATE FAILED!\nSupabase RLS is blocking updates.");
-        
-        await loadAdminInventoryMatrix();
-        renderSurgicalLogsFeed();
-    }
+    // Initialize the list on page load
+    loadRookery();
 </script>
-
 </body>
 </html>
