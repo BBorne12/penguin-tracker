@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iceberg Command Center | Penguin Tracker™</title>
     
+    <!-- Penguin Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -122,6 +123,7 @@
 
     <div class="layout-section">
         
+        <!-- FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
@@ -132,7 +134,7 @@
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
-                <img id="final-sticker-img" style="width: 160px; height: 160px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
+                <img id="final-sticker-img" style="width: 120px; height: 120px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
                 
                 <div style="flex: 1;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Square Sticker Rendering Complete!</strong>
@@ -142,6 +144,7 @@
             </div>
         </div>
 
+        <!-- ACTIVE INVENTORY -->
         <div class="glass-card">
             <h2>🐧 The Rookery</h2>
             <div style="overflow-x: auto;">
@@ -163,9 +166,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls -->
             <div id="pagination-controls" style="display: flex; justify-content: center; gap: 15px; margin-top: 16px; align-items: center;"></div>
         </div>
 
+        <!-- AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
                 <div style="flex: 1;">
@@ -174,18 +179,20 @@
                     <code id="audit-url-display" style="font-size: 7.5pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 4px; border-radius: 4px; word-break: break-all; display:none;"></code>
                 </div>
                 <div style="margin-left: 16px; text-align: right;">
-                    <img id="audit-sticker-img" style="width: 160px; height: 160px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
+                    <img id="audit-sticker-img" style="width: 120px; height: 120px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
                 </div>
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                </div>
+                <!-- Logs inject here -->
+            </div>
         </div>
 
     </div>
 
+    <!-- BRANDED FOOTER -->
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.7</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.8</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -268,26 +275,26 @@
             ctx.fillStyle = "#ffffff"; 
             ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
             
-            // Draw QR Code directly in the center
+            // Draw QR Code leaving exactly 70px margins on all 4 sides
             ctx.drawImage(qrCanvas, 70, 70, 360, 360);
             
             ctx.fillStyle = "#000000"; 
             ctx.textAlign = "center"; 
             ctx.textBaseline = "middle";
             
-            // TOP TEXT: Largest Font
-            ctx.font = "900 55px -apple-system, BlinkMacSystemFont, sans-serif";
+            // TOP TEXT: Massive Font, fills 70px margin tightly
+            ctx.font = "900 65px -apple-system, BlinkMacSystemFont, sans-serif";
             ctx.fillText("PENGUIN TRACKER™", 250, 35, 480);
             
-            // BOTTOM TEXT: Smallest Font (ID)
-            ctx.font = "900 35px -apple-system, BlinkMacSystemFont, sans-serif";
+            // BOTTOM TEXT: Matches Side Text size
+            ctx.font = "900 55px -apple-system, BlinkMacSystemFont, sans-serif";
             ctx.fillText(`ID: ${baseIdNumber}`, 250, 465, 480);
             
             // LEFT TEXT: SCAN TO TRACK
             ctx.save(); 
             ctx.translate(35, 250); 
             ctx.rotate(-Math.PI / 2); 
-            ctx.font = "900 45px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.font = "900 55px -apple-system, BlinkMacSystemFont, sans-serif";
             ctx.fillText("SCAN TO TRACK", 0, 0, 360); 
             ctx.restore();
             
@@ -295,7 +302,7 @@
             ctx.save(); 
             ctx.translate(465, 250); 
             ctx.rotate(Math.PI / 2); 
-            ctx.font = "900 45px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.font = "900 55px -apple-system, BlinkMacSystemFont, sans-serif";
             ctx.fillText("SCAN TO TRACK", 0, 0, 360); 
             ctx.restore();
             
