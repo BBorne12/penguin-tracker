@@ -439,7 +439,7 @@
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.6.0 (Stateless Core)</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.7.0 (Stateless Core)</div>
 
 </div>
 
@@ -502,7 +502,7 @@
         let parsedId = id;
         if(!id.startsWith("Penguin-")) parsedId = `Penguin-${id}`;
         
-        // BUG FIX: Legacy Penguin Bypass! IDs 1-65 are instantly verified without a tag.
+        // Legacy Penguin Bypass! IDs 1-65 are instantly verified without a tag.
         const numericId = parseInt(parsedId.replace("Penguin-", ""), 10);
         if (!isNaN(numericId) && numericId < 66) return true; 
 
@@ -512,7 +512,7 @@
         
         // LAZY MINTING: If zero rows exist, the DB is clean. 
         if (!data || data.length === 0) {
-            return true; // We already verified tag exists above
+            return true; 
         }
 
         return data.some(log => log.secret_tag === tag);
@@ -530,6 +530,13 @@
         // 2. Check if the URL proves authorized viewer status (Clicked from Leaderboard)
         if (viewerId) {
             isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam);
+        }
+
+        // STRANGER MODE OVERRIDE FIX
+        // If you are an authorized viewer, but the ID you are viewing is NOT your own ID, 
+        // you are forced into stranger mode. (Fixes the legacy bypass logic flaw).
+        if (isAuthorizedViewer && viewerId !== penguinId) {
+            isPrimaryControl = false;
         }
 
         // 3. Resolve internal interface state
@@ -557,17 +564,24 @@
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
-        if (isAuthorizedViewer) {
+        if (isAuthorizedViewer && !isPrimaryControl) {
             // Authorized Virtual Explorer viewing a stranger!
             if(backBtnContainer) backBtnContainer.style.display = 'block';
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
                 
-                // Check if this stranger is already in the Viewer's colony
-                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId).limit(1);
-                let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
+                // EMPTY ROW TRAP FIX: Pull all rows for the viewer to collect the master list
+                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+                let colonySet = new Set();
+                if (data) {
+                    data.forEach(log => {
+                        if (log.colony_list) {
+                            log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                        }
+                    });
+                }
                 
-                let inColonyHTML = currentList.includes(penguinId)
+                let inColonyHTML = colonySet.has(penguinId)
                     ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
                     : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
 
@@ -616,12 +630,22 @@
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId).limit(1);
-        let currentList = data && data.length > 0 && data[0].colony_list ? data[0].colony_list.split(',').filter(i => i) : [];
+        // EMPTY ROW TRAP FIX: Gather master list from all of the viewer's rows
+        const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+        let colonySet = new Set();
+        if (data) {
+            data.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if (i.trim()) colonySet.add(i.trim()); });
+                }
+            });
+        }
         
-        if (!currentList.includes(penguinId)) {
-            currentList.push(penguinId);
-            await supabaseClient.from('penguin_logs').update({ colony_list: currentList.join(',') }).eq('penguin_id', viewerId);
+        if (!colonySet.has(penguinId)) {
+            colonySet.add(penguinId);
+            let masterListArray = Array.from(colonySet);
+            // Update every row so no data is ever lost on the newest stop
+            await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
         }
         
         if(btn) {
@@ -633,8 +657,18 @@
         const listEl = document.getElementById('colony-list-output');
         listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying colony data...</li>`;
         
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId).limit(1);
-        let colonyIds = myLogs && myLogs.length > 0 && myLogs[0].colony_list ? myLogs[0].colony_list.split(',').filter(id => id.trim() !== '') : [];
+        // EMPTY ROW TRAP FIX: Gather master list from all rows belonging to the penguin currently being viewed
+        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
+        let colonySet = new Set();
+        if (myLogs) {
+            myLogs.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                }
+            });
+        }
+        
+        let colonyIds = Array.from(colonySet);
         
         if (colonyIds.length === 0) {
             listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
@@ -710,11 +744,21 @@
 
         if(!confirm(`Remove ${targetId} from your colony?`)) return;
         
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId).limit(1);
-        let colonyIds = myLogs && myLogs.length > 0 && myLogs[0].colony_list ? myLogs[0].colony_list.split(',').filter(id => id.trim() !== '') : [];
+        // EMPTY ROW TRAP FIX: Pull all rows, remove target, update all rows
+        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
+        let colonySet = new Set();
+        if (myLogs) {
+            myLogs.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                }
+            });
+        }
         
-        colonyIds = colonyIds.filter(id => id !== targetId);
-        await supabaseClient.from('penguin_logs').update({ colony_list: colonyIds.join(',') }).eq('penguin_id', penguinId);
+        colonySet.delete(targetId);
+        let masterListArray = Array.from(colonySet);
+        
+        await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', penguinId);
         
         loadColonyList();
     }
