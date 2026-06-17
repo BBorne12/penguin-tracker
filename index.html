@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penguin Tracker - Antarctic Adventure Mode</title>
+    <title>Penguin Tracker™ - Antarctic Adventure Mode</title>
     
     <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -168,7 +168,7 @@
         .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
         .app-footer {
             text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
-            letter-spacing: 1px; font-weight: 500; text-transform: uppercase; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
+            line-height: 1.6; letter-spacing: 1px; font-weight: 500; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
         }
         @media(min-width: 480px) { .app-header { display: flex; justify-content: space-between; align-items: flex-end; } }
     </style>
@@ -246,7 +246,7 @@
     <div class="app-header" style="position: relative; padding-right: 40px;">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
-            <h1>PENGUIN TRACKER</h1>
+            <h1>PENGUIN TRACKER™</h1>
         </div>
         <div style="margin-top: 8px;">
             <span class="status-badge" id="penguin-id-display">Detecting Tag...</span>
@@ -441,7 +441,10 @@
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.11.0 (Stateless Core)</div>
+    <div class="app-footer">
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.0 (Stateless Core)</span><br>
+        <span style="font-size: 8.5pt; color: #6b7280;">&copy; 2026 Benjamin J Borne. All Rights Reserved.</span>
+    </div>
 
 </div>
 
