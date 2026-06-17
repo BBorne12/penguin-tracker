@@ -386,6 +386,8 @@
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
+            <input type="text" id="leaderboard-search-input" class="note-textarea" style="height: 40px; margin-bottom: 12px; padding: 8px 12px; font-size: 11pt;" placeholder="🔍 Search penguins by name or ID..." oninput="handleLeaderboardSearch()">
+
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
                 <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button>
@@ -439,7 +441,7 @@
         
     </div>
 
-    <div class="app-footer">Antarctic Game Engine • Version 4.10.0 (Stateless Core)</div>
+    <div class="app-footer">Antarctic Game Engine • Version 4.11.0 (Stateless Core)</div>
 
 </div>
 
@@ -454,7 +456,6 @@
     let urlParams = new URLSearchParams(window.location.search);
     
     // --- GLOBAL ID NORMALIZATION (The Prefix Bug Fix) ---
-    // Forces "Penguin-" prefix on all IDs instantly so database queries never miss.
     let rawId = urlParams.get('id') || "Mystery Penguin";
     let penguinId = (rawId !== "Mystery Penguin" && !rawId.startsWith("Penguin-")) ? `Penguin-${rawId}` : rawId;
     let securityTagParam = urlParams.get('tag') || null; 
@@ -470,11 +471,15 @@
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
     let activeTab = "distance"; 
+    let currentSearchQuery = "";
 
     const AVATAR_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'];
     let selectedAvatarColor = '#38bdf8'; 
 
-    let activePassportPage = 1; let activeAllStopsPage = 1; const ITEMS_PER_PAGE = 10;
+    let activePassportPage = 1; let activeAllStopsPage = 1; 
+    const PASSPORT_ITEMS_PER_PAGE = 10;
+    const STOPS_ITEMS_PER_PAGE = 5;
+    
     let activeLeaderboardPage = 1; let computedLeaderboardArray = []; const LEADERBOARD_ITEMS_PER_PAGE = 5;
     let activeStopsTab = "log"; let activeLandmarkTab = "nearby";
 
@@ -503,7 +508,6 @@
     // STATELESS SECURITY GATEWAY LOGIC
     // ===================================================
     async function verifyPenguinSecurity(id, tag) {
-        // Legacy Penguin Bypass! IDs 1-65 are instantly verified without a tag.
         const numericId = parseInt(id.replace("Penguin-", ""), 10);
         if (!isNaN(numericId) && numericId < 66) return true; 
 
@@ -511,7 +515,6 @@
 
         const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', id);
         
-        // LAZY MINTING: If zero rows exist, the DB is clean. 
         if (!data || data.length === 0) {
             return true; 
         }
@@ -523,32 +526,27 @@
         initializeLiveMap();
         updateProfileAvatar(activeAvatarColor); 
         
-        // 1. Check if the URL proves ownership of the CURRENT page (Physical Scan or Bookmark)
         if (penguinId !== "Mystery Penguin") {
             isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
         }
 
-        // 2. Check if the URL proves authorized viewer status (Clicked from Leaderboard)
         if (viewerId) {
             isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam);
         }
 
-        // STRANGER MODE OVERRIDE FIX
         if (isAuthorizedViewer && viewerId !== penguinId) {
             isPrimaryControl = false;
         }
 
-        // 3. Resolve internal interface state
         if (isPrimaryControl) {
             isViewOnlyMode = false;
             verifyCurrentGPS(); 
         } else if (isAuthorizedViewer) {
-            isViewOnlyMode = true; // They can't edit or log stops for the stranger
+            isViewOnlyMode = true; 
         } else {
-            isViewOnlyMode = true; // Anonymous physical scan without a valid tag
+            isViewOnlyMode = true; 
         }
 
-        // Apply View Only UI Restrictions
         if (isViewOnlyMode) {
             const viewBanner = document.getElementById('view-mode-banner');
             if (viewBanner && !isAuthorizedViewer) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
@@ -557,19 +555,14 @@
             if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
         }
 
-        // ==========================================
-        // STATELESS COLONY UI ROUTING
-        // ==========================================
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
         if (isAuthorizedViewer && !isPrimaryControl) {
-            // Authorized Virtual Explorer viewing a stranger!
             if(backBtnContainer) backBtnContainer.style.display = 'block';
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
                 
-                // EMPTY ROW TRAP FIX: Pull all rows for the viewer to collect the master list
                 const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
                 let colonySet = new Set();
                 if (data) {
@@ -629,7 +622,6 @@
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        // Fetch master list directly matching our strictly formatted viewerId
         const { data, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
         
         if (selectError) {
@@ -651,10 +643,8 @@
             colonySet.add(penguinId);
             let masterListArray = Array.from(colonySet);
             
-            // Update every row safely for the VIEWER's profile
             const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
             
-            // Explicit error catch so it doesn't fail silently
             if (updateError) {
                 alert("Database update rejected: " + updateError.message);
                 if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
@@ -671,10 +661,8 @@
         const listEl = document.getElementById('colony-list-output');
         listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying colony data...</li>`;
         
-        // FIX: The colony list should display the friends of the penguin profile we are looking at.
         let queryId = penguinId; 
 
-        // EMPTY ROW TRAP FIX: Gather master list from all rows belonging to the target
         const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', queryId);
         let colonySet = new Set();
         if (myLogs) {
@@ -712,7 +700,6 @@
         
         listEl.innerHTML = "";
 
-        // Dynamically build viewer URL parameters based on legacy status
         let linkViewerParams = "";
         if (isPrimaryControl) {
             linkViewerParams = `&viewer=${penguinId}`;
@@ -727,7 +714,6 @@
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
             
-            // Remove button only if you are looking at YOUR OWN profile
             let removeButtonHTML = isPrimaryControl 
                 ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
                 : "";
@@ -747,7 +733,6 @@
                     ${removeButtonHTML}
                 </div>
             `;
-            // Securely pass viewer credentials into the link
             li.onclick = () => { window.location.href = `?id=${id}${linkViewerParams}`; }
             listEl.appendChild(li);
         });
@@ -756,7 +741,6 @@
     async function removeFromColony(targetId, event) {
         event.stopPropagation();
         
-        // Define whose master list we are managing right now
         let ownerId = isPrimaryControl ? penguinId : viewerId;
         
         if (!ownerId) {
@@ -766,7 +750,6 @@
 
         if(!confirm(`Remove ${targetId} from your colony?`)) return;
         
-        // EMPTY ROW TRAP FIX: Pull all rows, remove target, update all rows
         const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
         let colonySet = new Set();
         if (myLogs) {
@@ -1141,13 +1124,11 @@
             if (pNameEl) pNameEl.innerText = activeCustomName;
 
             if (globalLogData.length === 0) {
-                // Completely new scan logic: Write the first entry directly to the database.
                 await supabaseClient.from('penguin_logs').insert([{
                     penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                     finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
                 }]);
                 
-                // Force a hard reload to establish pure proper stateless identity from the DB
                 location.reload();
             } else {
                 await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
@@ -1166,6 +1147,13 @@
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
         document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
         activeLeaderboardPage = 1; buildLeaderboard();
+    }
+
+    function handleLeaderboardSearch() {
+        const inputEl = document.getElementById('leaderboard-search-input');
+        currentSearchQuery = inputEl ? inputEl.value.toLowerCase().trim() : "";
+        activeLeaderboardPage = 1;
+        renderLeaderboardPage();
     }
 
     async function buildLeaderboard() {
@@ -1197,20 +1185,31 @@
         if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
         else { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
 
-        computedLeaderboardArray = leaderboardData.slice(0, 50); activeLeaderboardPage = 1; renderLeaderboardPage();
+        leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
+
+        computedLeaderboardArray = leaderboardData.slice(0, 100); 
+        activeLeaderboardPage = 1; renderLeaderboardPage();
     }
 
     function renderLeaderboardPage() {
         const listOutput = document.getElementById('leaderboard-output'); const paginationEl = document.getElementById('leaderboard-pagination');
         if (!listOutput) return; listOutput.innerHTML = "";
 
-        if (computedLeaderboardArray.length === 0) {
-            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No logs logged yet!</li>`;
+        let filteredArray = computedLeaderboardArray;
+        if (currentSearchQuery !== "") {
+            filteredArray = computedLeaderboardArray.filter(item => 
+                item.displayName.toLowerCase().includes(currentSearchQuery) || 
+                item.id.toLowerCase().includes(currentSearchQuery)
+            );
+        }
+
+        if (filteredArray.length === 0) {
+            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No penguins found matching "${currentSearchQuery}"</li>`;
             if (paginationEl) paginationEl.style.display = "none";
             return;
         }
 
-        const totalPages = Math.ceil(computedLeaderboardArray.length / LEADERBOARD_ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(filteredArray.length / LEADERBOARD_ITEMS_PER_PAGE);
         if (paginationEl) {
             paginationEl.style.display = totalPages > 1 ? "flex" : "none";
             document.getElementById('leaderboard-page-indicator').innerText = `Page ${activeLeaderboardPage} of ${totalPages}`;
@@ -1219,9 +1218,8 @@
         }
 
         const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
-        const pageItemsSlice = computedLeaderboardArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
+        const pageItemsSlice = filteredArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
 
-        // Dynamically build viewer URL parameters based on legacy status
         let linkViewerParams = "";
         if (isPrimaryControl) {
             linkViewerParams = `&viewer=${penguinId}`;
@@ -1231,9 +1229,10 @@
             if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
-        pageItemsSlice.forEach((item, index) => {
+        pageItemsSlice.forEach((item) => {
             const li = document.createElement('li'); li.className = 'leaderboard-row';
-            let absoluteRank = startIdx + index + 1; let rankClass = ""; let medal = `#${absoluteRank}`;
+            let absoluteRank = item.originalRank; 
+            let rankClass = ""; let medal = `#${absoluteRank}`;
             if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
 
             let rightSideValueMetricsHTML = (activeTab === "distance") 
@@ -1242,7 +1241,6 @@
 
             li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
             
-            // Pass authorization securely into the URL
             li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
             listOutput.appendChild(li);
         });
@@ -1278,7 +1276,7 @@
             if (passportPagination) passportPagination.style.display = "none"; return;
         }
 
-        const totalPages = Math.ceil(computedPassportStampsArray.length / ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(computedPassportStampsArray.length / PASSPORT_ITEMS_PER_PAGE);
         if (passportPagination) {
             passportPagination.style.display = totalPages > 1 ? "flex" : "none";
             document.getElementById('passport-page-indicator').innerText = `Page ${activePassportPage} of ${totalPages}`;
@@ -1286,8 +1284,8 @@
             document.getElementById('passport-next-btn').disabled = (activePassportPage === totalPages);
         }
 
-        const startIdx = (activePassportPage - 1) * ITEMS_PER_PAGE;
-        const pageItemsSlice = computedPassportStampsArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+        const startIdx = (activePassportPage - 1) * PASSPORT_ITEMS_PER_PAGE;
+        const pageItemsSlice = computedPassportStampsArray.slice(startIdx, startIdx + PASSPORT_ITEMS_PER_PAGE);
 
         pageItemsSlice.forEach(stamp => {
             const rowLi = document.createElement('li'); rowLi.className = 'passport-history-row';
@@ -1335,7 +1333,7 @@
             if (paginationEl) paginationEl.style.display = "none"; return;
         }
 
-        const totalPages = Math.ceil(computedAllStopsArray.length / ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(computedAllStopsArray.length / STOPS_ITEMS_PER_PAGE);
         if (paginationEl) {
             paginationEl.style.display = totalPages > 1 ? "flex" : "none";
             document.getElementById('all-stops-page-indicator').innerText = `Page ${activeAllStopsPage} of ${totalPages}`;
@@ -1343,8 +1341,8 @@
             document.getElementById('all-stops-next-btn').disabled = (activeAllStopsPage === totalPages);
         }
 
-        const startIdx = (activeAllStopsPage - 1) * ITEMS_PER_PAGE;
-        const pageItemsSlice = computedAllStopsArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+        const startIdx = (activeAllStopsPage - 1) * STOPS_ITEMS_PER_PAGE;
+        const pageItemsSlice = computedAllStopsArray.slice(startIdx, startIdx + STOPS_ITEMS_PER_PAGE);
 
         pageItemsSlice.forEach(stop => {
             const rowLi = document.createElement('li'); rowLi.className = 'passport-history-row';
@@ -1381,7 +1379,6 @@
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
-        // The DB is totally empty! Unhatched! Let the scanner claim it.
         if (!logs || logs.length === 0) {
             if (!isViewOnlyMode) {
                 if (firstFindModal) firstFindModal.style.display = 'flex';
@@ -1420,17 +1417,14 @@
         const editBtn = document.getElementById('edit-profile-btn');
         
         if (isPrimaryControl) {
-            // Viewing your own
             if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
             if (editBtn) editBtn.style.display = 'block';
         } else if (isAuthorizedViewer) {
-            // Viewing a stranger
             if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
         } else {
-            // Anonymous Handler 
             if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
