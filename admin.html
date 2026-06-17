@@ -170,7 +170,7 @@
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
                 <div style="flex: 1;">
                     <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
-                    <span style="font-size: 8.5pt; color: #cbd5e1; display:block; margin-bottom: 8px;" id="audit-title-custom">Custom Name Pointer</span>
+                    <span style="font-size: 8.5pt; color: #cbd5e1; display:block; margin-bottom: 8px;" id="audit-title-custom">Current Registry Designation: "..."</span>
                     <code id="audit-url-display" style="font-size: 7.5pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 4px; border-radius: 4px; word-break: break-all; display:none;"></code>
                 </div>
                 <div style="margin-left: 16px; text-align: right;">
@@ -185,7 +185,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.1</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.3</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -197,15 +197,15 @@
 
     let activeAuditedPenguinId = null;
     let globalCachedLogsArray = [];
-    
-    // Pagination & Sorting Variables
     let globalFleetKeys = [];
     let globalFleetClusters = {};
     let currentPage = 1;
     const itemsPerPage = 10;
-    
     let currentSortCol = null;
     let currentSortAsc = false;
+
+    // Factory log checker
+    const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
 
     const idInputField = document.getElementById('new-penguin-id');
     idInputField.addEventListener('input', function(e) {
@@ -237,394 +237,158 @@
         location.reload();
     }
 
-    // ===================================================
-    // MASTER STICKER GENERATOR
-    // ===================================================
     function generateStickerImage(penguinId, secretTag, targetImgElementId) {
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
         const baseIdNumber = penguinId.replace("Penguin-", ""); 
         
         const tempDiv = document.createElement("div");
-        new QRCode(tempDiv, {
-            text: secureUrl,
-            width: 160,
-            height: 160,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.L
-        });
+        new QRCode(tempDiv, { text: secureUrl, width: 160, height: 160, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
 
         setTimeout(() => {
             const qrCanvas = tempDiv.querySelector('canvas');
             if(!qrCanvas) return;
-            
             const tempComposite = document.createElement("canvas");
             const ctx = tempComposite.getContext('2d');
-
-            tempComposite.width = 192;
-            tempComposite.height = 180; 
-
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
-
+            tempComposite.width = 192; tempComposite.height = 180; 
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
             ctx.drawImage(qrCanvas, 16, 2, 160, 160);
-
-            ctx.fillStyle = "#000000";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.font = "bold 12px sans-serif";
             ctx.fillText(`PENGUIN TRACKER™ ID: ${baseIdNumber}`, 96, 172);
-
-            ctx.save();
-            ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.translate(8, 82); 
-            ctx.rotate(-Math.PI / 2); 
-            ctx.fillText("SCAN TO TRACK", 0, 0);
-            ctx.restore();
-
-            ctx.save();
-            ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.translate(184, 82); 
-            ctx.rotate(Math.PI / 2);
-            ctx.fillText("SCAN TO TRACK", 0, 0);
-            ctx.restore();
-
+            ctx.save(); ctx.translate(8, 82); ctx.rotate(-Math.PI / 2); ctx.fillText("SCAN TO TRACK", 0, 0); ctx.restore();
+            ctx.save(); ctx.translate(184, 82); ctx.rotate(Math.PI / 2); ctx.fillText("SCAN TO TRACK", 0, 0); ctx.restore();
             const imgEl = document.getElementById(targetImgElementId);
-            if(imgEl) {
-                imgEl.src = tempComposite.toDataURL("image/png");
-                imgEl.style.display = "block";
-            }
+            if(imgEl) { imgEl.src = tempComposite.toDataURL("image/png"); imgEl.style.display = "block"; }
         }, 150);
     }
 
     async function generateNewPenguin() {
-        const idInput = document.getElementById('new-penguin-id');
-        const id = idInput.value.trim();
-        
-        if (id === 'Penguin-' || !id) {
-            alert("Please provide an initialization parameter extension sequence after the template layout prefix.");
-            return;
-        }
-
+        const id = idInputField.value.trim();
+        if (id === 'Penguin-' || !id) return;
         const secretTag = Math.random().toString(36).substring(2, 10);
-        
-        const { error } = await supabaseClient
-            .from('penguin_logs')
-            .insert([{ 
-                penguin_id: id, 
-                secret_tag: secretTag, 
-                finder_note: 'Initial Factory Registration',
-                latitude: 39.9783, 
-                longitude: -86.1180 
-            }]);
-
-        if (error) {
-            alert("Registration fault generated: " + error.message);
-            return;
-        }
-        
+        await supabaseClient.from('penguin_logs').insert([{ 
+            penguin_id: id, secret_tag: secretTag, finder_note: 'Initial Factory Registration',
+            latitude: 39.9783, longitude: -86.1180 
+        }]);
         generateStickerImage(id, secretTag, 'final-sticker-img');
-        
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
-        document.getElementById("qr-url-display").innerText = secureUrl;
+        document.getElementById("qr-url-display").innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
         document.getElementById("qrcode-container").style.display = "flex";
-
-        idInput.value = "Penguin-"; 
+        idInputField.value = "Penguin-"; 
         loadAdminInventoryMatrix(); 
     }
 
     function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
-        const R = 3958.8; 
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
     }
 
     async function loadAdminInventoryMatrix() {
-        const { data: rawLogs, error } = await supabaseClient
-            .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag') 
-            .order('created_at', { ascending: true });
-
+        const { data: rawLogs, error } = await supabaseClient.from('penguin_logs').select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag').order('created_at', { ascending: true });
         if (error || !rawLogs) return;
 
         globalCachedLogsArray = rawLogs; 
         globalFleetClusters = {};
 
         rawLogs.forEach(log => {
-            const id = log.penguin_id;
-            if (!globalFleetClusters[id]) {
-                globalFleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id, secretTag: log.secret_tag || null, compiledMiles: 0 };
+            if (!globalFleetClusters[log.penguin_id]) {
+                globalFleetClusters[log.penguin_id] = { id: log.penguin_id, points: [], pingsCount: 0, landmarksCount: 0, activeName: log.penguin_id, secretTag: log.secret_tag || null, compiledMiles: 0 };
             }
-            if (!globalFleetClusters[id].secretTag && log.secret_tag) {
-                globalFleetClusters[id].secretTag = log.secret_tag;
-            }
+            // NAME EXTRACTION FIRST (Before filtering ghost log)
+            if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[log.penguin_id].activeName = log.custom_name;
 
-            if (log.finder_note === 'Initial Factory Registration') return;
+            if (isFactoryLog(log.finder_note)) return;
 
-            globalFleetClusters[id].points.push({ lat: log.latitude, lng: log.longitude });
-            globalFleetClusters[id].pingsCount++;
-            
-            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) globalFleetClusters[id].landmarksCount++;
-            if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[id].activeName = log.custom_name;
+            globalFleetClusters[log.penguin_id].points.push({ lat: log.latitude, lng: log.longitude });
+            globalFleetClusters[log.penguin_id].pingsCount++;
+            if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) globalFleetClusters[log.penguin_id].landmarksCount++;
         });
 
-        // Pre-calculate miles for sorting
         Object.keys(globalFleetClusters).forEach(key => {
-            let miles = 0;
-            const pts = globalFleetClusters[key].points;
-            for (let i = 0; i < pts.length - 1; i++) {
-                miles += getDistanceBetweenPoints(pts[i].lat, pts[i].lng, pts[i+1].lat, pts[i+1].lng);
-            }
+            let miles = 0; const pts = globalFleetClusters[key].points;
+            for (let i = 0; i < pts.length - 1; i++) miles += getDistanceBetweenPoints(pts[i].lat, pts[i].lng, pts[i+1].lat, pts[i+1].lng);
             globalFleetClusters[key].compiledMiles = miles;
         });
 
-        // Apply existing sort or default reverse creation order
-        if (currentSortCol) {
-            applySortLogic();
-        } else {
-            globalFleetKeys = Object.keys(globalFleetClusters).reverse();
-        }
+        if (currentSortCol) applySortLogic();
+        else globalFleetKeys = Object.keys(globalFleetClusters).reverse();
         
-        // Force reset to page 1 on load or refresh
         currentPage = 1;
-        
-        renderRookeryPage();
-    }
-
-    // ===================================================
-    // SORTING & PAGINATION
-    // ===================================================
-    function sortRookery(column) {
-        if (currentSortCol === column) {
-            currentSortAsc = !currentSortAsc;
-        } else {
-            currentSortCol = column;
-            currentSortAsc = false; 
-        }
-        
-        applySortLogic();
-        updateSortHeaders();
-        
-        currentPage = 1; 
         renderRookeryPage();
     }
 
     function applySortLogic() {
         globalFleetKeys = Object.keys(globalFleetClusters);
         globalFleetKeys.sort((a, b) => {
-            const clusterA = globalFleetClusters[a];
-            const clusterB = globalFleetClusters[b];
-            let valA, valB;
-
-            if (currentSortCol === 'id') { valA = clusterA.id; valB = clusterB.id; }
-            else if (currentSortCol === 'name') { valA = clusterA.activeName.toLowerCase(); valB = clusterB.activeName.toLowerCase(); }
-            else if (currentSortCol === 'pings') { valA = clusterA.pingsCount; valB = clusterB.pingsCount; }
-            else if (currentSortCol === 'landmarks') { valA = clusterA.landmarksCount; valB = clusterB.landmarksCount; }
-            else if (currentSortCol === 'miles') { valA = clusterA.compiledMiles; valB = clusterB.compiledMiles; }
-
-            if (valA < valB) return currentSortAsc ? -1 : 1;
-            if (valA > valB) return currentSortAsc ? 1 : -1;
-            return 0;
+            const A = globalFleetClusters[a], B = globalFleetClusters[b];
+            let vA, vB;
+            if (currentSortCol === 'id') { vA = A.id; vB = B.id; }
+            else if (currentSortCol === 'name') { vA = A.activeName.toLowerCase(); vB = B.activeName.toLowerCase(); }
+            else if (currentSortCol === 'pings') { vA = A.pingsCount; vB = B.pingsCount; }
+            else if (currentSortCol === 'landmarks') { vA = A.landmarksCount; vB = B.landmarksCount; }
+            else if (currentSortCol === 'miles') { vA = A.compiledMiles; vB = B.compiledMiles; }
+            return (vA < vB) ? (currentSortAsc ? -1 : 1) : (currentSortAsc ? 1 : -1);
         });
     }
 
-    function updateSortHeaders() {
-        const headers = ['id', 'name', 'pings', 'landmarks', 'miles'];
-        headers.forEach(h => {
-            const el = document.getElementById(`th-${h}`);
-            if (el) {
-                const baseText = el.innerText.split(' ')[0] + (h === 'name' ? ' Name' : '') + (h === 'pings' ? ' Pings' : '') + (h === 'miles' ? ' Mileage' : '');
-                if (currentSortCol === h) {
-                    el.innerText = `${baseText} ${currentSortAsc ? '↑' : '↓'}`;
-                    el.style.color = '#ffffff';
-                } else {
-                    el.innerText = `${baseText} ↕`;
-                    el.style.color = '#f5d0fe';
-                }
-            }
-        });
-    }
-
-    function renderRookeryPage() {
-        const tbody = document.getElementById('inventory-tbody');
-        tbody.innerHTML = "";
-
-        if (globalFleetKeys.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No active pieces mapped.</td></tr>`;
-            document.getElementById('pagination-controls').innerHTML = '';
-            return;
-        }
-
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const pageKeys = globalFleetKeys.slice(startIdx, startIdx + itemsPerPage);
-
-        pageKeys.forEach(key => {
-            const summaryNode = globalFleetClusters[key];
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
-                <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
-                <td style="cursor:pointer;"><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
-                <td style="cursor:pointer;"><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
-                <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${summaryNode.compiledMiles.toFixed(1)} mi</span></td>
-                <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Delete</button></td>`;
-            
-            Array.from(tr.children).forEach((td, idx) => {
-                if (idx < 5) { 
-                    td.onclick = () => launchSurgicalAuditDeck(summaryNode.id, summaryNode.activeName, summaryNode.secretTag);
-                }
-            });
-
-            const deleteBtn = tr.querySelector('.delete-btn');
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation(); 
-                deleteEntirePenguin(summaryNode.id);
-            };
-
-            tbody.appendChild(tr);
-        });
-
-        renderPaginationControls();
-    }
-
-    function renderPaginationControls() {
-        const container = document.getElementById('pagination-controls');
-        if (!container) return;
-        
-        const totalPages = Math.ceil(globalFleetKeys.length / itemsPerPage);
-        
-        if (totalPages <= 1) {
-            container.innerHTML = '';
-            return;
-        }
-
-        container.innerHTML = `
-            <button class="btn-command" onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
-            <span style="color: #94a3b8; font-size: 10.5pt;">Page ${currentPage} of ${totalPages}</span>
-            <button class="btn-command" onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
-        `;
-    }
-
-    function changePage(direction) {
-        currentPage += direction;
+    function sortRookery(col) {
+        currentSortAsc = (currentSortCol === col) ? !currentSortAsc : false;
+        currentSortCol = col;
+        applySortLogic();
         renderRookeryPage();
     }
 
-    function launchSurgicalAuditDeck(targetId, displayName, secretTag) {
-        activeAuditedPenguinId = targetId;
+    function renderRookeryPage() {
+        const tbody = document.getElementById('inventory-tbody'); tbody.innerHTML = "";
+        const start = (currentPage - 1) * itemsPerPage;
+        globalFleetKeys.slice(start, start + itemsPerPage).forEach(key => {
+            const node = globalFleetClusters[key];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>🐧 ${node.id}</td><td>${node.activeName}</td><td>${node.pingsCount}</td><td>${node.landmarksCount}</td><td>${node.compiledMiles.toFixed(1)} mi</td><td><button class="btn-command btn-danger" onclick="deleteEntirePenguin('${node.id}')">Delete</button></td>`;
+            tr.onclick = () => launchSurgicalAuditDeck(node.id, node.activeName, node.secretTag);
+            tbody.appendChild(tr);
+        });
+        const total = Math.ceil(globalFleetKeys.length / itemsPerPage);
+        document.getElementById('pagination-controls').innerHTML = (total > 1) ? `<button class="btn-command" onclick="changePage(-1)" ${currentPage===1?'disabled':''}>Prev</button><span>Page ${currentPage} of ${total}</span><button class="btn-command" onclick="changePage(1)" ${currentPage===total?'disabled':''}>Next</button>` : "";
+    }
+
+    function changePage(d) { currentPage += d; renderRookeryPage(); }
+
+    function launchSurgicalAuditDeck(id, name, tag) {
+        activeAuditedPenguinId = id;
         document.getElementById('audit-panel-card').style.display = "block";
-        document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
-        document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
-        
-        const urlDisplay = document.getElementById('audit-url-display');
-        const stickerImg = document.getElementById('audit-sticker-img');
-
-        if (secretTag) {
-            const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(targetId)}&tag=${secretTag}`;
-            urlDisplay.innerText = secureUrl;
-            urlDisplay.style.display = "inline-block";
-            generateStickerImage(targetId, secretTag, 'audit-sticker-img');
-        } else {
-            urlDisplay.style.display = "none";
-            stickerImg.style.display = "none";
+        document.getElementById('audit-title-id').innerText = `Auditing: ${id}`;
+        document.getElementById('audit-title-custom').innerText = `Registry: "${name}"`;
+        if (tag) {
+            document.getElementById('audit-url-display').innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${tag}`;
+            document.getElementById('audit-url-display').style.display = "block";
+            generateStickerImage(id, tag, 'audit-sticker-img');
         }
-
         renderSurgicalLogsFeed();
     }
 
     function renderSurgicalLogsFeed() {
-        const feedContainer = document.getElementById('audit-logs-feed');
-        feedContainer.innerHTML = "";
-        const operationalSlice = globalCachedLogsArray.filter(log => log.penguin_id === activeAuditedPenguinId);
-        
-        for (let i = operationalSlice.length - 1; i >= 0; i--) {
-            const logItem = operationalSlice[i];
-            const timestampText = new Date(logItem.created_at).toLocaleString();
-            
-            let photoElementHTML = "";
-            let stripPhotoActionButtonHTML = "";
-            
-            if (logItem.photo_url) {
-                photoElementHTML = `<br><img src="${logItem.photo_url}" style="max-width:120px; border-radius:6px; margin-top:6px; border:1px solid rgba(255,255,255,0.1);">`;
-                stripPhotoActionButtonHTML = `<button class="btn-command btn-danger strip-btn" style="padding:2px 6px; font-size:7pt; margin-left:8px;">Strip Image</button>`;
-            }
-
-            const itemBlock = document.createElement('div');
-            itemBlock.className = "log-audit-item";
-            itemBlock.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-family:monospace; color:#00e5ff; font-size:8.5pt;">⏱️ ${timestampText}</span>
-                    <div style="margin-left:auto;">
-                        ${stripPhotoActionButtonHTML}
-                        <button class="btn-command btn-danger delete-log-btn" style="padding:2px 6px; font-size:7pt; margin-left:4px;">Delete Log</button>
-                    </div>
-                </div>
-                <div style="font-size:9pt; color:#cbd5e1; margin-top:4px;">
-                    <span style="color:#94a3b8; font-size:8pt; display:block;">Coords: ${logItem.latitude.toFixed(4)}°, ${logItem.longitude.toFixed(4)}°</span>
-                    <strong>Note:</strong> <i>"${logItem.finder_note || 'No description text recorded.'}"</i>
-                    ${photoElementHTML}
-                </div>`;
-            
-            const stripBtn = itemBlock.querySelector('.strip-btn');
-            if (stripBtn) {
-                stripBtn.onclick = (e) => { e.stopPropagation(); stripPhotoLink(logItem.created_at); };
-            }
-
-            const deleteLogBtn = itemBlock.querySelector('.delete-log-btn');
-            if (deleteLogBtn) {
-                deleteLogBtn.onclick = (e) => { e.stopPropagation(); purgeSingleLog(logItem.created_at); };
-            }
-
-            feedContainer.appendChild(itemBlock);
-        }
+        const feed = document.getElementById('audit-logs-feed'); feed.innerHTML = "";
+        globalCachedLogsArray.filter(l => l.penguin_id === activeAuditedPenguinId).forEach(log => {
+            const div = document.createElement('div');
+            div.className = "log-audit-item";
+            div.innerHTML = `<div>${new Date(log.created_at).toLocaleString()}</div><div>Note: ${log.finder_note}</div><button class="btn-command btn-danger" onclick="purgeSingleLog('${log.created_at}')">Delete</button>`;
+            feed.appendChild(div);
+        });
     }
 
-    async function deleteEntirePenguin(targetId) {
-        if (!confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently delete all tracking logs and photos.`)) return;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', targetId).select(); 
-
-        if (error) return alert("Delete operation failed: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\n\nSupabase RLS is quietly blocking deletions. Please enable 'DELETE' policies for 'anon' users.");
-
-        alert(`Success. ${targetId} deleted.`);
-        if (activeAuditedPenguinId === targetId) {
-            document.getElementById('audit-panel-card').style.display = "none";
-            activeAuditedPenguinId = null;
-        }
-        await loadAdminInventoryMatrix();
+    async function deleteEntirePenguin(id) {
+        if(!confirm(`Delete ${id}?`)) return;
+        await supabaseClient.from('penguin_logs').delete().eq('penguin_id', id);
+        loadAdminInventoryMatrix();
+        document.getElementById('audit-panel-card').style.display = "none";
     }
 
-    async function purgeSingleLog(createdAtISOString) {
-        if (!confirm("Are you certain you want to purge this record entry?")) return;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString).select();
-
-        if (error) return alert("Delete failed: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\nSupabase RLS is blocking deletions.");
-        
-        await loadAdminInventoryMatrix();
-        renderSurgicalLogsFeed();
-    }
-
-    async function stripPhotoLink(createdAtISOString) {
-        if (!confirm("Remove the image token parameter?")) return;
-
-        const { data, error } = await supabaseClient.from('penguin_logs').update({ photo_url: null }).eq('penguin_id', activeAuditedPenguinId).eq('created_at', createdAtISOString).select();
-
-        if (error) return alert("Override faulted: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ UPDATE FAILED!\nSupabase RLS is blocking updates.");
-        
-        await loadAdminInventoryMatrix();
+    async function purgeSingleLog(ts) {
+        await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', ts);
+        loadAdminInventoryMatrix();
         renderSurgicalLogsFeed();
     }
 </script>
-
 </body>
 </html>
