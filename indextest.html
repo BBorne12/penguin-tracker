@@ -5,10 +5,763 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penguin Tracker™ - Antarctic Adventure Mode</title>
     
+    <!-- Black and White Penguin Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 style=%22filter: grayscale(100%);%22>🐧</text></svg>">
     
+    <!-- Leaflet.js Map Stylesheet CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Base Setup & CSS Resets */
+        *, *::before, *::after { box-sizing: border-box; }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #02060d; color: #ffffff; font-size: 12pt; line-height: 1.5;
+        }
+
+        .app-container {
+            width: 100%; max-width: 600px; margin: 0 auto; padding: 16px;
+            background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
+            min-height: 100vh; display: flex; flex-direction: column;
+        }
+
+        h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+        h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
+        h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
+
+        .layout-section { width: 100%; margin-top: 16px; flex: 1; }
+
+        /* Greyscale Emoji Filter */
+        .bw-penguin { filter: grayscale(100%); display: inline-block; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-bottom: 16px; position: relative;
+        }
+
+        .glass-card-inner { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px; margin-top: 12px; }
+        .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+        .aurora-glow { color: #39ff14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.6); font-weight: bold; }
+        .ice-glow { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); font-weight: bold; }
+
+        .status-badge {
+            display: inline-block; padding: 4px 10px; background: rgba(57, 255, 20, 0.1);
+            border: 1px solid rgba(57, 255, 20, 0.3); color: #39ff14; border-radius: 20px;
+            font-size: 10pt; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(57, 255, 20, 0.4); white-space: nowrap;
+        }
+
+        .tagged-badge {
+            display: inline-block; padding: 2px 6px; background: rgba(57, 255, 20, 0.15);
+            border: 1px solid rgba(57, 255, 20, 0.4); color: #39ff14; font-size: 9pt; font-weight: bold;
+            border-radius: 4px; margin-left: 6px; vertical-align: middle;
+        }
+
+        .warning-badge {
+            display: block; padding: 12px; background: rgba(239, 68, 68, 0.07);
+            border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; border-radius: 8px;
+            font-size: 11pt; margin-top: 12px; line-height: 1.4;
+        }
+
+        .note-textarea, .select-poi {
+            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px; padding: 10px; color: #ffffff; font-family: inherit; font-size: 12pt;
+            outline: none; transition: border-color 0.2s ease; box-sizing: border-box;
+        }
+
+        .note-textarea { height: 80px; resize: none; margin-top: 4px; margin-bottom: 8px; }
+        .select-poi { margin-top: 6px; margin-bottom: 12px; cursor: pointer; }
+        .select-poi:disabled { color: #6b7280; border-color: rgba(255, 255, 255, 0.05); background: rgba(0, 0, 0, 0.2); cursor: not-allowed; }
+        .select-poi option { background: #07111e; color: #ffffff; }
+        .note-textarea:focus, .select-poi:focus { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 10px rgba(0, 229, 255, 0.1); }
+
+        .hidden-file-input { display: none !important; }
+
+        .btn-glow {
+            display: block; width: 100%; text-align: center; padding: 14px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; color: #ffffff;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); transition: opacity 0.2s ease, border-color 0.2s ease;
+        }
+        .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+        .btn-camera {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; font-size: 16pt;
+        }
+        .btn-camera.photo-attached {
+            border-color: #39ff14; color: #39ff14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
+        }
+
+        .btn-inline-refresh {
+            background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease;
+        }
+        .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
+
+        .tab-bar {
+            display: flex; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 8px; padding: 4px; margin-bottom: 12px;
+        }
+        .tab-btn {
+            flex: 1; padding: 8px; background: transparent; border: none; color: #94a3b8;
+            font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.5px;
+            cursor: pointer; border-radius: 6px; transition: all 0.2s ease; line-height: 1.3;
+        }
+        .tab-btn.active { background: rgba(56, 189, 248, 0.15); color: #00e5ff; text-shadow: 0 0 8px rgba(0, 229, 255, 0.3); }
+
+        .pagination-container {
+            display: flex; justify-content: space-between; align-items: center; margin-top: 14px;
+            padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .page-arrow {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); color: #00e5ff;
+            font-weight: bold; font-size: 14pt; padding: 4px 14px; border-radius: 6px; cursor: pointer;
+        }
+        .page-arrow:disabled { color: #4b5563; border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; background: transparent; }
+        .page-indicator { font-size: 10.5pt; color: #94a3b8; font-weight: 500; }
+
+        .data-list, .leaderboard-list, .poi-proximity-list, .passport-history-list { margin: 0; padding: 0; list-style: none; }
+        .data-item { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .data-item:last-child { border-bottom: none; }
+
+        .leaderboard-row, .poi-proximity-row, .passport-history-row {
+            display: flex; justify-content: space-between; align-items: center; padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; border-radius: 6px; transition: background 0.2s;
+        }
+        .leaderboard-row:hover, .poi-proximity-row:hover, .passport-history-row:hover { background: rgba(255, 255, 255, 0.05); }
+        .leaderboard-row:last-child, .poi-proximity-row:last-child, .passport-history-row:last-child { border-bottom: none; }
+
+        .rank-badge, .poi-icon-badge, .passport-icon-badge { display: inline-block; width: 28px; font-weight: bold; color: #7dd3fc; }
+        .p-name, .poi-list-name, .passport-list-name { font-weight: 600; color: #f8fafc; }
+        .p-dist, .poi-list-dist, .passport-list-date { font-weight: bold; color: #00e5ff; font-size: 11.5pt; }
+        .passport-list-date { color: #cc00ff; text-shadow: 0 0 8px rgba(204,0,255,0.3); }
+
+        .label { font-size: 10pt; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 2px; }
+        .value { font-size: 12pt; color: #f8fafc; }
+        .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
+
+        #map {
+            width: 100% !important; height: 220px !important; background: #030712 !important;
+            border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
+        }
+        .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+        }
+        .modal-card {
+            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 24px;
+            width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center;
+        }
+        .modal-input {
+            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 12pt; margin: 16px 0; outline: none; text-align: center;
+        }
+        .modal-input:focus { border-color: #00e5ff; }
+
+        .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
+        .app-footer {
+            text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
+            line-height: 1.6; letter-spacing: 1px; font-weight: 500; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
+        }
+        @media(min-width: 480px) { .app-header { display: flex; justify-content: space-between; align-items: flex-end; } }
+    </style>
+</head>
+<body>
+
+<!-- WELCOME STORY MODAL OVERLAY -->
+<div class="modal-overlay" id="welcome-modal">
+    <div class="modal-card" style="text-align: left;">
+        <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! <span class="bw-penguin">🐧</span></h2>
+        <p style="font-size: 11.5pt; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
+            Hi, my name is Ben Borne. I'm a product engineer from Carmel, IN and I 3D printed this little penguin. We're treating it like a modern-day Flat Stanley to see how far he can travel just by being passed from person to person.
+        </p>
+        <p style="font-size: 11.5pt; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
+            You don’t need to download anything or make an account. Log his location here, snap a quick picture of the view, and then hand him off to a friend or coworker who might get a kick out of taking him somewhere new.
+        </p>
+        <button class="btn-glow" onclick="closeWelcomeModal()">Continue to Game</button>
+    </div>
+</div>
+
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
+<div class="modal-overlay" id="first-find-modal">
+    <div class="modal-card">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ <span class="bw-penguin">🐧</span></span>
+        <h2 style="color: #39ff14; font-size: 16pt; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">First Discovery!</h2>
+        <p style="font-size: 11.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 0 0;">
+            You found a completely new penguin! Give it a custom name below to hatch it and officially launch its adventure.
+        </p>
+        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles...">
+        <button onclick="saveCustomNameFromModal(this)" class="btn-glow">Save Name & Start Journey!</button>
+    </div>
+</div>
+
+<!-- EDIT PROFILE MODAL OVERLAY -->
+<div class="modal-overlay" id="edit-profile-modal">
+    <div class="modal-card">
+        <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
+        <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
+        
+        <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
+        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
+            <!-- Dynamic Avatars Injected Here -->
+        </div>
+        
+        <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
+        <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- DEDICATED MAP POPUP MODAL -->
+<div class="modal-overlay" id="map-modal">
+    <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
+        <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
+        <div id="modal-map" style="width: 100%; height: 60vh; min-height: 400px; max-height: 600px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"></div>
+        <button class="btn-glow" style="margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
+    </div>
+</div>
+
+<!-- FULLSCREEN IMAGE MODAL -->
+<div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="closeImageModal()">
+    <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
+        <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+        <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;" onclick="closeImageModal()">×</button>
+    </div>
+</div>
+
+<div class="app-container">
+    
+    <!-- BACK TO MY PENGUIN BUTTON (Hidden by default) -->
+    <div id="back-to-my-penguin-container" style="display:none; margin-bottom: 12px;">
+        <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Penguin</button>
+    </div>
+
+    <!-- HEADER SECTION -->
+    <div class="app-header" style="position: relative; padding-right: 40px;">
+        <div>
+            <div class="subtitle">The Traveling Penguin Game</div>
+            <h1>PENGUIN TRACKER™</h1>
+        </div>
+        <div style="margin-top: 8px;">
+            <span class="status-badge" id="penguin-id-display">Detecting Tag...</span>
+        </div>
+        <button id="help-btn" onclick="document.getElementById('welcome-modal').style.display='flex';" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
+    </div>
+
+    <!-- MAIN STACKED BLOCKS -->
+    <div class="layout-section" id="game-panel">
+        
+        <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
+            🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only.
+        </div>
+
+        <div class="glass-card" id="instruction-panel" style="padding: 14px; background: rgba(56, 189, 248, 0.02); display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <span style="font-size: 20pt;">🎒</span>
+                <p style="margin: 0; font-size: 11.5pt; color: #cbd5e1; line-height: 1.4;"><strong style="color: #e0f2fe; display: block; margin-bottom: 2px;">Your New Travel Buddy!</strong> Take this penguin on fun adventures, snap photos, and pass it along to friends!</p>
+            </div>
+        </div>
+
+        <!-- CURRENT PENGUIN STATUS BOX -->
+        <div class="glass-card" id="profile-card-block">
+            
+            <!-- STRANGER ACTION ROW -->
+            <div id="stranger-action-row" style="display: none; justify-content: flex-end; margin-bottom: 12px;">
+            </div>
+
+            <!-- UNIVERSAL TABS -->
+            <div class="tab-bar" id="profile-tabs" style="display: flex; margin-bottom: 16px;">
+                <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')"><span class="bw-penguin">🐧</span> My Penguin</button>
+                <button class="tab-btn" id="tab-my-colony" onclick="switchProfileTab('colony')">🧊 My Colony</button>
+            </div>
+
+            <!-- PENGUIN PROFILE CONTAINER -->
+            <div id="my-penguin-container">
+                
+                <!-- Avatar & Identity Box -->
+                <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
+                    <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
+                    
+                    <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
+                    <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
+                </div>
+
+                <!-- Stats List -->
+                <ul class="data-list">
+                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div><span class="label">Current Status</span></div>
+                        <div><span class="value aurora-glow" id="current-status-display">On an Adventure</span></div>
+                    </li>
+                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div><span class="label">Total Stops So Far</span></div>
+                        <div><span class="value ice-glow" id="total-stops-counter">0 Passport Stops Logged</span></div>
+                    </li>
+                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div><span class="label">Last Stop</span></div>
+                        <div style="text-align: right;">
+                            <span class="value" id="last-stop-city" style="color: #f8fafc; font-size: 11pt;">Awaiting first stop</span>
+                            <span class="stat-subtext" id="last-stop-distance">--</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- MY COLONY CONTENT CONTAINER -->
+            <div id="colony-container" style="display: none;">
+                <ul class="leaderboard-list" id="colony-list-output">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Loading colony...</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
+        <div class="glass-card" id="tracking-card-block">
+            <div class="card-header-flex" style="margin-bottom: 6px;">
+                <h2 id="tracking-card-title">Location</h2>
+                <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh</button>
+            </div>
+            <ul class="data-list" id="location-text-elements">
+                <li class="data-item">
+                    <span class="label">Current Coordinates</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                        <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 11pt;">Detecting Location...</span>
+                        <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 11pt;">WAITING</span>
+                    </div>
+                </li>
+            </ul>
+            <div id="map"></div>
+            <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
+            
+            <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
+                <select id="poi-selector" class="select-poi" disabled>
+                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
+        <div class="glass-card" id="journey-stops-card">
+            <h2>📍 Journey Stops</h2>
+            
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-stop-log" onclick="switchStopsTab('log')">✍️ Log New</button>
+                <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
+            </div>
+
+            <!-- TAB: LOG NEW STOP -->
+            <div id="stop-log-container">
+                <div class="input-group" id="notes-input-group">
+                    <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
+                    <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
+                </div>
+                <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
+                <div class="glass-card-inner" style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
+                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
+                </div>
+            </div>
+
+            <!-- TAB: ALL STOPS HISTORY -->
+            <div id="stop-history-container" style="display: none;">
+                <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
+                </ul>
+                <div class="pagination-container" id="all-stops-pagination" style="display: none;">
+                    <button class="page-arrow" id="all-stops-prev-btn" onclick="changeAllStopsPage(-1)">←</button>
+                    <span class="page-indicator" id="all-stops-page-indicator">Page 1 of 1</span>
+                    <button class="page-arrow" id="all-stops-next-btn" onclick="changeAllStopsPage(1)">→</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD CARD BLOCK -->
+        <div class="glass-card">
+            <h2>🏆 Game Center Standings</h2>
+            
+            <input type="text" id="leaderboard-search-input" class="note-textarea" style="height: 40px; margin-bottom: 12px; padding: 8px 12px; font-size: 11pt;" placeholder="🔍 Search penguins by name or ID..." oninput="handleLeaderboardSearch()">
+
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
+                <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button>
+            </div>
+
+            <ul class="leaderboard-list" id="leaderboard-output">
+                <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Calculating distances...</li>
+            </ul>
+            
+            <div class="pagination-container" id="leaderboard-pagination" style="display: none;">
+                <button class="page-arrow" id="leaderboard-prev-btn" onclick="changeLeaderboardPage(-1)">←</button>
+                <span class="page-indicator" id="leaderboard-page-indicator">Page 1 of 10</span>
+                <button class="page-arrow" id="leaderboard-next-btn" onclick="changeLeaderboardPage(1)">→</button>
+            </div>
+        </div>
+
+        <!-- CONSOLIDATED LANDMARKS CARD -->
+        <div class="glass-card" id="landmarks-card">
+            <div class="card-header-flex">
+                <h2>🏛️ Landmarks</h2>
+                <button type="button" class="btn-inline-refresh" id="manual-refresh-poi-btn" onclick="triggerManualProximityRefresh()">🔄 Refresh List</button>
+            </div>
+            
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-landmark-nearby" onclick="switchLandmarkTab('nearby')">📍 Nearby</button>
+                <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
+            </div>
+
+            <div id="landmark-nearby-container">
+                <ul class="poi-proximity-list" id="poi-proximity-output">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
+                </ul>
+            </div>
+
+            <div id="landmark-history-container" style="display: none;">
+                <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
+                </ul>
+                <div class="pagination-container" id="passport-pagination" style="display: none;">
+                    <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
+                    <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
+                    <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAFETY DISCLAIMER NOTICE -->
+        <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
+            <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
+        </div>
+        
+    </div>
+
+    <div class="app-footer">
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.5 (Stateless Core)</span><br>
+        <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
+    </div>
+
+</div>
+
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // --- CONNECT CREDENTIALS ---
+    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let urlParams = new URLSearchParams(window.location.search);
+    
+    // --- GLOBAL ID NORMALIZATION ---
+    let rawId = urlParams.get('id') || "Mystery Penguin";
+    let penguinId = (rawId !== "Mystery Penguin" && !rawId.startsWith("Penguin-")) ? `Penguin-${rawId}` : rawId;
+    let securityTagParam = urlParams.get('tag') || null; 
+    
+    let rawViewer = urlParams.get('viewer');
+    let viewerId = (rawViewer && !rawViewer.startsWith("Penguin-")) ? `Penguin-${rawViewer}` : rawViewer;
+    let viewerTagParam = urlParams.get('vtag') || null;
+    
+    let isPrimaryControl = false;
+    let isAuthorizedViewer = false;
+    let isViewOnlyMode = true; 
+    
+    let activeCustomName = "";
+    let activeAvatarColor = "#38bdf8"; 
+    let activeTab = "distance"; 
+    let currentSearchQuery = "";
+
+    const AVATAR_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'];
+    let selectedAvatarColor = '#38bdf8'; 
+
+    let activePassportPage = 1; let activeAllStopsPage = 1; 
+    const PASSPORT_ITEMS_PER_PAGE = 10;
+    const STOPS_ITEMS_PER_PAGE = 5;
+    
+    let activeLeaderboardPage = 1; let computedLeaderboardArray = []; const LEADERBOARD_ITEMS_PER_PAGE = 5;
+    let activeStopsTab = "log"; let activeLandmarkTab = "nearby";
+
+    let computedPassportStampsArray = []; let computedAllStopsArray = [];
+    let discoveredMonumentsSet = new Set(); 
+    let globalLogData = []; let globalNamedEntry = null;
+
+    // Location Trackers
+    let verifiedLat = null; let verifiedLng = null;
+    let lastLogLat = null; let lastLogLng = null;
+
+    const penguinIdHeader = document.getElementById('penguin-id-display');
+    if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
+
+    let map = null; let marker = null; let historyLayerGroup = null; let poiLayerGroup = null; 
+    let currentJourneyLine = null; let poiMarkersMap = {}; 
+    let modalMap = null; let modalLayerGroup = null;
+
+    const coordinatesDisplay = document.getElementById("coordinates-display");
+    const lockBadge = document.getElementById("lock-badge");
+    const customCameraBtn = document.getElementById("custom-camera-btn");
+    const penguinNameDisplayEl = document.getElementById("penguin-name-display");
+    if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
+
+    // --- BULLETPROOF FACTORY LOG FILTER ---
+    function isFactoryLog(note) {
+        if (!note) return false;
+        return note.toLowerCase().includes('initial factory registration');
+    }
+
+    // ===================================================
+    // STATELESS SECURITY GATEWAY LOGIC
+    // ===================================================
+    async function verifyPenguinSecurity(id, tag) {
+        const numericId = parseInt(id.replace("Penguin-", ""), 10);
+        if (!isNaN(numericId) && numericId < 66) return true; 
+
+        if (!tag) return false;
+
+        const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', id);
+        
+        if (!data || data.length === 0) {
+            return true; 
+        }
+
+        return data.some(log => log.secret_tag === tag);
+    }
+
+    window.addEventListener("DOMContentLoaded", async function() {
+        initializeLiveMap();
+        updateProfileAvatar(activeAvatarColor); 
+        
+        if (penguinId !== "Mystery Penguin") {
+            isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
+        }
+
+        if (viewerId) {
+            isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam);
+        }
+
+        if (isAuthorizedViewer && viewerId !== penguinId) {
+            isPrimaryControl = false;
+        }
+
+        if (isPrimaryControl) {
+            isViewOnlyMode = false;
+            verifyCurrentGPS(); 
+        } else if (isAuthorizedViewer) {
+            isViewOnlyMode = true; 
+        } else {
+            isViewOnlyMode = true; 
+        }
+
+        if (isViewOnlyMode) {
+            const viewBanner = document.getElementById('view-mode-banner');
+            if (viewBanner && !isAuthorizedViewer) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
+            activateViewOnlyUI();
+            const poiOutput = document.getElementById("poi-proximity-output");
+            if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
+        }
+
+        const backBtnContainer = document.getElementById('back-to-my-penguin-container');
+        const strangerActionRow = document.getElementById('stranger-action-row');
+
+        if (isAuthorizedViewer && !isPrimaryControl) {
+            if(backBtnContainer) backBtnContainer.style.display = 'block';
+            if(strangerActionRow) {
+                strangerActionRow.style.display = 'flex';
+                
+                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+                let colonySet = new Set();
+                if (data) {
+                    data.forEach(log => {
+                        if (log.colony_list) {
+                            log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                        }
+                    });
+                }
+                
+                let inColonyHTML = colonySet.has(penguinId)
+                    ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
+                    : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
+
+                strangerActionRow.innerHTML = inColonyHTML;
+            }
+        }
+
+        setTimeout(function() {
+            loadPenguinHistory(penguinId);
+            buildLeaderboard();
+        }, 150);
+    });
+
+    // ===================================================
+    // COLONY FEATURES & ROUTING LOGIC
+    // ===================================================
+    function goBackToMyPenguin() {
+        if (isAuthorizedViewer && viewerId) {
+            let url = `?id=${viewerId}`;
+            if (viewerTagParam) url += `&tag=${viewerTagParam}`;
+            window.location.href = url;
+        }
+    }
+
+    function switchProfileTab(tabName) {
+        const btnPenguin = document.getElementById('tab-my-penguin');
+        const btnColony = document.getElementById('tab-my-colony');
+        const contPenguin = document.getElementById('my-penguin-container');
+        const contColony = document.getElementById('colony-container');
+        const editBtn = document.getElementById('edit-profile-btn');
+        
+        if(tabName === 'penguin') {
+            btnPenguin.classList.add('active'); btnColony.classList.remove('active');
+            contPenguin.style.display = 'block'; contColony.style.display = 'none';
+            if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
+        } else {
+            btnPenguin.classList.remove('active'); btnColony.classList.add('active');
+            contPenguin.style.display = 'none'; contColony.style.display = 'block';
+            if(editBtn) editBtn.style.display = 'none';
+            loadColonyList();
+        }
+    }
+
+    async function addToColony() {
+        if (!isAuthorizedViewer || !viewerId) return;
+        const btn = document.getElementById('add-colony-btn');
+        if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
+
+        const { data, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+        
+        if (selectError) {
+            alert("Connection error: " + selectError.message);
+            if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
+            return;
+        }
+
+        let colonySet = new Set();
+        if (data && data.length > 0) {
+            data.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if (i.trim()) colonySet.add(i.trim()); });
+                }
+            });
+        }
+        
+        if (!colonySet.has(penguinId)) {
+            colonySet.add(penguinId);
+            let masterListArray = Array.from(colonySet);
+            
+            const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
+            
+            if (updateError) {
+                alert("Database update rejected: " + updateError.message);
+                if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
+                return;
+            }
+        }
+        
+        if(btn) {
+            btn.outerHTML = `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`;
+        }
+    }
+
+    async function loadColonyList() {
+        const listEl = document.getElementById('colony-list-output');
+        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying database pipelines... Data are aggregating.</li>`;
+        
+        let queryId = penguinId; 
+
+        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', queryId);
+        let colonySet = new Set();
+        if (myLogs) {
+            myLogs.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                }
+            });
+        }
+        
+        let colonyIds = Array.from(colonySet);
+        
+        if (colonyIds.length === 0) {
+            listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
+            return;
+        }
+
+        const { data: allLogs } = await supabaseClient.from('penguin_logs')
+            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note')
+            .in('penguin_id', colonyIds)
+            .order('created_at', { ascending: true });
+            
+        const colonyStats = {};
+        colonyIds.forEach(id => colonyStats[id] = { name: id, avatar: '#38bdf8', points: [] });
+        
+        if (allLogs) {
+            allLogs.forEach(log => {
+                if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
+                if(log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
+                    colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                }
+            });
+        }
+        
+        listEl.innerHTML = "";
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
+        colonyIds.forEach(id => {
+            let miles = 0;
+            let pts = colonyStats[id].points;
+            for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
+            
+            let removeButtonHTML = isPrimaryControl 
+                ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
+                : "";
+
+            const li = document.createElement('li');
+            li.className = 'leaderboard-row'; 
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg(colonyStats[id].avatar)}</div>
+                    <span class="p-name" style="font-size:11pt;"><span class="bw-penguin">🐧</span> ${colonyStats[id].name}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="text-align:right;">
+                        <span class="p-dist" style="font-size:10pt;">${miles.toFixed(1)} mi</span>
+                        <span class="stat-subtext">${pts.length}Ah, that makes perfect sense! I completely misunderstood—I thought you wanted the literal SVG avatars to be black and white, but you meant the standard Windows/iOS `🐧` emoji that pops up in the text fields (which often renders with a purple hue on certain operating systems). 
+
+I have fully restored your dynamic, colorful SVG avatar picker. To fix the emojis, I wrapped every single player-facing `🐧` emoji in `index.html` with a CSS grayscale filter. They will now display as a clean black, white, and gray across all browsers and devices, while leaving the Admin dashboard untouched. 
+
+Since the data are ready and you explicitly gave me the green light, here is your fully updated **Version 4.12.5 `index.html`**:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penguin Tracker™ - Antarctic Adventure Mode</title>
+    
+    <!-- Black and White Penguin Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22[http://www.w3.org/2000/svg%22](http://www.w3.org/2000/svg%22) viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 style=%22filter: grayscale(100%);%22>🐧</text></svg>">
+    
+    <!-- Leaflet.js Map Stylesheet CDN -->
+    <link rel="stylesheet" href="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.css](https://unpkg.com/leaflet@1.9.4/dist/leaflet.css)" />
+    <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
 
     <style>
         /* Base Setup & CSS Resets */
@@ -176,9 +929,10 @@
 </head>
 <body>
 
+<!-- WELCOME STORY MODAL OVERLAY -->
 <div class="modal-overlay" id="welcome-modal">
     <div class="modal-card" style="text-align: left;">
-        <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! 🐧</h2>
+        <h2 style="color: #38bdf8; margin-bottom: 14px; text-align: center;">Welcome! <span style="filter: grayscale(100%);">🐧</span></h2>
         <p style="font-size: 11.5pt; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
             Hi, my name is Ben Borne. I'm a product engineer from Carmel, IN and I 3D printed this little penguin. We're treating it like a modern-day Flat Stanley to see how far he can travel just by being passed from person to person.
         </p>
@@ -189,9 +943,10 @@
     </div>
 </div>
 
+<!-- FIRST FIND POPUP MODAL OVERLAY -->
 <div class="modal-overlay" id="first-find-modal">
     <div class="modal-card">
-        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ 🐧</span>
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🥚 ➔ <span style="filter: grayscale(100%);">🐧</span></span>
         <h2 style="color: #39ff14; font-size: 16pt; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">First Discovery!</h2>
         <p style="font-size: 11.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 0 0;">
             You found a completely new penguin! Give it a custom name below to hatch it and officially launch its adventure.
@@ -201,15 +956,23 @@
     </div>
 </div>
 
+<!-- EDIT PROFILE MODAL OVERLAY -->
 <div class="modal-overlay" id="edit-profile-modal">
     <div class="modal-card">
         <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
         <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
+        
+        <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
+        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
+            <!-- Dynamic Avatars Injected Here -->
+        </div>
+        
         <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
 
+<!-- DEDICATED MAP POPUP MODAL -->
 <div class="modal-overlay" id="map-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
@@ -218,6 +981,7 @@
     </div>
 </div>
 
+<!-- FULLSCREEN IMAGE MODAL -->
 <div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -227,10 +991,12 @@
 
 <div class="app-container">
     
+    <!-- BACK TO MY PENGUIN BUTTON (Hidden by default) -->
     <div id="back-to-my-penguin-container" style="display:none; margin-bottom: 12px;">
         <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Penguin</button>
     </div>
 
+    <!-- HEADER SECTION -->
     <div class="app-header" style="position: relative; padding-right: 40px;">
         <div>
             <div class="subtitle">The Traveling Penguin Game</div>
@@ -239,9 +1005,11 @@
         <div style="margin-top: 8px;">
             <span class="status-badge" id="penguin-id-display">Detecting Tag...</span>
         </div>
+        <!-- Help Button manually triggers the welcome story -->
         <button id="help-btn" onclick="document.getElementById('welcome-modal').style.display='flex';" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
     </div>
 
+    <!-- MAIN STACKED BLOCKS -->
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
@@ -255,18 +1023,23 @@
             </div>
         </div>
 
+        <!-- CURRENT PENGUIN STATUS BOX -->
         <div class="glass-card" id="profile-card-block">
             
+            <!-- STRANGER ACTION ROW -->
             <div id="stranger-action-row" style="display: none; justify-content: flex-end; margin-bottom: 12px;">
             </div>
 
+            <!-- UNIVERSAL TABS -->
             <div class="tab-bar" id="profile-tabs" style="display: flex; margin-bottom: 16px;">
-                <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')">🐧 My Penguin</button>
+                <button class="tab-btn active" id="tab-my-penguin" onclick="switchProfileTab('penguin')"><span style="filter: grayscale(100%);">🐧</span> My Penguin</button>
                 <button class="tab-btn" id="tab-my-colony" onclick="switchProfileTab('colony')">🧊 My Colony</button>
             </div>
 
+            <!-- PENGUIN PROFILE CONTAINER -->
             <div id="my-penguin-container">
                 
+                <!-- Avatar & Identity Box -->
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -274,6 +1047,7 @@
                     <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
                 </div>
 
+                <!-- Stats List -->
                 <ul class="data-list">
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Current Status</span></div>
@@ -293,6 +1067,7 @@
                 </ul>
             </div>
 
+            <!-- MY COLONY CONTENT CONTAINER -->
             <div id="colony-container" style="display: none;">
                 <ul class="leaderboard-list" id="colony-list-output">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Querying database pipelines... Data are aggregating.</li>
@@ -300,6 +1075,7 @@
             </div>
         </div>
 
+        <!-- AUTOMATED GEOLOCATION METRICS DISPLAY -->
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
@@ -325,6 +1101,7 @@
             </div>
         </div>
         
+        <!-- CONSOLIDATED JOURNEY STOPS CARD -->
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Journey Stops</h2>
             
@@ -333,6 +1110,7 @@
                 <button class="tab-btn" id="tab-stop-history" onclick="switchStopsTab('history')">📜 History</button>
             </div>
 
+            <!-- TAB: LOG NEW STOP -->
             <div id="stop-log-container">
                 <div class="input-group" id="notes-input-group">
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
@@ -345,6 +1123,7 @@
                 </div>
             </div>
 
+            <!-- TAB: ALL STOPS HISTORY -->
             <div id="stop-history-container" style="display: none;">
                 <ul class="passport-history-list" id="all-stops-history-output" style="margin-top: 8px;">
                     <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading journey stops...</li>
@@ -357,6 +1136,7 @@
             </div>
         </div>
 
+        <!-- LEADERBOARD CARD BLOCK -->
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -378,6 +1158,7 @@
             </div>
         </div>
 
+        <!-- CONSOLIDATED LANDMARKS CARD -->
         <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Landmarks</h2>
@@ -407,6 +1188,7 @@
             </div>
         </div>
 
+        <!-- SAFETY DISCLAIMER NOTICE -->
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -414,16 +1196,17 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.4 (Stateless Core)</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.5 (Stateless Core)</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- DATA PIPELINE HANDLING SCRIPTS -->
+<script src="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.js](https://unpkg.com/leaflet@1.9.4/dist/leaflet.js)"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
-    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
+    const SUPABASE_URL = "[https://ylpgdjiucsserioafdas.supabase.co](https://ylpgdjiucsserioafdas.supabase.co)"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -443,8 +1226,12 @@
     let isViewOnlyMode = true; 
     
     let activeCustomName = "";
+    let activeAvatarColor = "#38bdf8"; 
     let activeTab = "distance"; 
     let currentSearchQuery = "";
+
+    const AVATAR_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'];
+    let selectedAvatarColor = '#38bdf8'; 
 
     let activePassportPage = 1; let activeAllStopsPage = 1; 
     const PASSPORT_ITEMS_PER_PAGE = 10;
@@ -501,7 +1288,7 @@
 
     window.addEventListener("DOMContentLoaded", async function() {
         initializeLiveMap();
-        updateProfileAvatar(); 
+        updateProfileAvatar(activeAvatarColor); 
         
         if (penguinId !== "Mystery Penguin") {
             isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
@@ -636,7 +1423,7 @@
 
     async function loadColonyList() {
         const listEl = document.getElementById('colony-list-output');
-        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying database pipelines... Data are aggregating.</li>`;
+        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying database pipelines... The data are aggregating.</li>`;
         
         let queryId = penguinId; 
 
@@ -658,16 +1445,17 @@
         }
 
         const { data: allLogs } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, custom_name, latitude, longitude, finder_note')
+            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note')
             .in('penguin_id', colonyIds)
             .order('created_at', { ascending: true });
             
         const colonyStats = {};
-        colonyIds.forEach(id => colonyStats[id] = { name: id, points: [] });
+        colonyIds.forEach(id => colonyStats[id] = { name: id, avatar: '#38bdf8', points: [] });
         
         if (allLogs) {
             allLogs.forEach(log => {
                 if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
                 if(log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
                     colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
                 }
@@ -698,8 +1486,8 @@
             li.className = 'leaderboard-row'; 
             li.innerHTML = `
                 <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg()}</div>
-                    <span class="p-name" style="font-size:11pt;">🐧 ${colonyStats[id].name}</span>
+                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg(colonyStats[id].avatar)}</div>
+                    <span class="p-name" style="font-size:11pt;"><span style="filter: grayscale(100%);">🐧</span> ${colonyStats[id].name}</span>
                 </div>
                 <div style="display:flex; align-items:center; gap: 12px;">
                     <div style="text-align:right;">
@@ -751,6 +1539,9 @@
         const w = document.getElementById('welcome-modal'); 
         if (w) w.style.display = 'none'; 
         
+        // SEQUENCED MODAL HANDOFF:
+        // If the penguin is unhatched (doesn't have a custom name yet), 
+        // open the First Discovery modal right after they finish reading the welcome story.
         if (!globalNamedEntry && !isViewOnlyMode) {
             const f = document.getElementById('first-find-modal');
             if (f) f.style.display = 'flex';
@@ -792,7 +1583,7 @@
             const dateObj = new Date(log.created_at).toLocaleDateString();
             let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
             const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-            const stopLabel = globalNamedEntry ? `🐧 ${globalNamedEntry}` : `Stop #${stopCounter}`;
+            const stopLabel = globalNamedEntry ? `<span style="filter: grayscale(100%);">🐧</span> ${globalNamedEntry}` : `Stop #${stopCounter}`;
             
             const newMarker = L.marker(logLatLng, { icon: historicalIcon }).addTo(modalLayerGroup)
                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
@@ -830,27 +1621,42 @@
     // ===================================================
     // AVATAR SYSTEM
     // ===================================================
-    function getPenguinSvg() {
-        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-            <rect width="100" height="100" rx="20" fill="#cbd5e1"/>
-            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#111827"/>
-            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#111827"/>
-            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#111827"/>
+    function getPenguinSvg(bgColor) {
+        return `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 100 100" width="100%" height="100%">
+            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
+            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
+            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
+            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
             <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
             <circle cx="36" cy="45" r="15" fill="#ffffff"/>
             <circle cx="64" cy="45" r="15" fill="#ffffff"/>
-            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#4b5563"/>
-            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#4b5563"/>
-            <circle cx="36" cy="45" r="4.5" fill="#000000"/>
-            <circle cx="64" cy="45" r="4.5" fill="#000000"/>
+            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
             <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
             <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
-            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#4b5563"/>
+            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
         </svg>`;
+    }
+
+    function initAvatarGrid() {
+        const grid = document.getElementById('avatar-grid');
+        if (!grid) return; grid.innerHTML = '';
+        AVATAR_COLORS.forEach(color => {
+            const div = document.createElement('div');
+            div.style.width = '45px'; div.style.height = '45px'; div.style.cursor = 'pointer'; div.style.borderRadius = '10px';
+            div.style.border = selectedAvatarColor === color ? '3px solid #39ff14' : '2px solid transparent';
+            div.innerHTML = getPenguinSvg(color);
+            div.onclick = () => { selectedAvatarColor = color; initAvatarGrid(); };
+            grid.appendChild(div);
+        });
     }
 
     function openEditModal() {
         document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
+        selectedAvatarColor = activeAvatarColor || '#38bdf8';
+        initAvatarGrid();
         document.getElementById('edit-profile-modal').style.display = 'flex';
     }
 
@@ -860,17 +1666,17 @@
         const newName = document.getElementById('edit-custom-name').value.trim();
         if(!newName) return alert("Penguin name cannot be empty.");
 
-        activeCustomName = newName;
+        activeCustomName = newName; activeAvatarColor = selectedAvatarColor;
         
-        await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
+        await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName, avatar_color: activeAvatarColor }).eq('penguin_id', penguinId);
         
         // Force refresh to instantly sync interface
         location.reload();
     }
 
-    function updateProfileAvatar() {
+    function updateProfileAvatar(colorHex) {
         const container = document.getElementById('profile-avatar-container');
-        if (container) container.innerHTML = getPenguinSvg();
+        if (container) container.innerHTML = getPenguinSvg(colorHex || '#38bdf8');
     }
 
     // ===================================================
@@ -950,7 +1756,7 @@
 
     async function fetchLastStopCity(lat, lng) {
         try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+            const response = await fetch(`[https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$](https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$){lat}&lon=${lng}`);
             const data = await response.json();
             const city = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state || "Unknown location";
             const cityEl = document.getElementById('last-stop-city'); if (cityEl) cityEl.innerText = city;
@@ -979,7 +1785,7 @@
         const minLat = lat - offset; const maxLat = lat + offset;
         const minLng = lng - offset; const maxLng = lng + offset;
 
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
+        const overpassUrl = `[https://overpass-api.de/api/interpreter?data=](https://overpass-api.de/api/interpreter?data=)[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
 
         try {
             if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
@@ -1077,7 +1883,7 @@
 
             // Generate a metadata log that records the name but will not disrupt map data.
             await supabaseClient.from('penguin_logs').insert([{
-                penguin_id: penguinId, custom_name: activeCustomName,
+                penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                 finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
             }]);
             
@@ -1188,7 +1994,7 @@
                 ? `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`
                 : `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
 
-            li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name">🐧 ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
+            li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name"><span style="filter: grayscale(100%);">🐧</span> ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
             listOutput.appendChild(li);
@@ -1314,7 +2120,7 @@
 
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name')
+            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
@@ -1354,12 +2160,15 @@
         let resolvedDisplayName = globalNamedEntry ? globalNamedEntry : targetId;
         activeCustomName = resolvedDisplayName;
         
+        const avatarEntry = logs.find(log => log.avatar_color && log.avatar_color.trim() !== "");
+        activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
+        
         const pIdEl = document.getElementById('penguin-id-display');
         if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
         const pNameEl = document.getElementById("penguin-name-display");
         if (pNameEl) pNameEl.innerText = resolvedDisplayName;
 
-        updateProfileAvatar();
+        updateProfileAvatar(activeAvatarColor);
 
         let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
         const btnPenguin = document.getElementById('tab-my-penguin');
@@ -1367,11 +2176,11 @@
         const editBtn = document.getElementById('edit-profile-btn');
         
         if (isPrimaryControl) {
-            if (btnPenguin) btnPenguin.innerText = `🐧 My Penguin`;
+            if (btnPenguin) btnPenguin.innerHTML = `<span style="filter: grayscale(100%);">🐧</span> My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
             if (editBtn) editBtn.style.display = 'block';
         } else {
-            if (btnPenguin) btnPenguin.innerText = `🐧 Viewing: ${resolvedDisplayName}`;
+            if (btnPenguin) btnPenguin.innerHTML = `<span style="filter: grayscale(100%);">🐧</span> Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
         }
@@ -1398,7 +2207,7 @@
                 const dateObj = new Date(log.created_at).toLocaleDateString();
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                const stopLabel = globalNamedEntry ? `🐧 ${resolvedDisplayName}` : `Stop #${validStopCounterForMap}`;
+                const stopLabel = globalNamedEntry ? `<span style="filter: grayscale(100%);">🐧</span> ${resolvedDisplayName}` : `Stop #${validStopCounterForMap}`;
                 
                 L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${validStopCounterForMap})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
                 validStopCounterForMap++;
@@ -1459,16 +2268,16 @@
 
         const submissionData = {
             penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, 
-            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, secret_tag: securityTagParam 
+            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, avatar_color: activeAvatarColor, secret_tag: securityTagParam 
         };
 
         const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
         if (error) { alert("Database entry rejected."); if (submitBtn) submitBtn.disabled = false; return; }
 
         try {
-            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+            const DISCORD_WEBHOOK_URL = "[https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R](https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R)";
             const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
-            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
+            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** [https://www.google.com/maps?q=$](https://www.google.com/maps?q=$){verifiedLat},${verifiedLng}\n`;
             if (cleanedPoiStringValue) discordMsg += `🏛️ **Landmark Tagged:** \`${cleanedPoiStringValue}\`\n`;
             discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
             const message = { username: "Penguin Scout", content: discordMsg };
