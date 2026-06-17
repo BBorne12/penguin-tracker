@@ -72,7 +72,11 @@
         /* Tables & Lists Matrices */
         .matrix-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
         .matrix-table th, .matrix-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .matrix-table th { color: #f5d0fe; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; }
+        .matrix-table th { 
+            color: #f5d0fe; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; 
+            cursor: pointer; user-select: none; transition: color 0.2s;
+        }
+        .matrix-table th:hover { color: #ffffff; }
         .matrix-table tbody tr { transition: background 0.2s; }
         .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); }
 
@@ -118,11 +122,11 @@
         
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure, ultra-compact low-density QR code sticker. This tool creates the Canvas image only—the penguin remains a ghost until physically scanned.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
-                <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Create Sticker</button>
+                <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Generate & Register</button>
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
@@ -142,11 +146,11 @@
                 <table class="matrix-table" id="inventory-table">
                     <thead>
                         <tr>
-                            <th>Identity</th>
-                            <th>Active Name</th>
-                            <th>Total Pings</th>
-                            <th>Landmarks</th>
-                            <th>Est. Mileage</th>
+                            <th id="th-id" onclick="sortRookery('id')">Identity ↕</th>
+                            <th id="th-name" onclick="sortRookery('name')">Active Name ↕</th>
+                            <th id="th-pings" onclick="sortRookery('pings')">Total Pings ↕</th>
+                            <th id="th-landmarks" onclick="sortRookery('landmarks')">Landmarks ↕</th>
+                            <th id="th-miles" onclick="sortRookery('miles')">Est. Mileage ↕</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -168,7 +172,7 @@
                     <code id="audit-url-display" style="font-size: 7.5pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 4px; border-radius: 4px; word-break: break-all; display:none;"></code>
                 </div>
                 <div style="margin-left: 16px; text-align: right;">
-                    <img id="audit-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none; max-width: 120px;" alt="QR Sticker">
+                    <img id="audit-sticker-img" style="border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none; max-width: 140px;" alt="QR Sticker">
                 </div>
             </div>
 
@@ -192,11 +196,14 @@
     let activeAuditedPenguinId = null;
     let globalCachedLogsArray = [];
     
-    // Pagination Variables
+    // Pagination & Sorting Variables
     let globalFleetKeys = [];
     let globalFleetClusters = {};
     let currentPage = 1;
     const itemsPerPage = 10;
+    
+    let currentSortCol = null;
+    let currentSortAsc = false;
 
     const idInputField = document.getElementById('new-penguin-id');
     idInputField.addEventListener('input', function(e) {
@@ -229,13 +236,12 @@
     }
 
     // ===================================================
-    // MASTER STICKER GENERATOR (Reusable Engine)
+    // MASTER STICKER GENERATOR
     // ===================================================
     function generateStickerImage(penguinId, secretTag, targetImgElementId) {
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
         const baseIdNumber = penguinId.replace("Penguin-", ""); 
         
-        // Use a temporary off-screen div to generate the code array
         const tempDiv = document.createElement("div");
         new QRCode(tempDiv, {
             text: secureUrl,
@@ -243,7 +249,7 @@
             height: 160,
             colorDark : "#000000",
             colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.L // Low error correction = larger, clearer dots
+            correctLevel : QRCode.CorrectLevel.L
         });
 
         setTimeout(() => {
@@ -253,37 +259,31 @@
             const tempComposite = document.createElement("canvas");
             const ctx = tempComposite.getContext('2d');
 
-            // Set canvas dimensions to fit text borders
-            tempComposite.width = 240;
-            tempComposite.height = 250; 
+            tempComposite.width = 192;
+            tempComposite.height = 180; 
 
-            // White background
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
 
-            // Draw QR Code centered (X: 40, Y: 20)
-            ctx.drawImage(qrCanvas, 40, 20, 160, 160);
+            ctx.drawImage(qrCanvas, 16, 2, 160, 160);
 
             ctx.fillStyle = "#000000";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            // Bottom text: PENGUIN TRACKER™ ID#
-            ctx.font = "bold 14px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.fillText(`PENGUIN TRACKER™ ID: ${baseIdNumber}`, 120, 220);
+            ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.fillText(`PENGUIN TRACKER™ ID: ${baseIdNumber}`, 96, 172);
 
-            // Left sideways text
             ctx.save();
-            ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.translate(20, 100); 
+            ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.translate(8, 82); 
             ctx.rotate(-Math.PI / 2); 
             ctx.fillText("SCAN TO TRACK", 0, 0);
             ctx.restore();
 
-            // Right sideways text
             ctx.save();
-            ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.translate(220, 100); 
+            ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.translate(184, 82); 
             ctx.rotate(Math.PI / 2);
             ctx.fillText("SCAN TO TRACK", 0, 0);
             ctx.restore();
@@ -307,7 +307,21 @@
 
         const secretTag = Math.random().toString(36).substring(2, 10);
         
-        // Zero Database Footprint - Sticker rendering only
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .insert([{ 
+                penguin_id: id, 
+                secret_tag: secretTag, 
+                finder_note: 'Initial Factory Registration',
+                latitude: 39.9783, 
+                longitude: -86.1180 
+            }]);
+
+        if (error) {
+            alert("Registration fault generated: " + error.message);
+            return;
+        }
+        
         generateStickerImage(id, secretTag, 'final-sticker-img');
         
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
@@ -315,6 +329,7 @@
         document.getElementById("qrcode-container").style.display = "flex";
 
         idInput.value = "Penguin-"; 
+        loadAdminInventoryMatrix(); 
     }
 
     function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
@@ -337,12 +352,12 @@
         if (error || !rawLogs) return;
 
         globalCachedLogsArray = rawLogs; 
-
         globalFleetClusters = {};
+
         rawLogs.forEach(log => {
             const id = log.penguin_id;
             if (!globalFleetClusters[id]) {
-                globalFleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id, secretTag: log.secret_tag || null };
+                globalFleetClusters[id] = { id: id, points: [], pingsCount: 0, landmarksCount: 0, activeName: id, secretTag: log.secret_tag || null, compiledMiles: 0 };
             }
             if (!globalFleetClusters[id].secretTag && log.secret_tag) {
                 globalFleetClusters[id].secretTag = log.secret_tag;
@@ -357,14 +372,80 @@
             if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[id].activeName = log.custom_name;
         });
 
-        // Set up Pagination
-        // Reverse so the newest generated items are at the top (descending order)
-        globalFleetKeys = Object.keys(globalFleetClusters).reverse();
-        
-        const totalPages = Math.ceil(globalFleetKeys.length / itemsPerPage);
-        currentPage = totalPages > 0 ? totalPages : 1; // Default to last page
+        // Pre-calculate miles for sorting
+        Object.keys(globalFleetClusters).forEach(key => {
+            let miles = 0;
+            const pts = globalFleetClusters[key].points;
+            for (let i = 0; i < pts.length - 1; i++) {
+                miles += getDistanceBetweenPoints(pts[i].lat, pts[i].lng, pts[i+1].lat, pts[i+1].lng);
+            }
+            globalFleetClusters[key].compiledMiles = miles;
+        });
+
+        // Apply existing sort or default reverse creation order
+        if (currentSortCol) {
+            applySortLogic();
+        } else {
+            globalFleetKeys = Object.keys(globalFleetClusters).reverse();
+            const totalPages = Math.ceil(globalFleetKeys.length / itemsPerPage);
+            currentPage = totalPages > 0 ? totalPages : 1; 
+        }
         
         renderRookeryPage();
+    }
+
+    // ===================================================
+    // SORTING & PAGINATION
+    // ===================================================
+    function sortRookery(column) {
+        if (currentSortCol === column) {
+            currentSortAsc = !currentSortAsc;
+        } else {
+            currentSortCol = column;
+            currentSortAsc = false; 
+        }
+        
+        applySortLogic();
+        updateSortHeaders();
+        
+        currentPage = 1; 
+        renderRookeryPage();
+    }
+
+    function applySortLogic() {
+        globalFleetKeys = Object.keys(globalFleetClusters);
+        globalFleetKeys.sort((a, b) => {
+            const clusterA = globalFleetClusters[a];
+            const clusterB = globalFleetClusters[b];
+            let valA, valB;
+
+            if (currentSortCol === 'id') { valA = clusterA.id; valB = clusterB.id; }
+            else if (currentSortCol === 'name') { valA = clusterA.activeName.toLowerCase(); valB = clusterB.activeName.toLowerCase(); }
+            else if (currentSortCol === 'pings') { valA = clusterA.pingsCount; valB = clusterB.pingsCount; }
+            else if (currentSortCol === 'landmarks') { valA = clusterA.landmarksCount; valB = clusterB.landmarksCount; }
+            else if (currentSortCol === 'miles') { valA = clusterA.compiledMiles; valB = clusterB.compiledMiles; }
+
+            if (valA < valB) return currentSortAsc ? -1 : 1;
+            if (valA > valB) return currentSortAsc ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function updateSortHeaders() {
+        const headers = ['id', 'name', 'pings', 'landmarks', 'miles'];
+        headers.forEach(h => {
+            const el = document.getElementById(`th-${h}`);
+            if (el) {
+                const baseText = el.innerText.split(' ')[0] + (h === 'name' ? ' Name' : '') + (h === 'pings' ? ' Pings' : '') + (h === 'miles' ? ' Mileage' : '');
+                if (currentSortCol === h) {
+                    el.innerText = `${baseText} ${currentSortAsc ? '↑' : '↓'}`;
+                    el.style.color = '#ffffff';
+                } else {
+                    el.innerText = `${baseText} ↕`;
+                    el.style.color = '#f5d0fe';
+                }
+            }
+        });
     }
 
     function renderRookeryPage() {
@@ -382,22 +463,14 @@
 
         pageKeys.forEach(key => {
             const summaryNode = globalFleetClusters[key];
-            let compiledMiles = 0;
-            for (let i = 0; i < summaryNode.points.length - 1; i++) {
-                compiledMiles += getDistanceBetweenPoints(
-                    summaryNode.points[i].lat, summaryNode.points[i].lng,
-                    summaryNode.points[i+1].lat, summaryNode.points[i+1].lng
-                );
-            }
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="font-weight:bold;color:#f5d0fe;cursor:pointer;">🐧 ${summaryNode.id}</td>
                 <td style="cursor:pointer;"><span style="color:#fae8ff;">${summaryNode.activeName}</span></td>
                 <td style="cursor:pointer;"><span class="badge-count">${summaryNode.pingsCount} stops</span></td>
                 <td style="cursor:pointer;"><span style="color:#cc00ff;">🏛️ ${summaryNode.landmarksCount}</span></td>
-                <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${compiledMiles.toFixed(1)} mi</span></td>
-                <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Release to the Wild</button></td>`;
+                <td style="cursor:pointer;"><span style="color:#00e5ff;font-family:monospace;">${summaryNode.compiledMiles.toFixed(1)} mi</span></td>
+                <td><button class="btn-command btn-danger delete-btn" style="padding: 4px 8px; font-size: 8pt;">Delete</button></td>`;
             
             Array.from(tr.children).forEach((td, idx) => {
                 if (idx < 5) { 
@@ -446,7 +519,6 @@
         document.getElementById('audit-title-id').innerText = `Auditing Workspace: ${targetId}`;
         document.getElementById('audit-title-custom').innerText = `Current Registry Designation: "${displayName}"`;
         
-        // Dynamically spin up the QR sticker for the Audit Panel!
         const urlDisplay = document.getElementById('audit-url-display');
         const stickerImg = document.getElementById('audit-sticker-img');
 
@@ -511,14 +583,14 @@
     }
 
     async function deleteEntirePenguin(targetId) {
-        if (!confirm(`🚨 WARNING: Are you sure you want to completely release ${targetId} to the wild?\n\nThis will permanently delete all tracking logs and photos.`)) return;
+        if (!confirm(`🚨 WARNING: Are you sure you want to completely DELETE ${targetId}?\n\nThis will permanently delete all tracking logs and photos.`)) return;
 
         const { data, error } = await supabaseClient.from('penguin_logs').delete().eq('penguin_id', targetId).select(); 
 
-        if (error) return alert("Release operation failed: " + error.message);
-        if (!data || data.length === 0) return alert("⚠️ RELEASE FAILED!\n\nSupabase RLS is quietly blocking deletions. Please enable 'DELETE' policies for 'anon' users.");
+        if (error) return alert("Delete operation failed: " + error.message);
+        if (!data || data.length === 0) return alert("⚠️ DELETE FAILED!\n\nSupabase RLS is quietly blocking deletions. Please enable 'DELETE' policies for 'anon' users.");
 
-        alert(`Success. ${targetId} released.`);
+        alert(`Success. ${targetId} deleted.`);
         if (activeAuditedPenguinId === targetId) {
             document.getElementById('audit-panel-card').style.display = "none";
             activeAuditedPenguinId = null;
