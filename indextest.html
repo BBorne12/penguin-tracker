@@ -205,11 +205,6 @@
     <div class="modal-card">
         <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
         <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
-        
-        <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
-        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
-            </div>
-        
         <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
@@ -300,7 +295,7 @@
 
             <div id="colony-container" style="display: none;">
                 <ul class="leaderboard-list" id="colony-list-output">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Loading colony...</li>
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size: 11pt;">Querying database pipelines... Data are aggregating.</li>
                 </ul>
             </div>
         </div>
@@ -419,7 +414,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.3 (Stateless Core)</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.4 (Stateless Core)</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -448,12 +443,8 @@
     let isViewOnlyMode = true; 
     
     let activeCustomName = "";
-    let activeAvatarColor = "#38bdf8"; 
     let activeTab = "distance"; 
     let currentSearchQuery = "";
-
-    const AVATAR_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'];
-    let selectedAvatarColor = '#38bdf8'; 
 
     let activePassportPage = 1; let activeAllStopsPage = 1; 
     const PASSPORT_ITEMS_PER_PAGE = 10;
@@ -486,8 +477,8 @@
     // --- BULLETPROOF FACTORY LOG FILTER ---
     function isFactoryLog(note) {
         if (!note) return false;
-        const lowerNote = note.toLowerCase();
-        return lowerNote.includes('initial factory registration') || lowerNote.includes('penguin hatched');
+        // The hatced log is no longer treated as a factory log, allowing it to populate naturally
+        return note.toLowerCase().includes('initial factory registration');
     }
 
     // ===================================================
@@ -510,7 +501,7 @@
 
     window.addEventListener("DOMContentLoaded", async function() {
         initializeLiveMap();
-        updateProfileAvatar(activeAvatarColor); 
+        updateProfileAvatar(); 
         
         if (penguinId !== "Mystery Penguin") {
             isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
@@ -667,17 +658,16 @@
         }
 
         const { data: allLogs } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note')
+            .select('penguin_id, custom_name, latitude, longitude, finder_note')
             .in('penguin_id', colonyIds)
             .order('created_at', { ascending: true });
             
         const colonyStats = {};
-        colonyIds.forEach(id => colonyStats[id] = { name: id, avatar: '#38bdf8', points: [] });
+        colonyIds.forEach(id => colonyStats[id] = { name: id, points: [] });
         
         if (allLogs) {
             allLogs.forEach(log => {
                 if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
-                if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
                 if(log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
                     colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
                 }
@@ -708,7 +698,7 @@
             li.className = 'leaderboard-row'; 
             li.innerHTML = `
                 <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg(colonyStats[id].avatar)}</div>
+                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg()}</div>
                     <span class="p-name" style="font-size:11pt;">🐧 ${colonyStats[id].name}</span>
                 </div>
                 <div style="display:flex; align-items:center; gap: 12px;">
@@ -761,9 +751,6 @@
         const w = document.getElementById('welcome-modal'); 
         if (w) w.style.display = 'none'; 
         
-        // SEQUENCED MODAL HANDOFF:
-        // If the penguin is unhatched (doesn't have a custom name yet), 
-        // open the First Discovery modal right after they finish reading the welcome story.
         if (!globalNamedEntry && !isViewOnlyMode) {
             const f = document.getElementById('first-find-modal');
             if (f) f.style.display = 'flex';
@@ -843,42 +830,27 @@
     // ===================================================
     // AVATAR SYSTEM
     // ===================================================
-    function getPenguinSvg(bgColor) {
+    function getPenguinSvg() {
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
-            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
-            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
-            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
+            <rect width="100" height="100" rx="20" fill="#cbd5e1"/>
+            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#111827"/>
+            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#111827"/>
+            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#111827"/>
             <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
             <circle cx="36" cy="45" r="15" fill="#ffffff"/>
             <circle cx="64" cy="45" r="15" fill="#ffffff"/>
-            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
-            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
-            <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
-            <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
+            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#4b5563"/>
+            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#4b5563"/>
+            <circle cx="36" cy="45" r="4.5" fill="#000000"/>
+            <circle cx="64" cy="45" r="4.5" fill="#000000"/>
             <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
             <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
-            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
+            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#4b5563"/>
         </svg>`;
-    }
-
-    function initAvatarGrid() {
-        const grid = document.getElementById('avatar-grid');
-        if (!grid) return; grid.innerHTML = '';
-        AVATAR_COLORS.forEach(color => {
-            const div = document.createElement('div');
-            div.style.width = '45px'; div.style.height = '45px'; div.style.cursor = 'pointer'; div.style.borderRadius = '10px';
-            div.style.border = selectedAvatarColor === color ? '3px solid #39ff14' : '2px solid transparent';
-            div.innerHTML = getPenguinSvg(color);
-            div.onclick = () => { selectedAvatarColor = color; initAvatarGrid(); };
-            grid.appendChild(div);
-        });
     }
 
     function openEditModal() {
         document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
-        selectedAvatarColor = activeAvatarColor || '#38bdf8';
-        initAvatarGrid();
         document.getElementById('edit-profile-modal').style.display = 'flex';
     }
 
@@ -888,17 +860,17 @@
         const newName = document.getElementById('edit-custom-name').value.trim();
         if(!newName) return alert("Penguin name cannot be empty.");
 
-        activeCustomName = newName; activeAvatarColor = selectedAvatarColor;
+        activeCustomName = newName;
         
-        await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName, avatar_color: activeAvatarColor }).eq('penguin_id', penguinId);
+        await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
         
         // Force refresh to instantly sync interface
         location.reload();
     }
 
-    function updateProfileAvatar(colorHex) {
+    function updateProfileAvatar() {
         const container = document.getElementById('profile-avatar-container');
-        if (container) container.innerHTML = getPenguinSvg(colorHex || '#38bdf8');
+        if (container) container.innerHTML = getPenguinSvg();
     }
 
     // ===================================================
@@ -1103,14 +1075,11 @@
             
             activeCustomName = nameInput;
 
-            if (globalLogData.length === 0) {
-                await supabaseClient.from('penguin_logs').insert([{
-                    penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
-                    finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
-                }]);
-            } else {
-                await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName }).eq('penguin_id', penguinId);
-            }
+            // Generate a metadata log that records the name but will not disrupt map data.
+            await supabaseClient.from('penguin_logs').insert([{
+                penguin_id: penguinId, custom_name: activeCustomName,
+                finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
+            }]);
             
             // Force a hard reload to ensure all UI elements build perfectly
             location.reload();
@@ -1345,7 +1314,7 @@
 
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color')
+            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
@@ -1366,11 +1335,9 @@
         const firstFindModal = document.getElementById('first-find-modal');
 
         if (!globalNamedEntry && !isViewOnlyMode) {
-            // Brand new! Show Welcome first.
             if (welcomeModal) welcomeModal.style.display = 'flex';
             if (firstFindModal) firstFindModal.style.display = 'none';
         } else {
-            // Veteran penguin! Hide both.
             if (welcomeModal) welcomeModal.style.display = 'none';
             if (firstFindModal) firstFindModal.style.display = 'none';
         }
@@ -1387,15 +1354,12 @@
         let resolvedDisplayName = globalNamedEntry ? globalNamedEntry : targetId;
         activeCustomName = resolvedDisplayName;
         
-        const avatarEntry = logs.find(log => log.avatar_color && log.avatar_color.trim() !== "");
-        activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
-        
         const pIdEl = document.getElementById('penguin-id-display');
         if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
         const pNameEl = document.getElementById("penguin-name-display");
         if (pNameEl) pNameEl.innerText = resolvedDisplayName;
 
-        updateProfileAvatar(activeAvatarColor);
+        updateProfileAvatar();
 
         let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
         const btnPenguin = document.getElementById('tab-my-penguin');
@@ -1495,7 +1459,7 @@
 
         const submissionData = {
             penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, 
-            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, avatar_color: activeAvatarColor, secret_tag: securityTagParam 
+            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, secret_tag: securityTagParam 
         };
 
         const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
