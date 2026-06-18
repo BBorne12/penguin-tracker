@@ -135,8 +135,8 @@
                 <img id="final-sticker-img" style="width: 400px; height: 400px; background: white; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
                 
                 <div style="flex: 1;">
-                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Symmetrical Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered internally at ultra-high 1200x1200 resolution. Zero outer padding applied. Right-click and copy image directly to grab the high-res file for printing.</p>
+                    <strong style="color: #f5d0fe; font-size: 10pt; display: block;">High-Res Sticker Rendering Complete!</strong>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered internally at 1200x1200 with zero outer padding. Right-click and copy image directly to grab the high-res file for printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
@@ -158,7 +158,7 @@
                     </thead>
                     <tbody id="inventory-tbody">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... The data are aggregating.</td>
+                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... These data are aggregating.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -185,7 +185,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.16</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.17</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -237,16 +237,13 @@
         location.reload();
     }
 
-    // Custom function to perfectly stretch text to match a specific width
-    function drawStretchedText(ctx, text, x, y, targetWidth, fontStyle, baseline) {
+    // Function to stretch text to an exact boundary length
+    function drawStretchedText(ctx, text, x, y, targetWidth, fontStyle, baseline, align="left") {
         ctx.font = fontStyle;
         ctx.textBaseline = baseline;
-        ctx.textAlign = "center";
+        ctx.textAlign = align;
         const metrics = ctx.measureText(text);
-        const actualWidth = metrics.width;
-        // Calculate exact horizontal squeeze/stretch factor
-        const scaleX = targetWidth / actualWidth;
-
+        const scaleX = targetWidth / metrics.width;
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(scaleX, 1);
@@ -255,7 +252,7 @@
     }
 
     // ===================================================
-    // HIGH-RES SYMMETRICAL STICKER GENERATOR (1200x1200)
+    // HIGH-RES 1200x1200 STICKER GENERATOR
     // ===================================================
     function generateStickerImage(penguinId, secretTag, targetImgElementId) {
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
@@ -264,7 +261,7 @@
         const tempDiv = document.createElement("div");
         new QRCode(tempDiv, { 
             text: secureUrl, 
-            width: 840, // 840x840 QR Code
+            width: 840, 
             height: 840, 
             colorDark : "#000000", 
             colorLight : "#ffffff", 
@@ -278,48 +275,53 @@
             const tempComposite = document.createElement("canvas");
             const ctx = tempComposite.getContext('2d');
             
-            // Native 1200x1200 High-Res Canvas
+            // Native 1200x1200 Canvas
             tempComposite.width = 1200; 
             tempComposite.height = 1200; 
             
             ctx.fillStyle = "#ffffff"; 
             ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
             
-            // Draw QR Code centered. (1200 - 840) / 2 = 180 margins
+            // Center the QR Code, leaving 180px margins on all sides
             ctx.drawImage(qrCanvas, 180, 180, 840, 840);
             
             ctx.fillStyle = "#000000"; 
             
-            // Heavy fonts
-            const heavyFont = "900 150px 'Arial Black', Impact, sans-serif";
+            // Apply Font Rules: Heavy/Bold for top & right, Normal/Unbolded for left & bottom
+            const heavyFont = "900 160px 'Arial Black', Impact, sans-serif";
+            const normalFont = "normal 130px Arial, Helvetica, sans-serif";
             
-            // TOP TEXT: PENGUIN 
-            // X=600 is center. Y=-8 physically shaves the padding so ink hits the edge.
-            // Width strictly locked to 840px to align perfectly with the QR Code.
-            drawStretchedText(ctx, "PENGUIN", 600, -8, 840, heavyFont, "top");
+            // TOP TEXT: PENGUIN (Bold)
+            // X=180 matches the left edge of the QR code.
+            // Width=840 matches the right edge of the QR code exactly.
+            // Y=-10 slices off the invisible font padding so the ink touches the top canvas boundary.
+            drawStretchedText(ctx, "PENGUIN", 180, -10, 840, heavyFont, "top", "left");
             
-            // BOTTOM TEXT: ID: {ID} 
-            // Y=1208 physically pushes the baseline to the extreme bottom edge.
-            ctx.font = heavyFont;
+            // RIGHT TEXT: TRACKER™ (Bold)
+            ctx.save(); 
+            ctx.translate(1200, 0); 
+            ctx.rotate(Math.PI / 2); 
+            // Stretches the absolute full height of the 1200px canvas to fill the corners.
+            // Transformed Y=-10 slices off the invisible font padding so the ink touches the right boundary.
+            drawStretchedText(ctx, "TRACKER™", 0, -10, 1200, heavyFont, "top", "left");
+            ctx.restore();
+
+            // LEFT TEXT: SCAN TO TRACK (Normal/Unbolded)
+            ctx.save(); 
+            ctx.translate(0, 1200); 
+            ctx.rotate(-Math.PI / 2); 
+            // Stretches exactly 1020px to stop flush underneath PENGUIN (1200 total - 180 top margin = 1020).
+            // Transformed Y=-10 slices off the invisible font padding so the ink touches the left boundary.
+            drawStretchedText(ctx, "SCAN TO TRACK", 0, -10, 1020, normalFont, "top", "left");
+            ctx.restore();
+            
+            // BOTTOM TEXT: ID: {ID} (Normal/Unbolded)
+            ctx.font = normalFont;
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
-            ctx.fillText(`ID: ${baseIdNumber}`, 600, 1208);
-            
-            // LEFT TEXT: SCAN TO TRACK 
-            ctx.save(); 
-            ctx.translate(0, 600); 
-            ctx.rotate(-Math.PI / 2); 
-            // Transformed: Y=-8 pushes to the left boundary.
-            drawStretchedText(ctx, "SCAN TO TRACK", 0, -8, 840, heavyFont, "top");
-            ctx.restore();
-            
-            // RIGHT TEXT: TRACKER™ 
-            ctx.save(); 
-            ctx.translate(1200, 600); 
-            ctx.rotate(Math.PI / 2); 
-            // Transformed: Y=-8 pushes to the right boundary.
-            drawStretchedText(ctx, "TRACKER™", 0, -8, 840, heavyFont, "top");
-            ctx.restore();
+            // Centered perfectly under the QR Code at X=600.
+            // Y=1215 drops the baseline physically onto the bottom boundary edge to kill padding.
+            ctx.fillText(`ID: ${baseIdNumber}`, 600, 1215);
             
             const imgEl = document.getElementById(targetImgElementId);
             if(imgEl) { 
