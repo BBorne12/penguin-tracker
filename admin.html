@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iceberg Command Center | Penguin Tracker™</title>
     
+    <!-- Penguin Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -122,6 +123,7 @@
 
     <div class="layout-section">
         
+        <!-- FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
@@ -136,12 +138,13 @@
                 
                 <div style="flex: 1;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Asymmetrical Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered internally at 1200x1200. Restored the full-height corner tracking and centered the left text block. Right-click and copy image directly for printing.</p>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered internally at 1200x1200. Restored full-height tracking, bolded side text, and injected custom label-maker left margin. Right-click and copy image directly for printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
         </div>
 
+        <!-- ACTIVE INVENTORY -->
         <div class="glass-card">
             <h2>🐧 The Rookery</h2>
             <div style="overflow-x: auto;">
@@ -163,9 +166,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls -->
             <div id="pagination-controls" style="display: flex; justify-content: center; gap: 15px; margin-top: 16px; align-items: center;"></div>
         </div>
 
+        <!-- AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
                 <div style="flex: 1;">
@@ -179,13 +184,15 @@
             </div>
 
             <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                </div>
+                <!-- Logs inject here -->
+            </div>
         </div>
 
     </div>
 
+    <!-- BRANDED FOOTER -->
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.19</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.20</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -287,39 +294,35 @@
             
             ctx.fillStyle = "#000000"; 
             
-            // Apply Font Rules: Heavy/Bold for top & right, Normal/Unbolded for left & bottom
+            // Apply Font Rules
             const heavyFont = "900 140px 'Arial Black', Impact, sans-serif";
+            // Custom font sizing for SCAN TO TRACK to perfectly accommodate the left padding
+            const scanFont = "900 115px 'Arial Black', Impact, sans-serif"; 
             const normalFont = "normal 115px Arial, Helvetica, sans-serif";
             
             // TOP TEXT: PENGUIN (Bold)
-            // X=140 matches the left edge of the QR code exactly.
-            // Width=920 matches the right edge of the QR code exactly.
-            // Y=-10 physically slices off the font padding so it touches the absolute top.
             drawStretchedText(ctx, "PENGUIN", 140, -10, 920, heavyFont, "top", "left");
             
             // RIGHT TEXT: TRACKER™ (Bold)
-            // Restoring the full 1200px height so it fills the top-right and bottom-right corners.
             ctx.save(); 
             ctx.translate(1200, 0); 
             ctx.rotate(Math.PI / 2); 
             drawStretchedText(ctx, "TRACKER™", 0, -10, 1200, heavyFont, "top", "left");
             ctx.restore();
 
-            // LEFT TEXT: SCAN TO TRACK (Normal/Unbolded, Centered relative to QR Code)
-            // Y=1060 is exactly the bottom edge of the QR code.
-            // Spans 920 up to exactly match the top edge of the QR code.
+            // LEFT TEXT: SCAN TO TRACK (Bold, Centered relative to QR Code)
             ctx.save(); 
             ctx.translate(0, 1060); 
             ctx.rotate(-Math.PI / 2); 
-            drawStretchedText(ctx, "SCAN TO TRACK", 0, -10, 920, normalFont, "top", "left");
+            // Y=15 shifts the text slightly inward, creating a permanent visual left-margin for label makers
+            // without corrupting the inner gap distance to the QR code.
+            drawStretchedText(ctx, "SCAN TO TRACK", 0, 15, 920, scanFont, "top", "left");
             ctx.restore();
             
             // BOTTOM TEXT: ID: {ID} (Normal/Unbolded, Centered)
             ctx.font = normalFont;
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
-            // Centered perfectly under the QR Code at X=600.
-            // Y=1215 drops the baseline physically onto the bottom boundary edge.
             ctx.fillText(`ID: ${baseIdNumber}`, 600, 1215);
             
             const imgEl = document.getElementById(targetImgElementId);
