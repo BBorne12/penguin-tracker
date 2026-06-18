@@ -136,7 +136,7 @@
                 
                 <div style="flex: 1;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Square Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered at native 400x400 resolution with edge-to-edge layout. Right-click and copy image directly for printing.</p>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered at native 400x400 resolution with perfect bounding-box framing. Right-click and copy image directly for printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
@@ -158,7 +158,7 @@
                     </thead>
                     <tbody id="inventory-tbody">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... The data are aggregating.</td>
+                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -185,7 +185,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.10</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.11</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -247,8 +247,8 @@
         const tempDiv = document.createElement("div");
         new QRCode(tempDiv, { 
             text: secureUrl, 
-            width: 320, 
-            height: 320, 
+            width: 280, // Decreased to allow larger margins
+            height: 280, 
             colorDark : "#000000", 
             colorLight : "#ffffff", 
             correctLevel : QRCode.CorrectLevel.L 
@@ -261,45 +261,46 @@
             const tempComposite = document.createElement("canvas");
             const ctx = tempComposite.getContext('2d');
             
-            // 400x400 Canvas
+            // Native 400x400 Canvas
             tempComposite.width = 400; 
             tempComposite.height = 400; 
             
             ctx.fillStyle = "#ffffff"; 
             ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
             
-            // Draw QR Code leaving razor-thin 40px margins
-            ctx.drawImage(qrCanvas, 40, 40, 320, 320);
+            // Draw QR Code leaving exact 60px margins on all 4 sides
+            ctx.drawImage(qrCanvas, 60, 60, 280, 280);
             
             ctx.fillStyle = "#000000"; 
-            ctx.textAlign = "center"; 
             ctx.textBaseline = "middle";
             
-            // Use blocky, heavy font identical to the mockup
-            const heavyFont = "900 48px 'Arial Black', Impact, sans-serif";
+            // TOP TEXT: PENGUIN (Bold, Right Aligned to edge of QR Code)
+            ctx.font = "900 65px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.textAlign = "right";
+            // Anchored at x=340 (Right edge of QR), squeezing slightly if needed to guarantee flush alignment
+            ctx.fillText("PENGUIN", 340, 30, 280);
             
-            // TOP TEXT: PENGUIN
-            ctx.font = heavyFont;
-            ctx.fillText("PENGUIN", 200, 20, 320);
+            // BOTTOM TEXT: ID: {ID} (Normal, Centered)
+            ctx.font = "normal 36px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`ID: ${baseIdNumber}`, 200, 370, 280);
             
-            // BOTTOM TEXT: ID: {ID}
-            ctx.font = heavyFont;
-            ctx.fillText(`ID: ${baseIdNumber}`, 200, 380, 320);
-            
-            // LEFT TEXT: SCAN TO TRACK
+            // LEFT TEXT: SCAN TO TRACK (Normal, Left Aligned from bottom of QR)
             ctx.save(); 
-            ctx.translate(20, 200); 
+            ctx.translate(30, 340); // 340 = Bottom edge of QR
             ctx.rotate(-Math.PI / 2); 
-            ctx.font = heavyFont;
-            ctx.fillText("SCAN TO TRACK", 0, 0, 320); 
+            ctx.font = "normal 55px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("SCAN TO TRACK", 0, 0, 280); 
             ctx.restore();
             
-            // RIGHT TEXT: TRACKER™
+            // RIGHT TEXT: TRACKER™ (Bold, Left Aligned from top of QR)
             ctx.save(); 
-            ctx.translate(380, 200); 
+            ctx.translate(370, 60); // 60 = Top edge of QR
             ctx.rotate(Math.PI / 2); 
-            ctx.font = heavyFont;
-            ctx.fillText("TRACKER™", 0, 0, 320); 
+            ctx.font = "900 65px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("TRACKER™", 0, 0, 280); 
             ctx.restore();
             
             const imgEl = document.getElementById(targetImgElementId);
