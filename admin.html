@@ -136,7 +136,7 @@
                 
                 <div style="flex: 1;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Square Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered at native 400x400 resolution. Right-click and copy image directly for printing.</p>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered at native 400x400 resolution with edge-to-edge layout. Right-click and copy image directly for printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
@@ -158,7 +158,7 @@
                     </thead>
                     <tbody id="inventory-tbody">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... Data are aggregating.</td>
+                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... The data are aggregating.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -185,7 +185,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.9</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.10</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -238,7 +238,7 @@
     }
 
     // ===================================================
-    // TIGHT 1:1 STICKER GENERATOR (400x400)
+    // TIGHT 1:1 STICKER GENERATOR (400x400) Edge-To-Edge
     // ===================================================
     function generateStickerImage(penguinId, secretTag, targetImgElementId) {
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
@@ -275,28 +275,31 @@
             ctx.textAlign = "center"; 
             ctx.textBaseline = "middle";
             
-            // TOP TEXT: Massive Font
-            ctx.font = "900 44px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.fillText("PENGUIN TRACKER™", 200, 20, 380);
+            // Use blocky, heavy font identical to the mockup
+            const heavyFont = "900 48px 'Arial Black', Impact, sans-serif";
             
-            // BOTTOM TEXT: Matches Side Text size perfectly
-            ctx.font = "900 36px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.fillText(`ID: ${baseIdNumber}`, 200, 380, 380);
+            // TOP TEXT: PENGUIN
+            ctx.font = heavyFont;
+            ctx.fillText("PENGUIN", 200, 20, 320);
+            
+            // BOTTOM TEXT: ID: {ID}
+            ctx.font = heavyFont;
+            ctx.fillText(`ID: ${baseIdNumber}`, 200, 380, 320);
             
             // LEFT TEXT: SCAN TO TRACK
             ctx.save(); 
             ctx.translate(20, 200); 
             ctx.rotate(-Math.PI / 2); 
-            ctx.font = "900 36px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.font = heavyFont;
             ctx.fillText("SCAN TO TRACK", 0, 0, 320); 
             ctx.restore();
             
-            // RIGHT TEXT: SCAN TO TRACK
+            // RIGHT TEXT: TRACKER™
             ctx.save(); 
             ctx.translate(380, 200); 
             ctx.rotate(Math.PI / 2); 
-            ctx.font = "900 36px -apple-system, BlinkMacSystemFont, sans-serif";
-            ctx.fillText("SCAN TO TRACK", 0, 0, 320); 
+            ctx.font = heavyFont;
+            ctx.fillText("TRACKER™", 0, 0, 320); 
             ctx.restore();
             
             const imgEl = document.getElementById(targetImgElementId);
@@ -406,7 +409,6 @@
         if (tag) {
             document.getElementById('audit-url-display').innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${tag}`;
             document.getElementById('audit-url-display').style.display = "block";
-            // Ensure audit image also renders at 400x400 internally but scaled via CSS if needed
             generateStickerImage(id, tag, 'audit-sticker-img');
         }
         renderSurgicalLogsFeed();
