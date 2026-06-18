@@ -136,7 +136,7 @@
                 
                 <div style="flex: 1;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Square Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered at native 400x400 resolution with perfect bounding-box framing. Right-click and copy image directly for printing.</p>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered at native 400x400 resolution with absolute edge-to-edge layout. Right-click and copy image directly for printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
@@ -185,7 +185,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.11</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.12</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -238,7 +238,7 @@
     }
 
     // ===================================================
-    // TIGHT 1:1 STICKER GENERATOR (400x400) Edge-To-Edge
+    // ZERO-PADDING 1:1 STICKER GENERATOR (400x400)
     // ===================================================
     function generateStickerImage(penguinId, secretTag, targetImgElementId) {
         const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
@@ -247,8 +247,8 @@
         const tempDiv = document.createElement("div");
         new QRCode(tempDiv, { 
             text: secureUrl, 
-            width: 280, // Decreased to allow larger margins
-            height: 280, 
+            width: 300, // Explicit 300x300 QR Code mapping
+            height: 300, 
             colorDark : "#000000", 
             colorLight : "#ffffff", 
             correctLevel : QRCode.CorrectLevel.L 
@@ -268,39 +268,48 @@
             ctx.fillStyle = "#ffffff"; 
             ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
             
-            // Draw QR Code leaving exact 60px margins on all 4 sides
-            ctx.drawImage(qrCanvas, 60, 60, 280, 280);
+            // Draw QR Code precisely in the center
+            ctx.drawImage(qrCanvas, 45, 55, 300, 300);
             
             ctx.fillStyle = "#000000"; 
-            ctx.textBaseline = "middle";
+            
+            const heavyFont = "900 70px 'Arial Black', Impact, sans-serif";
+            const normalFont = "normal 52px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
             
             // TOP TEXT: PENGUIN (Bold, Right Aligned to edge of QR Code)
-            ctx.font = "900 65px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.font = heavyFont;
             ctx.textAlign = "right";
-            // Anchored at x=340 (Right edge of QR), squeezing slightly if needed to guarantee flush alignment
-            ctx.fillText("PENGUIN", 340, 30, 280);
+            ctx.textBaseline = "top";
+            // Right edge of QR is 345. Y is pushed to -7 to touch top margin.
+            ctx.fillText("PENGUIN", 345, -7, 300);
             
             // BOTTOM TEXT: ID: {ID} (Normal, Centered)
-            ctx.font = "normal 36px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.font = normalFont;
             ctx.textAlign = "center";
-            ctx.fillText(`ID: ${baseIdNumber}`, 200, 370, 280);
+            ctx.textBaseline = "bottom";
+            // X is center of QR (45 + 150 = 195). Y is pushed to 407 to touch bottom margin.
+            ctx.fillText(`ID: ${baseIdNumber}`, 195, 407, 300);
             
             // LEFT TEXT: SCAN TO TRACK (Normal, Left Aligned from bottom of QR)
             ctx.save(); 
-            ctx.translate(30, 340); // 340 = Bottom edge of QR
+            ctx.translate(0, 355); // Anchor to Bottom Left of QR height
             ctx.rotate(-Math.PI / 2); 
-            ctx.font = "normal 55px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.font = normalFont;
             ctx.textAlign = "left";
-            ctx.fillText("SCAN TO TRACK", 0, 0, 280); 
+            ctx.textBaseline = "top";
+            // Y is pushed to -8 to push text to extreme left margin
+            ctx.fillText("SCAN TO TRACK", 0, -8, 300); 
             ctx.restore();
             
             // RIGHT TEXT: TRACKER™ (Bold, Left Aligned from top of QR)
             ctx.save(); 
-            ctx.translate(370, 60); // 60 = Top edge of QR
+            ctx.translate(400, 55); // Anchor to Top Right of QR height
             ctx.rotate(Math.PI / 2); 
-            ctx.font = "900 65px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+            ctx.font = heavyFont;
             ctx.textAlign = "left";
-            ctx.fillText("TRACKER™", 0, 0, 280); 
+            ctx.textBaseline = "top";
+            // Y is pushed to -7 to push text to extreme right margin
+            ctx.fillText("TRACKER™", 0, -7, 300); 
             ctx.restore();
             
             const imgEl = document.getElementById(targetImgElementId);
