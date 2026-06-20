@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iceberg Command Center | Penguin Tracker™</title>
     
-    <!-- Penguin Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -51,7 +50,7 @@
         .admin-input {
             width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 70, 239, 0.2);
             border-radius: 8px; padding: 12px; color: #ffffff; font-size: 11pt;
-            outline: none; margin-bottom: 12px;
+            outline: none; margin-bottom: 12px; box-sizing: border-box;
         }
 
         .admin-input:focus {
@@ -81,7 +80,7 @@
         }
         .matrix-table th:hover { color: #ffffff; }
         .matrix-table tbody tr { transition: background 0.2s; }
-        .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); }
+        .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); cursor: pointer; }
 
         .badge-count { font-weight: bold; color: #a21caf; background: rgba(217, 70, 239, 0.15); padding: 2px 6px; border-radius: 4px; }
         .log-audit-item { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 6px; }
@@ -122,8 +121,28 @@
     </div>
 
     <div class="layout-section">
+
+        <div class="glass-card">
+            <h2>🎨 The Style Forge</h2>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Create and manage custom 3D printed styles and their avatar images.</p>
+            
+            <select id="forge-style-select" class="admin-input" onchange="handleForgeSelect()">
+                <option value="new">-- Create New Style --</option>
+            </select>
+            
+            <input type="text" id="forge-style-name" class="admin-input" placeholder="Style Name (e.g., Galaxy Black)">
+            
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+                <input type="file" id="forge-style-image" class="admin-input" accept="image/*" style="margin-bottom: 0;">
+                <img id="forge-preview-img" src="" style="width: 40px; height: 40px; border-radius: 4px; border: 1px solid #555; display: none; object-fit: cover;">
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-command" onclick="saveStyle()" id="forge-btn-save">Save Style</button>
+                <button class="btn-command btn-danger" onclick="deleteStyle()" id="forge-btn-delete" style="display: none;">Delete</button>
+            </div>
+        </div>
         
-        <!-- FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
@@ -144,7 +163,6 @@
             </div>
         </div>
 
-        <!-- ACTIVE INVENTORY -->
         <div class="glass-card">
             <h2>🐧 The Rookery</h2>
             <div style="overflow-x: auto;">
@@ -166,11 +184,9 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Pagination Controls -->
             <div id="pagination-controls" style="display: flex; justify-content: center; gap: 15px; margin-top: 16px; align-items: center;"></div>
         </div>
 
-        <!-- AUDIT PANEL -->
         <div class="glass-card" id="audit-panel-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
                 <div style="flex: 1;">
@@ -183,16 +199,24 @@
                 </div>
             </div>
 
-            <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                <!-- Logs inject here -->
+            <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                <label style="font-size: 9pt; color: #cbd5e1; display: block; margin-bottom: 4px;">Assigned Physical Style:</label>
+                <div style="display: flex; gap: 8px;">
+                    <select id="audit-style-select" class="admin-input" style="margin-bottom: 0;">
+                        <option value="">Unassigned Base Model</option>
+                    </select>
+                    <button class="btn-command" onclick="assignStyleToPenguin(event)">Update</button>
+                </div>
             </div>
+
+            <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                </div>
         </div>
 
     </div>
 
-    <!-- BRANDED FOOTER -->
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.12.20</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.13.0</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -206,6 +230,9 @@
     let globalCachedLogsArray = [];
     let globalFleetKeys = [];
     let globalFleetClusters = {};
+    let globalStyles = [];
+    let forgeSelectedId = null;
+    
     let currentPage = 1;
     const itemsPerPage = 10;
     let currentSortCol = null;
@@ -227,6 +254,7 @@
             sessionStorage.setItem("admin_verified", "true");
             document.getElementById('auth-lock-screen').style.display = "none";
             document.getElementById('admin-main-ui').style.display = "flex";
+            loadStyles();
             loadAdminInventoryMatrix();
         } else {
             alert("Authorization token signature mismatch. Access denied.");
@@ -236,12 +264,162 @@
     if (sessionStorage.getItem("admin_verified") === "true") {
         document.getElementById('auth-lock-screen').style.display = "none";
         document.getElementById('admin-main-ui').style.display = "flex";
+        loadStyles();
         loadAdminInventoryMatrix();
     }
 
     function logoutAdmin() {
         sessionStorage.removeItem("admin_verified");
         location.reload();
+    }
+
+    // ===================================================
+    // STYLE FORGE & DATA COMPRESSION PIPELINE
+    // ===================================================
+    async function loadStyles() {
+        const { data, error } = await supabaseClient.from('penguin_styles').select('*').order('created_at', { ascending: true });
+        if (error) return;
+        globalStyles = data || [];
+        updateStyleDropdowns();
+    }
+
+    function updateStyleDropdowns() {
+        const forgeSelect = document.getElementById('forge-style-select');
+        const auditSelect = document.getElementById('audit-style-select');
+        
+        forgeSelect.innerHTML = '<option value="new">-- Create New Style --</option>';
+        auditSelect.innerHTML = '<option value="">Unassigned Base Model</option>';
+        
+        globalStyles.forEach(style => {
+            forgeSelect.innerHTML += `<option value="${style.id}">${style.style_name}</option>`;
+            auditSelect.innerHTML += `<option value="${style.id}">${style.style_name}</option>`;
+        });
+    }
+
+    function handleForgeSelect() {
+        const val = document.getElementById('forge-style-select').value;
+        const nameInput = document.getElementById('forge-style-name');
+        const imgPreview = document.getElementById('forge-preview-img');
+        const delBtn = document.getElementById('forge-btn-delete');
+        
+        if (val === 'new') {
+            forgeSelectedId = null;
+            nameInput.value = '';
+            imgPreview.style.display = 'none';
+            imgPreview.src = '';
+            delBtn.style.display = 'none';
+        } else {
+            forgeSelectedId = val;
+            const style = globalStyles.find(s => s.id === val);
+            nameInput.value = style.style_name;
+            imgPreview.src = style.image_url;
+            imgPreview.style.display = 'block';
+            delBtn.style.display = 'inline-block';
+        }
+    }
+
+    async function compressImage(file, maxWidth = 800, quality = 0.8) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                    }, 'image/jpeg', quality);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function saveStyle() {
+        const name = document.getElementById('forge-style-name').value.trim();
+        const fileInput = document.getElementById('forge-style-image');
+        
+        if (!name) return alert('Style name is required.');
+        
+        let imageUrl = null;
+        const file = fileInput.files[0];
+        
+        if (forgeSelectedId && !file) {
+            imageUrl = globalStyles.find(s => s.id === forgeSelectedId).image_url;
+        } else if (file) {
+            const saveBtn = document.getElementById('forge-btn-save');
+            saveBtn.disabled = true;
+            saveBtn.innerText = "Processing...";
+            
+            const compressedFile = await compressImage(file);
+            const fileName = `${Date.now()}_${compressedFile.name}`;
+            
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from('avatars')
+                .upload(fileName, compressedFile, { cacheControl: '3600', upsert: false });
+                
+            if (uploadError) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Save Style";
+                return alert('Image upload failed: ' + uploadError.message);
+            }
+            
+            const { data: publicUrlData } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+            imageUrl = publicUrlData.publicUrl;
+            
+            saveBtn.disabled = false;
+            saveBtn.innerText = "Save Style";
+        } else {
+            return alert('An image is required for new styles.');
+        }
+        
+        if (forgeSelectedId) {
+            await supabaseClient.from('penguin_styles').update({ style_name: name, image_url: imageUrl }).eq('id', forgeSelectedId);
+        } else {
+            await supabaseClient.from('penguin_styles').insert([{ style_name: name, image_url: imageUrl }]);
+        }
+        
+        document.getElementById('forge-style-image').value = '';
+        await loadStyles();
+        document.getElementById('forge-style-select').value = 'new';
+        handleForgeSelect();
+    }
+
+    async function deleteStyle() {
+        if (!forgeSelectedId) return;
+        if (!confirm('Are you sure you want to delete this style?')) return;
+        
+        await supabaseClient.from('penguin_styles').delete().eq('id', forgeSelectedId);
+        await loadStyles();
+        document.getElementById('forge-style-select').value = 'new';
+        handleForgeSelect();
+    }
+
+    async function assignStyleToPenguin(event) {
+        if (!activeAuditedPenguinId) return;
+        const styleId = document.getElementById('audit-style-select').value;
+        const updateVal = styleId === "" ? null : styleId;
+        
+        const btn = event.target;
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+        
+        await supabaseClient.from('penguin_logs').update({ style_id: updateVal }).eq('penguin_id', activeAuditedPenguinId);
+        
+        btn.innerText = "Update";
+        btn.disabled = false;
+        
+        loadAdminInventoryMatrix();
     }
 
     // Function to stretch text centrally to an exact boundary length
@@ -355,7 +533,7 @@
     }
 
     async function loadAdminInventoryMatrix() {
-        const { data: rawLogs, error } = await supabaseClient.from('penguin_logs').select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag').order('created_at', { ascending: true });
+        const { data: rawLogs, error } = await supabaseClient.from('penguin_logs').select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag, style_id').order('created_at', { ascending: true });
         if (error || !rawLogs) return;
 
         globalCachedLogsArray = rawLogs; 
@@ -363,9 +541,10 @@
 
         rawLogs.forEach(log => {
             if (!globalFleetClusters[log.penguin_id]) {
-                globalFleetClusters[log.penguin_id] = { id: log.penguin_id, points: [], pingsCount: 0, landmarksCount: 0, activeName: log.penguin_id, secretTag: log.secret_tag || null, compiledMiles: 0 };
+                globalFleetClusters[log.penguin_id] = { id: log.penguin_id, points: [], pingsCount: 0, landmarksCount: 0, activeName: log.penguin_id, secretTag: log.secret_tag || null, styleId: log.style_id || null, compiledMiles: 0 };
             }
             if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[log.penguin_id].activeName = log.custom_name;
+            if (log.style_id) globalFleetClusters[log.penguin_id].styleId = log.style_id;
 
             if (isFactoryLog(log.finder_note)) return;
 
@@ -429,6 +608,11 @@
         document.getElementById('audit-panel-card').style.display = "block";
         document.getElementById('audit-title-id').innerText = `Auditing: ${id}`;
         document.getElementById('audit-title-custom').innerText = `Registry: "${name}"`;
+        
+        // Populate the dropdown with the correct style
+        const assignedStyle = globalFleetClusters[id].styleId || "";
+        document.getElementById('audit-style-select').value = assignedStyle;
+        
         if (tag) {
             document.getElementById('audit-url-display').innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${tag}`;
             document.getElementById('audit-url-display').style.display = "block";
