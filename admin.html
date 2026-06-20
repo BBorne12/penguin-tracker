@@ -10,6 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style>
         /* Base Setup & CSS Resets */
         *, *::before, *::after { box-sizing: border-box; }
@@ -22,7 +25,7 @@
         }
 
         .app-container {
-            width: 100%; max-width: 900px; margin: 0 auto; padding: 16px;
+            width: 100%; max-width: 950px; margin: 0 auto; padding: 16px;
             background: radial-gradient(circle at 50% 0%, #1a102f 0%, #09071e 60%, #02060d 100%);
             min-height: 100vh;
             display: flex; flex-direction: column;
@@ -79,12 +82,22 @@
             cursor: pointer; user-select: none; transition: color 0.2s;
         }
         .matrix-table th:hover { color: #ffffff; }
-        .matrix-table tbody tr { transition: background 0.2s; }
-        .matrix-table tbody tr:hover { background: rgba(217, 70, 239, 0.05); cursor: pointer; }
+        .matrix-table tbody tr.clickable-row { transition: background 0.2s; cursor: pointer; }
+        .matrix-table tbody tr.clickable-row:hover { background: rgba(217, 70, 239, 0.05); }
+        
+        .expanded-audit-row { background: rgba(217, 70, 239, 0.05); }
+        .expanded-audit-row td { border-bottom: 2px solid rgba(217, 70, 239, 0.3); }
 
-        .badge-count { font-weight: bold; color: #a21caf; background: rgba(217, 70, 239, 0.15); padding: 2px 6px; border-radius: 4px; }
         .log-audit-item { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 6px; }
         .log-audit-item:last-child { border-bottom: none; }
+
+        /* Dark Mode Map Adjustment */
+        .leaflet-layer,
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out,
+        .leaflet-control-attribution {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
 
         /* Auth Screen Cover */
         #auth-lock-screen {
@@ -169,17 +182,18 @@
                 <table class="matrix-table" id="inventory-table">
                     <thead>
                         <tr>
-                            <th id="th-id" onclick="sortRookery('id')">Identity ↕</th>
-                            <th id="th-name" onclick="sortRookery('name')">Active Name ↕</th>
-                            <th id="th-pings" onclick="sortRookery('pings')">Total Pings ↕</th>
-                            <th id="th-landmarks" onclick="sortRookery('landmarks')">Landmarks ↕</th>
-                            <th id="th-miles" onclick="sortRookery('miles')">Est. Mileage ↕</th>
+                            <th onclick="sortRookery('id')">Identity ↕</th>
+                            <th onclick="sortRookery('name')">Active Name ↕</th>
+                            <th onclick="sortRookery('style')">Assigned Style ↕</th>
+                            <th onclick="sortRookery('pings')">Total Pings ↕</th>
+                            <th onclick="sortRookery('landmarks')">Landmarks ↕</th>
+                            <th onclick="sortRookery('miles')">Est. Mileage ↕</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="inventory-tbody">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: #94a3b8;">Querying database pipelines... These data are aggregating.</td>
+                            <td colspan="7" style="text-align: center; color: #94a3b8;">Querying database pipelines... These data are aggregating.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -187,36 +201,10 @@
             <div id="pagination-controls" style="display: flex; justify-content: center; gap: 15px; margin-top: 16px; align-items: center;"></div>
         </div>
 
-        <div class="glass-card" id="audit-panel-card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
-                <div style="flex: 1;">
-                    <h3 style="color: #fae8ff; font-size: 13pt;" id="audit-title-id">Auditing: Penguin-ID</h3>
-                    <span style="font-size: 8.5pt; color: #cbd5e1; display:block; margin-bottom: 8px;" id="audit-title-custom">Current Registry Designation: "..."</span>
-                    <code id="audit-url-display" style="font-size: 7.5pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 4px; border-radius: 4px; word-break: break-all; display:none;"></code>
-                </div>
-                <div style="margin-left: 16px; text-align: right;">
-                    <img id="audit-sticker-img" style="width: 120px; height: 120px; background: white; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
-                </div>
-            </div>
-
-            <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                <label style="font-size: 9pt; color: #cbd5e1; display: block; margin-bottom: 4px;">Assigned Physical Style:</label>
-                <div style="display: flex; gap: 8px;">
-                    <select id="audit-style-select" class="admin-input" style="margin-bottom: 0;">
-                        <option value="">Unassigned Base Model</option>
-                    </select>
-                    <button class="btn-command" onclick="assignStyleToPenguin(event)">Update</button>
-                </div>
-            </div>
-
-            <div id="audit-logs-feed" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                </div>
-        </div>
-
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.13.0</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.15.0</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -226,20 +214,22 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let activeAuditedPenguinId = null;
     let globalCachedLogsArray = [];
     let globalFleetKeys = [];
     let globalFleetClusters = {};
     let globalStyles = [];
     let forgeSelectedId = null;
+    let expandedPenguinId = null; 
+    let activeLeafletMap = null;
     
     let currentPage = 1;
     const itemsPerPage = 10;
     let currentSortCol = null;
     let currentSortAsc = false;
 
-    // Factory log checker
+    // Log identifiers
     const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
+    const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
 
     const idInputField = document.getElementById('new-penguin-id');
     idInputField.addEventListener('input', function(e) {
@@ -254,8 +244,7 @@
             sessionStorage.setItem("admin_verified", "true");
             document.getElementById('auth-lock-screen').style.display = "none";
             document.getElementById('admin-main-ui').style.display = "flex";
-            loadStyles();
-            loadAdminInventoryMatrix();
+            loadStyles().then(loadAdminInventoryMatrix);
         } else {
             alert("Authorization token signature mismatch. Access denied.");
         }
@@ -264,8 +253,7 @@
     if (sessionStorage.getItem("admin_verified") === "true") {
         document.getElementById('auth-lock-screen').style.display = "none";
         document.getElementById('admin-main-ui').style.display = "flex";
-        loadStyles();
-        loadAdminInventoryMatrix();
+        loadStyles().then(loadAdminInventoryMatrix);
     }
 
     function logoutAdmin() {
@@ -280,19 +268,14 @@
         const { data, error } = await supabaseClient.from('penguin_styles').select('*').order('created_at', { ascending: true });
         if (error) return;
         globalStyles = data || [];
-        updateStyleDropdowns();
+        updateForgeDropdown();
     }
 
-    function updateStyleDropdowns() {
+    function updateForgeDropdown() {
         const forgeSelect = document.getElementById('forge-style-select');
-        const auditSelect = document.getElementById('audit-style-select');
-        
         forgeSelect.innerHTML = '<option value="new">-- Create New Style --</option>';
-        auditSelect.innerHTML = '<option value="">Unassigned Base Model</option>';
-        
         globalStyles.forEach(style => {
             forgeSelect.innerHTML += `<option value="${style.id}">${style.style_name}</option>`;
-            auditSelect.innerHTML += `<option value="${style.id}">${style.style_name}</option>`;
         });
     }
 
@@ -393,139 +376,23 @@
         await loadStyles();
         document.getElementById('forge-style-select').value = 'new';
         handleForgeSelect();
+        loadAdminInventoryMatrix(); 
     }
 
     async function deleteStyle() {
         if (!forgeSelectedId) return;
-        if (!confirm('Are you sure you want to delete this style?')) return;
+        if (!confirm('Are you sure you want to delete this style? Penguins assigned to this style will revert to Base Model.')) return;
         
         await supabaseClient.from('penguin_styles').delete().eq('id', forgeSelectedId);
         await loadStyles();
         document.getElementById('forge-style-select').value = 'new';
         handleForgeSelect();
-    }
-
-    async function assignStyleToPenguin(event) {
-        if (!activeAuditedPenguinId) return;
-        const styleId = document.getElementById('audit-style-select').value;
-        const updateVal = styleId === "" ? null : styleId;
-        
-        const btn = event.target;
-        btn.disabled = true;
-        btn.innerText = "Saving...";
-        
-        await supabaseClient.from('penguin_logs').update({ style_id: updateVal }).eq('penguin_id', activeAuditedPenguinId);
-        
-        btn.innerText = "Update";
-        btn.disabled = false;
-        
         loadAdminInventoryMatrix();
     }
 
-    // Function to stretch text centrally to an exact boundary length
-    function drawStretchedText(ctx, text, x, y, targetWidth, fontStyle, baseline, align="left") {
-        ctx.font = fontStyle;
-        ctx.textBaseline = baseline;
-        ctx.textAlign = align;
-        const metrics = ctx.measureText(text);
-        const scaleX = targetWidth / metrics.width;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scaleX, 1);
-        ctx.fillText(text, 0, 0);
-        ctx.restore();
-    }
-
     // ===================================================
-    // HIGH-RES 1200x1200 STICKER GENERATOR (Asymmetrical)
+    // INVENTORY MANAGEMENT & EXPANDING ROWS
     // ===================================================
-    function generateStickerImage(penguinId, secretTag, targetImgElementId) {
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
-        const baseIdNumber = penguinId.replace("Penguin-", ""); 
-        
-        const tempDiv = document.createElement("div");
-        new QRCode(tempDiv, { 
-            text: secureUrl, 
-            width: 920, // Keep enlarged QR code to halve padding
-            height: 920, 
-            colorDark : "#000000", 
-            colorLight : "#ffffff", 
-            correctLevel : QRCode.CorrectLevel.L 
-        });
-
-        setTimeout(() => {
-            const qrCanvas = tempDiv.querySelector('canvas');
-            if(!qrCanvas) return;
-            
-            const tempComposite = document.createElement("canvas");
-            const ctx = tempComposite.getContext('2d');
-            
-            // Native 1200x1200 Canvas
-            tempComposite.width = 1200; 
-            tempComposite.height = 1200; 
-            
-            ctx.fillStyle = "#ffffff"; 
-            ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
-            
-            // Center the QR Code, leaving exactly 140px margins on all sides
-            ctx.drawImage(qrCanvas, 140, 140, 920, 920);
-            
-            ctx.fillStyle = "#000000"; 
-            
-            // Apply Font Rules
-            const heavyFont = "900 140px 'Arial Black', Impact, sans-serif";
-            // Custom font sizing for SCAN TO TRACK to perfectly accommodate the left padding
-            const scanFont = "900 115px 'Arial Black', Impact, sans-serif"; 
-            const normalFont = "normal 115px Arial, Helvetica, sans-serif";
-            
-            // TOP TEXT: PENGUIN (Bold)
-            drawStretchedText(ctx, "PENGUIN", 140, -10, 920, heavyFont, "top", "left");
-            
-            // RIGHT TEXT: TRACKER™ (Bold)
-            ctx.save(); 
-            ctx.translate(1200, 0); 
-            ctx.rotate(Math.PI / 2); 
-            drawStretchedText(ctx, "TRACKER™", 0, -10, 1200, heavyFont, "top", "left");
-            ctx.restore();
-
-            // LEFT TEXT: SCAN TO TRACK (Bold, Centered relative to QR Code)
-            ctx.save(); 
-            ctx.translate(0, 1060); 
-            ctx.rotate(-Math.PI / 2); 
-            // Y=15 shifts the text slightly inward, creating a permanent visual left-margin for label makers
-            // without corrupting the inner gap distance to the QR code.
-            drawStretchedText(ctx, "SCAN TO TRACK", 0, 15, 920, scanFont, "top", "left");
-            ctx.restore();
-            
-            // BOTTOM TEXT: ID: {ID} (Normal/Unbolded, Centered)
-            ctx.font = normalFont;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "bottom";
-            ctx.fillText(`ID: ${baseIdNumber}`, 600, 1215);
-            
-            const imgEl = document.getElementById(targetImgElementId);
-            if(imgEl) { 
-                imgEl.src = tempComposite.toDataURL("image/png"); 
-                imgEl.style.display = "block"; 
-            }
-        }, 150);
-    }
-
-    async function generateNewPenguin() {
-        const id = idInputField.value.trim();
-        if (id === 'Penguin-' || !id) return;
-        const secretTag = Math.random().toString(36).substring(2, 10);
-        await supabaseClient.from('penguin_logs').insert([{ 
-            penguin_id: id, secret_tag: secretTag, finder_note: 'Initial Factory Registration',
-            latitude: 39.9783, longitude: -86.1180 
-        }]);
-        generateStickerImage(id, secretTag, 'final-sticker-img');
-        document.getElementById("qr-url-display").innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
-        document.getElementById("qrcode-container").style.display = "flex";
-        idInputField.value = "Penguin-"; 
-        loadAdminInventoryMatrix(); 
-    }
-
     function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
         const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
@@ -546,7 +413,8 @@
             if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[log.penguin_id].activeName = log.custom_name;
             if (log.style_id) globalFleetClusters[log.penguin_id].styleId = log.style_id;
 
-            if (isFactoryLog(log.finder_note)) return;
+            // Explicitly filter out ghost logs from the public aggregations
+            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
 
             globalFleetClusters[log.penguin_id].points.push({ lat: log.latitude, lng: log.longitude });
             globalFleetClusters[log.penguin_id].pingsCount++;
@@ -562,7 +430,6 @@
         if (currentSortCol) applySortLogic();
         else globalFleetKeys = Object.keys(globalFleetClusters).reverse();
         
-        currentPage = 1;
         renderRookeryPage();
     }
 
@@ -576,6 +443,15 @@
             else if (currentSortCol === 'pings') { vA = A.pingsCount; vB = B.pingsCount; }
             else if (currentSortCol === 'landmarks') { vA = A.landmarksCount; vB = B.landmarksCount; }
             else if (currentSortCol === 'miles') { vA = A.compiledMiles; vB = B.compiledMiles; }
+            else if (currentSortCol === 'style') {
+                const getStyleName = (sId) => {
+                    if(!sId) return "base model";
+                    const st = globalStyles.find(x => x.id === sId);
+                    return st ? st.style_name.toLowerCase() : "base model";
+                };
+                vA = getStyleName(A.styleId);
+                vB = getStyleName(B.styleId);
+            }
             return (vA < vB) ? (currentSortAsc ? -1 : 1) : (currentSortAsc ? 1 : -1);
         });
     }
@@ -588,60 +464,315 @@
     }
 
     function renderRookeryPage() {
-        const tbody = document.getElementById('inventory-tbody'); tbody.innerHTML = "";
+        const tbody = document.getElementById('inventory-tbody'); 
+        tbody.innerHTML = "";
+        
         const start = (currentPage - 1) * itemsPerPage;
         globalFleetKeys.slice(start, start + itemsPerPage).forEach(key => {
             const node = globalFleetClusters[key];
+            
+            let styleName = "Base Model";
+            if (node.styleId) {
+                const s = globalStyles.find(x => x.id === node.styleId);
+                if (s) styleName = s.style_name;
+            }
+
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>🐧 ${node.id}</td><td>${node.activeName}</td><td>${node.pingsCount}</td><td>${node.landmarksCount}</td><td>${node.compiledMiles.toFixed(1)} mi</td><td><button class="btn-command btn-danger" onclick="deleteEntirePenguin('${node.id}')">Delete</button></td>`;
-            tr.onclick = () => launchSurgicalAuditDeck(node.id, node.activeName, node.secretTag);
+            tr.className = "clickable-row";
+            tr.innerHTML = `
+                <td>🐧 ${node.id}</td>
+                <td>${node.activeName}</td>
+                <td style="color: #f5d0fe;">${styleName}</td>
+                <td>${node.pingsCount}</td>
+                <td>${node.landmarksCount}</td>
+                <td>${node.compiledMiles.toFixed(1)} mi</td>
+                <td><button class="btn-command btn-danger" onclick="event.stopPropagation(); deleteEntirePenguin('${node.id}')">Delete</button></td>
+            `;
+            
+            tr.onclick = () => toggleAuditRow(tr, node);
             tbody.appendChild(tr);
+
+            if (expandedPenguinId === node.id) {
+                toggleAuditRow(tr, node, true);
+            }
         });
+        
         const total = Math.ceil(globalFleetKeys.length / itemsPerPage);
         document.getElementById('pagination-controls').innerHTML = (total > 1) ? `<button class="btn-command" onclick="changePage(-1)" ${currentPage===1?'disabled':''}>Prev</button><span>Page ${currentPage} of ${total}</span><button class="btn-command" onclick="changePage(1)" ${currentPage===total?'disabled':''}>Next</button>` : "";
     }
 
-    function changePage(d) { currentPage += d; renderRookeryPage(); }
-
-    function launchSurgicalAuditDeck(id, name, tag) {
-        activeAuditedPenguinId = id;
-        document.getElementById('audit-panel-card').style.display = "block";
-        document.getElementById('audit-title-id').innerText = `Auditing: ${id}`;
-        document.getElementById('audit-title-custom').innerText = `Registry: "${name}"`;
-        
-        // Populate the dropdown with the correct style
-        const assignedStyle = globalFleetClusters[id].styleId || "";
-        document.getElementById('audit-style-select').value = assignedStyle;
-        
-        if (tag) {
-            document.getElementById('audit-url-display').innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${tag}`;
-            document.getElementById('audit-url-display').style.display = "block";
-            generateStickerImage(id, tag, 'audit-sticker-img');
-        }
-        renderSurgicalLogsFeed();
+    function changePage(d) { 
+        if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; }
+        expandedPenguinId = null; 
+        currentPage += d; 
+        renderRookeryPage(); 
     }
 
-    function renderSurgicalLogsFeed() {
-        const feed = document.getElementById('audit-logs-feed'); feed.innerHTML = "";
-        globalCachedLogsArray.filter(l => l.penguin_id === activeAuditedPenguinId).forEach(log => {
-            const div = document.createElement('div');
-            div.className = "log-audit-item";
-            div.innerHTML = `<div>${new Date(log.created_at).toLocaleString()}</div><div>Note: ${log.finder_note}</div><button class="btn-command btn-danger" onclick="purgeSingleLog('${log.created_at}')">Delete</button>`;
-            feed.appendChild(div);
+    // ===================================================
+    // INLINE AUDIT ROW (ACCORDION & TACTICAL MAP)
+    // ===================================================
+    function toggleAuditRow(rowEl, node, forceOpen = false) {
+        const existingRow = document.querySelector('.expanded-audit-row');
+        let isSameRow = false;
+        
+        if (existingRow) {
+            isSameRow = existingRow.previousElementSibling === rowEl;
+            existingRow.remove();
+            if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; }
+        }
+
+        if (isSameRow && !forceOpen) {
+            expandedPenguinId = null;
+            return; 
+        }
+
+        expandedPenguinId = node.id;
+
+        const expandTr = document.createElement('tr');
+        expandTr.className = 'expanded-audit-row';
+        
+        let styleOptions = '<option value="">Unassigned Base Model</option>';
+        globalStyles.forEach(s => {
+            const sel = s.id === node.styleId ? 'selected' : '';
+            styleOptions += `<option value="${s.id}" ${sel}>${s.style_name}</option>`;
         });
+
+        let logsHtml = '';
+        globalCachedLogsArray.filter(l => l.penguin_id === node.id).forEach(log => {
+            const isGhost = isAdminHideLog(log.finder_note);
+            const badge = isGhost ? `<span style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 2px 6px; border-radius: 4px; font-size: 7.5pt; margin-left: 8px;">GHOST LOG</span>` : '';
+            
+            logsHtml += `<div class="log-audit-item">
+                <div style="font-weight: 600; color: #fae8ff; font-size: 9.5pt;">${new Date(log.created_at).toLocaleString()} ${badge}</div>
+                <div style="color: #cbd5e1; font-size: 9.5pt; margin-top: 4px;">Note: ${log.finder_note}</div>
+                <button class="btn-command btn-danger" style="padding: 4px 10px; font-size: 7.5pt; margin-top: 8px;" onclick="purgeSingleLog('${log.created_at}', '${node.id}')">Delete Log</button>
+            </div>`;
+        });
+
+        expandTr.innerHTML = `
+            <td colspan="7" style="padding: 24px 16px;">
+                <div style="display: flex; gap: 32px; align-items: flex-start;">
+                    
+                    <div style="flex: 1;">
+                        <h3 style="color: #fae8ff; font-size: 14pt; margin-bottom: 4px;">Auditing: ${node.id}</h3>
+                        <span style="font-size: 9pt; color: #cbd5e1; display:block; margin-bottom: 16px;">Current Registry: "${node.activeName}"</span>
+                        
+                        <div style="background: rgba(0,0,0,0.4); padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                            <label style="font-size: 9pt; color: #cbd5e1; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Assign Physical Style:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="audit-style-select-${node.id}" class="admin-input" style="margin-bottom: 0;">
+                                    ${styleOptions}
+                                </select>
+                                <button class="btn-command" onclick="assignStyleToPenguin(event, '${node.id}')">Update Style</button>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.4); padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                            <label style="font-size: 9pt; color: #cbd5e1; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Record Hide Location:</label>
+                            <div id="audit-map-container" style="height: 250px; width: 100%; border-radius: 6px; margin-bottom: 12px; z-index: 1; border: 1px solid #333;"></div>
+                            
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="hidden" id="hide-lat-${node.id}">
+                                <input type="hidden" id="hide-lng-${node.id}">
+                                <button class="btn-command" id="btn-save-hide-${node.id}" disabled onclick="saveHideLocation('${node.id}')">Save Map Location</button>
+                                <span style="font-size: 8.5pt; color: #94a3b8;">Click the map to drop a coordinate pin.</span>
+                            </div>
+                        </div>
+
+                        ${node.secretTag ? `<div style="margin-bottom: 24px;"><code style="font-size: 8pt; color: #00e5ff; background: rgba(0,229,255,0.1); padding: 8px 12px; border-radius: 6px; word-break: break-all; display: inline-block;">https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(node.id)}&tag=${node.secretTag}</code></div>` : ''}
+                        
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                            <h4 style="margin: 0 0 12px 0; color: #d946ef; font-size: 10pt; text-transform: uppercase; letter-spacing: 1px;">Activity Feed</h4>
+                            <div style="max-height: 250px; overflow-y: auto; padding-right: 12px;">
+                                ${logsHtml || '<div style="color: #94a3b8; font-size: 9.5pt; font-style: italic;">These data are currently empty. Awaiting discovery.</div>'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="width: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px dashed rgba(255,255,255,0.1);">
+                        <span style="font-size: 8pt; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Security Sticker</span>
+                        <img id="audit-sticker-${node.id}" style="width: 180px; height: 180px; background: white; border-radius: 6px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); display: none;" alt="QR Sticker">
+                    </div>
+
+                </div>
+            </td>
+        `;
+
+        rowEl.parentNode.insertBefore(expandTr, rowEl.nextSibling);
+
+        if (node.secretTag) {
+            generateStickerImage(node.id, node.secretTag, `audit-sticker-${node.id}`);
+        }
+
+        // Initialize Tactical Map
+        setTimeout(() => {
+            activeLeafletMap = L.map('audit-map-container').setView([39.9783, -86.1180], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(activeLeafletMap);
+
+            let activeClickMarker;
+            const logData = globalCachedLogsArray.filter(l => l.penguin_id === node.id);
+            
+            if (logData.length > 0) {
+                const bounds = L.latLngBounds();
+                logData.forEach(log => {
+                    if (isFactoryLog(log.finder_note)) return;
+
+                    const isGhost = isAdminHideLog(log.finder_note);
+                    const dotColor = isGhost ? '#ef4444' : '#00e5ff';
+
+                    L.circleMarker([log.latitude, log.longitude], {
+                        color: dotColor,
+                        fillColor: dotColor,
+                        fillOpacity: 0.8,
+                        radius: isGhost ? 8 : 5,
+                        weight: 2
+                    }).bindPopup(`<b>${isGhost ? 'HIDDEN HERE' : 'Discovery'}</b><br>${new Date(log.created_at).toLocaleDateString()}`).addTo(activeLeafletMap);
+                    
+                    bounds.extend([log.latitude, log.longitude]);
+                });
+                if (bounds.isValid()) activeLeafletMap.fitBounds(bounds, { padding: [30, 30] });
+            }
+
+            activeLeafletMap.on('click', function(e) {
+                if(activeClickMarker) activeLeafletMap.removeLayer(activeClickMarker);
+                activeClickMarker = L.marker(e.latlng).addTo(activeLeafletMap);
+                document.getElementById(`hide-lat-${node.id}`).value = e.latlng.lat;
+                document.getElementById(`hide-lng-${node.id}`).value = e.latlng.lng;
+                document.getElementById(`btn-save-hide-${node.id}`).disabled = false;
+            });
+            
+            activeLeafletMap.invalidateSize();
+        }, 150);
+    }
+
+    async function saveHideLocation(id) {
+        const lat = document.getElementById(`hide-lat-${id}`).value;
+        const lng = document.getElementById(`hide-lng-${id}`).value;
+        if(!lat || !lng) return;
+
+        const btn = document.getElementById(`btn-save-hide-${id}`);
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+
+        await supabaseClient.from('penguin_logs').insert([{
+            penguin_id: id,
+            finder_note: '[ADMIN HIDE LOCATION]',
+            latitude: parseFloat(lat),
+            longitude: parseFloat(lng)
+        }]);
+
+        loadAdminInventoryMatrix();
+    }
+
+    async function assignStyleToPenguin(event, id) {
+        const styleId = document.getElementById(`audit-style-select-${id}`).value;
+        const updateVal = styleId === "" ? null : styleId;
+        
+        const btn = event.target;
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+        
+        await supabaseClient.from('penguin_logs').update({ style_id: updateVal }).eq('penguin_id', id);
+        
+        btn.innerText = "Update Style";
+        btn.disabled = false;
+        
+        loadAdminInventoryMatrix();
     }
 
     async function deleteEntirePenguin(id) {
-        if(!confirm(`Delete ${id}?`)) return;
+        if(!confirm(`Delete ${id}? This action cannot be reversed.`)) return;
         await supabaseClient.from('penguin_logs').delete().eq('penguin_id', id);
+        if (expandedPenguinId === id) {
+            if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; }
+            expandedPenguinId = null;
+        }
         loadAdminInventoryMatrix();
-        document.getElementById('audit-panel-card').style.display = "none";
     }
 
-    async function purgeSingleLog(ts) {
-        await supabaseClient.from('penguin_logs').delete().eq('penguin_id', activeAuditedPenguinId).eq('created_at', ts);
+    async function purgeSingleLog(ts, pId) {
+        await supabaseClient.from('penguin_logs').delete().eq('penguin_id', pId).eq('created_at', ts);
         loadAdminInventoryMatrix();
-        renderSurgicalLogsFeed();
+    }
+
+    // ===================================================
+    // HIGH-RES STICKER GENERATION PIPELINE
+    // ===================================================
+    function drawStretchedText(ctx, text, x, y, targetWidth, fontStyle, baseline, align="left") {
+        ctx.font = fontStyle;
+        ctx.textBaseline = baseline;
+        ctx.textAlign = align;
+        const metrics = ctx.measureText(text);
+        const scaleX = targetWidth / metrics.width;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scaleX, 1);
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+    }
+
+    function generateStickerImage(penguinId, secretTag, targetImgElementId) {
+        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
+        const baseIdNumber = penguinId.replace("Penguin-", ""); 
+        
+        const tempDiv = document.createElement("div");
+        new QRCode(tempDiv, { 
+            text: secureUrl, 
+            width: 920, 
+            height: 920, 
+            colorDark : "#000000", 
+            colorLight : "#ffffff", 
+            correctLevel : QRCode.CorrectLevel.L 
+        });
+
+        setTimeout(() => {
+            const qrCanvas = tempDiv.querySelector('canvas');
+            if(!qrCanvas) return;
+            
+            const tempComposite = document.createElement("canvas");
+            const ctx = tempComposite.getContext('2d');
+            
+            tempComposite.width = 1200; 
+            tempComposite.height = 1200; 
+            
+            ctx.fillStyle = "#ffffff"; 
+            ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
+            
+            ctx.drawImage(qrCanvas, 140, 140, 920, 920);
+            
+            ctx.fillStyle = "#000000"; 
+            
+            const heavyFont = "900 140px 'Arial Black', Impact, sans-serif";
+            const scanFont = "900 115px 'Arial Black', Impact, sans-serif"; 
+            const normalFont = "normal 115px Arial, Helvetica, sans-serif";
+            
+            drawStretchedText(ctx, "PENGUIN", 140, -10, 920, heavyFont, "top", "left");
+            
+            ctx.save(); 
+            ctx.translate(1200, 0); 
+            ctx.rotate(Math.PI / 2); 
+            drawStretchedText(ctx, "TRACKER™", 0, -10, 1200, heavyFont, "top", "left");
+            ctx.restore();
+
+            ctx.save(); 
+            ctx.translate(0, 1060); 
+            ctx.rotate(-Math.PI / 2); 
+            drawStretchedText(ctx, "SCAN TO TRACK", 0, 15, 920, scanFont, "top", "left");
+            ctx.restore();
+            
+            ctx.font = normalFont;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(`ID: ${baseIdNumber}`, 600, 1215);
+            
+            const imgEl = document.getElementById(targetImgElementId);
+            if(imgEl) { 
+                imgEl.src = tempComposite.toDataURL("image/png"); 
+                imgEl.style.display = "block"; 
+            }
+        }, 150);
     }
 </script>
 </body>
