@@ -33,7 +33,6 @@
 
         .layout-section { width: 100%; margin-top: 16px; flex: 1; }
 
-        /* Greyscale Emoji Filter */
         .bw-penguin { filter: grayscale(100%); display: inline-block; }
 
         .glass-card {
@@ -170,6 +169,12 @@
         }
         .modal-input:focus { border-color: #00e5ff; }
 
+        .avatar-option {
+            width: 55px; height: 55px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;
+            display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);
+        }
+        .avatar-option:hover { transform: scale(1.05); }
+
         .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
         .app-footer {
             text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
@@ -209,23 +214,31 @@
         <h2 style="color: #00e5ff; margin-bottom: 5px;">Edit Penguin Profile</h2>
         <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
         
-        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 20px; text-align: left;">
-            <label style="font-size: 10pt; color: #94a3b8; display: block; margin-bottom: 8px; text-transform: uppercase;">Custom Avatar Upload:</label>
-            <input type="file" id="edit-avatar-upload" class="modal-input" accept="image/*" style="margin: 0; padding: 8px; text-align: left; font-size: 10pt;">
-            
-            <div id="style-avatar-section" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <label style="font-size: 10pt; color: #a3e635; display: block; margin-bottom: 8px; text-transform: uppercase;">Factory Style Assigned:</label>
-                <img id="edit-style-preview" src="" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #a3e635; object-fit:cover; margin: 0 auto;">
-            </div>
-
-            <div id="fallback-avatar-section" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <label style="font-size: 10pt; color: #94a3b8; display: block; margin-bottom: 8px; text-transform: uppercase;">Or Choose a Base Color:</label>
-                <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
-            </div>
+        <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 10px;">Select an Avatar:</p>
+        <input type="file" id="hidden-avatar-upload" style="display:none;" accept="image/*" onchange="handleModalAvatarUpload()">
+        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
         </div>
         
         <button class="btn-glow" id="save-profile-btn" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="share-modal">
+    <div class="modal-card">
+        <h2 style="color: #00e5ff; margin-bottom: 12px;">Share Penguin</h2>
+        <p style="font-size: 10pt; color: #94a3b8; margin-bottom: 16px;">Share this link so others can follow the adventure!</p>
+        <div style="display:flex; gap: 8px; margin-bottom: 16px;">
+            <input type="text" id="share-url-input" class="modal-input" readonly style="margin:0; text-align:left; font-size: 10pt;">
+            <button class="btn-glow" style="width: auto; padding: 0 16px;" onclick="copyShareUrl()">Copy</button>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;">
+            <button class="btn-glow" style="padding: 10px; width: 45px; height: 45px; border-radius: 50%; font-size: 16pt; display:flex; align-items:center; justify-content:center;" onclick="shareNative()">📱</button>
+            <button class="btn-glow" style="padding: 10px; width: 45px; height: 45px; border-radius: 50%; background: #1877f2; font-size: 14pt; display:flex; align-items:center; justify-content:center; border:none;" onclick="shareFacebook()">f</button>
+            <button class="btn-glow" style="padding: 10px; width: 45px; height: 45px; border-radius: 50%; background: #25d366; font-size: 14pt; display:flex; align-items:center; justify-content:center; border:none;" onclick="shareWhatsApp()">💬</button>
+            <button class="btn-glow" style="padding: 10px; width: 45px; height: 45px; border-radius: 50%; background: #1da1f2; font-size: 14pt; display:flex; align-items:center; justify-content:center; border:none;" onclick="shareTwitter()">🐦</button>
+        </div>
+        <button class="btn-glow" style="background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeShareModal()">Close</button>
     </div>
 </div>
 
@@ -289,6 +302,8 @@
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
+                    <button id="share-profile-btn" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openShareModal()">🔗 Share</button>
+
                     <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
                     <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
                 </div>
@@ -433,7 +448,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.15.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.15.1</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -468,11 +483,15 @@
     let activeStyleId = null;
     let globalStyles = [];
     
+    // Avatar Modal Selection State
+    let modalAvatarType = 'color'; // 'color', 'style', 'custom'
+    let modalAvatarColor = '#38bdf8';
+    let modalCustomUrl = null;
+    
     let activeTab = "distance"; 
     let currentSearchQuery = "";
 
     const AVATAR_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'];
-    let selectedAvatarColor = '#38bdf8'; 
 
     let activePassportPage = 1; let activeAllStopsPage = 1; 
     const PASSPORT_ITEMS_PER_PAGE = 10;
@@ -773,6 +792,40 @@
     }
 
     // ===================================================
+    // SHARE MODAL
+    // ===================================================
+    function openShareModal() {
+        const shareUrl = "https://bborne12.github.io/penguin-tracker/?id=" + encodeURIComponent(penguinId);
+        document.getElementById('share-url-input').value = shareUrl;
+        document.getElementById('share-modal').style.display = 'flex';
+    }
+    
+    function closeShareModal() {
+        document.getElementById('share-modal').style.display = 'none';
+    }
+    
+    function copyShareUrl() {
+        const input = document.getElementById('share-url-input');
+        input.select();
+        document.execCommand('copy');
+        alert('Link copied to clipboard!');
+    }
+    
+    function shareNative() {
+        const url = document.getElementById('share-url-input').value;
+        const shareText = `Track ${activeCustomName || penguinId}'s adventure!`;
+        if (navigator.share) {
+            navigator.share({ title: 'Penguin Tracker™', text: shareText, url: url });
+        } else {
+            alert('Native sharing not supported on this browser.');
+        }
+    }
+    
+    function shareFacebook() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
+    function shareTwitter() { window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(document.getElementById('share-url-input').value)}&text=Track%20my%20penguin!`, '_blank'); }
+    function shareWhatsApp() { window.open(`https://api.whatsapp.com/send?text=Track%20my%20penguin!%20${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
+
+    // ===================================================
     // WELCOME MODAL & IMAGE VIEWER
     // ===================================================
     function closeWelcomeModal() { 
@@ -879,10 +932,16 @@
     }
 
     function getAvatarThumbnail(color, customUrl, styleId) {
-        if (customUrl) return `<img src="${customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+        if (customUrl === 'USE_COLOR') return getPenguinSvg(color || '#38bdf8');
+        if (customUrl === 'USE_STYLE' && styleId) {
+            const s = globalStyles.find(x => x.id === styleId);
+            if (s && s.image_url) return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        }
+        if (customUrl && customUrl.startsWith('http')) return `<img src="${customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        
         if (styleId) {
             const s = globalStyles.find(x => x.id === styleId);
-            if (s && s.image_url) return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+            if (s && s.image_url) return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
         }
         return getPenguinSvg(color || '#38bdf8');
     }
@@ -890,41 +949,87 @@
     function initAvatarGrid() {
         const grid = document.getElementById('avatar-grid');
         if (!grid) return; grid.innerHTML = '';
+        
+        // 1. Base Colors
         AVATAR_COLORS.forEach(color => {
             const div = document.createElement('div');
-            div.style.width = '45px'; div.style.height = '45px'; div.style.cursor = 'pointer'; div.style.borderRadius = '10px';
-            div.style.border = selectedAvatarColor === color ? '3px solid #39ff14' : '2px solid transparent';
+            div.className = 'avatar-option';
+            div.style.border = (modalAvatarType === 'color' && modalAvatarColor === color) ? '3px solid #39ff14' : '2px solid transparent';
             div.innerHTML = getPenguinSvg(color);
-            div.onclick = () => { selectedAvatarColor = color; initAvatarGrid(); };
+            div.onclick = () => { modalAvatarType = 'color'; modalAvatarColor = color; initAvatarGrid(); };
             grid.appendChild(div);
         });
+        
+        // 2. Factory Style (If Assigned)
+        if (activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if (styleObj && styleObj.image_url) {
+                const div = document.createElement('div');
+                div.className = 'avatar-option';
+                div.style.border = (modalAvatarType === 'style') ? '3px solid #39ff14' : '2px solid transparent';
+                div.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+                div.onclick = () => { modalAvatarType = 'style'; initAvatarGrid(); };
+                grid.appendChild(div);
+            }
+        }
+        
+        // 3. Custom Photo Button
+        const customDiv = document.createElement('div');
+        customDiv.className = 'avatar-option';
+        customDiv.style.border = (modalAvatarType === 'custom') ? '3px solid #39ff14' : '2px solid rgba(255,255,255,0.2)';
+        
+        if (modalAvatarType === 'custom' && modalCustomUrl) {
+            customDiv.innerHTML = `<img src="${modalCustomUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+        } else {
+            customDiv.innerHTML = `<span style="font-size:20pt;">📸</span>`;
+        }
+        customDiv.onclick = () => { document.getElementById('hidden-avatar-upload').click(); };
+        grid.appendChild(customDiv);
+    }
+
+    async function handleModalAvatarUpload() {
+        const fileInput = document.getElementById('hidden-avatar-upload');
+        const file = fileInput.files[0];
+        if (!file) return;
+        
+        const saveBtn = document.getElementById('save-profile-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Processing Image...";
+        
+        try {
+            const compressedBlob = await compressImage(file);
+            const fileName = `${penguinId}_avatar_${Date.now()}.jpg`;
+            const { error } = await supabaseClient.storage.from('avatars').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+            if (error) throw error;
+            const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+            
+            modalCustomUrl = data.publicUrl;
+            modalAvatarType = 'custom';
+            initAvatarGrid();
+            
+        } catch(e) {
+            alert("Image upload failed: " + e.message);
+        }
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Changes";
     }
 
     function openEditModal() {
         document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
-        selectedAvatarColor = activeAvatarColor || '#38bdf8';
-        document.getElementById('edit-avatar-upload').value = "";
         
-        const fallbackSec = document.getElementById('fallback-avatar-section');
-        const styleSec = document.getElementById('style-avatar-section');
-
-        if (activeStyleId) {
-            const styleObj = globalStyles.find(s => s.id === activeStyleId);
-            if(styleObj) {
-                fallbackSec.style.display = 'none';
-                styleSec.style.display = 'block';
-                document.getElementById('edit-style-preview').src = styleObj.image_url;
-            } else {
-                fallbackSec.style.display = 'block';
-                styleSec.style.display = 'none';
-                initAvatarGrid();
-            }
+        if (activeCustomAvatarUrl === 'USE_COLOR') {
+            modalAvatarType = 'color'; modalAvatarColor = activeAvatarColor;
+        } else if (activeCustomAvatarUrl === 'USE_STYLE') {
+            modalAvatarType = 'style';
+        } else if (activeCustomAvatarUrl && activeCustomAvatarUrl.startsWith('http')) {
+            modalAvatarType = 'custom'; modalCustomUrl = activeCustomAvatarUrl;
+        } else if (activeStyleId) {
+            modalAvatarType = 'style';
         } else {
-            fallbackSec.style.display = 'block';
-            styleSec.style.display = 'none';
-            initAvatarGrid();
+            modalAvatarType = 'color'; modalAvatarColor = activeAvatarColor || '#38bdf8';
         }
-
+        
+        initAvatarGrid();
         document.getElementById('edit-profile-modal').style.display = 'flex';
     }
 
@@ -934,35 +1039,25 @@
         const newName = document.getElementById('edit-custom-name').value.trim();
         if(!newName) return alert("Penguin name cannot be empty.");
 
-        const fileInput = document.getElementById('edit-avatar-upload');
-        const file = fileInput.files[0];
         const saveBtn = document.getElementById('save-profile-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Saving Profile...";
 
-        let newCustomAvatarUrl = activeCustomAvatarUrl; 
+        let finalCustomUrlVal = null;
+        let finalAvatarColor = activeAvatarColor;
 
-        if (file) {
-            saveBtn.disabled = true;
-            saveBtn.innerText = "Uploading Image...";
-            try {
-                const compressedBlob = await compressImage(file);
-                const fileName = `${penguinId}_avatar_${Date.now()}.jpg`;
-                const { error } = await supabaseClient.storage.from('avatars').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
-                if (error) throw error;
-                const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
-                newCustomAvatarUrl = data.publicUrl;
-            } catch(e) {
-                alert("Image upload failed: " + e.message);
-                saveBtn.disabled = false;
-                saveBtn.innerText = "Save Changes";
-                return;
-            }
+        if (modalAvatarType === 'color') {
+            finalCustomUrlVal = 'USE_COLOR';
+            finalAvatarColor = modalAvatarColor;
+        } else if (modalAvatarType === 'style') {
+            finalCustomUrlVal = 'USE_STYLE';
+        } else if (modalAvatarType === 'custom') {
+            finalCustomUrlVal = modalCustomUrl;
         }
 
         activeCustomName = newName; 
-        activeAvatarColor = selectedAvatarColor;
-        activeCustomAvatarUrl = newCustomAvatarUrl;
-
-        saveBtn.innerText = "Saving Profile...";
+        activeAvatarColor = finalAvatarColor;
+        activeCustomAvatarUrl = finalCustomUrlVal;
         
         await supabaseClient.from('penguin_logs').update({ 
             custom_name: activeCustomName, 
@@ -977,18 +1072,31 @@
         const container = document.getElementById('profile-avatar-container');
         if (!container) return;
         
-        if (activeCustomAvatarUrl) {
-            container.innerHTML = `<img src="${activeCustomAvatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; border:3px solid #00e5ff;">`;
-        } else if (activeStyleId) {
+        if (activeCustomAvatarUrl === 'USE_COLOR') {
+            container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
+            return;
+        }
+        if (activeCustomAvatarUrl === 'USE_STYLE' && activeStyleId) {
             const styleObj = globalStyles.find(s => s.id === activeStyleId);
             if (styleObj && styleObj.image_url) {
-                container.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; border:3px solid #39ff14;">`;
-            } else {
-                container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
+                container.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
+                return;
             }
-        } else {
-            container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
         }
+        if (activeCustomAvatarUrl && activeCustomAvatarUrl.startsWith('http')) {
+            container.innerHTML = `<img src="${activeCustomAvatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
+            return;
+        }
+        
+        if (activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if (styleObj && styleObj.image_url) {
+                container.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
+                return;
+            }
+        }
+        
+        container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
     }
 
     // ===================================================
