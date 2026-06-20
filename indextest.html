@@ -165,7 +165,8 @@
         }
         .modal-input {
             width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 12pt; margin: 16px 0; outline: none; text-align: center;
+            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 12pt; margin: 8px 0 16px 0; outline: none; text-align: center;
+            box-sizing: border-box;
         }
         .modal-input:focus { border-color: #00e5ff; }
 
@@ -198,21 +199,32 @@
         <p style="font-size: 11.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 0 0;">
             You found a completely new penguin! Give it a custom name below to hatch it and officially launch its adventure.
         </p>
-        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles...">
+        <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles..." style="margin-top: 16px;">
         <button onclick="saveCustomNameFromModal(this)" class="btn-glow">Save Name & Start Journey!</button>
     </div>
 </div>
 
 <div class="modal-overlay" id="edit-profile-modal">
     <div class="modal-card">
-        <h2 style="color: #00e5ff; margin-bottom: 15px;">Edit Penguin Profile</h2>
+        <h2 style="color: #00e5ff; margin-bottom: 5px;">Edit Penguin Profile</h2>
         <input type="text" id="edit-custom-name" class="modal-input" placeholder="Penguin Name">
         
-        <p style="font-size: 11pt; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">Choose an Avatar Photo:</p>
-        <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px;">
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 20px; text-align: left;">
+            <label style="font-size: 10pt; color: #94a3b8; display: block; margin-bottom: 8px; text-transform: uppercase;">Custom Avatar Upload:</label>
+            <input type="file" id="edit-avatar-upload" class="modal-input" accept="image/*" style="margin: 0; padding: 8px; text-align: left; font-size: 10pt;">
+            
+            <div id="style-avatar-section" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <label style="font-size: 10pt; color: #a3e635; display: block; margin-bottom: 8px; text-transform: uppercase;">Factory Style Assigned:</label>
+                <img id="edit-style-preview" src="" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #a3e635; object-fit:cover; margin: 0 auto;">
             </div>
+
+            <div id="fallback-avatar-section" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <label style="font-size: 10pt; color: #94a3b8; display: block; margin-bottom: 8px; text-transform: uppercase;">Or Choose a Base Color:</label>
+                <div id="avatar-grid" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
+            </div>
+        </div>
         
-        <button class="btn-glow" onclick="saveProfileEdit()">Save Changes</button>
+        <button class="btn-glow" id="save-profile-btn" onclick="saveProfileEdit()">Save Changes</button>
         <button class="btn-glow" style="margin-top: 10px; background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
@@ -421,7 +433,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.12.5 (Stateless Core)</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.15.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -449,8 +461,13 @@
     let isAuthorizedViewer = false;
     let isViewOnlyMode = true; 
     
+    // Global Styling State
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
+    let activeCustomAvatarUrl = null;
+    let activeStyleId = null;
+    let globalStyles = [];
+    
     let activeTab = "distance"; 
     let currentSearchQuery = "";
 
@@ -485,11 +502,9 @@
     const penguinNameDisplayEl = document.getElementById("penguin-name-display");
     if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
 
-    // --- BULLETPROOF FACTORY LOG FILTER ---
-    function isFactoryLog(note) {
-        if (!note) return false;
-        return note.toLowerCase().includes('initial factory registration');
-    }
+    // --- BULLETPROOF FILTERS ---
+    function isFactoryLog(note) { return note && note.toLowerCase().includes('initial factory registration'); }
+    function isAdminHideLog(note) { return note && note.includes('[ADMIN HIDE LOCATION]'); }
 
     // ===================================================
     // STATELESS SECURITY GATEWAY LOGIC
@@ -509,9 +524,16 @@
         return data.some(log => log.secret_tag === tag);
     }
 
+    async function fetchStyles() {
+        const { data, error } = await supabaseClient.from('penguin_styles').select('*');
+        if (!error && data) globalStyles = data;
+    }
+
     window.addEventListener("DOMContentLoaded", async function() {
+        await fetchStyles();
+        
         initializeLiveMap();
-        updateProfileAvatar(activeAvatarColor); 
+        updateProfileAvatarDisplay(); 
         
         if (penguinId !== "Mystery Penguin") {
             isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
@@ -668,18 +690,21 @@
         }
 
         const { data: allLogs } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note')
+            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note, custom_avatar_url, style_id')
             .in('penguin_id', colonyIds)
             .order('created_at', { ascending: true });
             
         const colonyStats = {};
-        colonyIds.forEach(id => colonyStats[id] = { name: id, avatar: '#38bdf8', points: [] });
+        colonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
         
         if (allLogs) {
             allLogs.forEach(log => {
                 if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
-                if(log.avatar_color) colonyStats[log.penguin_id].avatar = log.avatar_color;
-                if(log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
+                if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
+                if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
+                if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
+
+                if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
                     colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
                 }
             });
@@ -709,7 +734,7 @@
             li.className = 'leaderboard-row'; 
             li.innerHTML = `
                 <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="width:34px; height:34px; flex-shrink:0;">${getPenguinSvg(colonyStats[id].avatar)}</div>
+                    <div style="width:34px; height:34px; flex-shrink:0;">${getAvatarThumbnail(colonyStats[id].avatarColor, colonyStats[id].customAvatar, colonyStats[id].styleId)}</div>
                     <span class="p-name" style="font-size:11pt;"><span class="bw-penguin">🐧</span> ${colonyStats[id].name}</span>
                 </div>
                 <div style="display:flex; align-items:center; gap: 12px;">
@@ -727,14 +752,8 @@
 
     async function removeFromColony(targetId, event) {
         event.stopPropagation();
-        
         let ownerId = isPrimaryControl ? penguinId : viewerId;
-        
-        if (!ownerId) {
-            alert("You can only remove penguins from your own colony.");
-            return;
-        }
-
+        if (!ownerId) { alert("You can only remove penguins from your own colony."); return; }
         if(!confirm(`Remove ${targetId} from your colony?`)) return;
         
         const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
@@ -749,9 +768,7 @@
         
         colonySet.delete(targetId);
         let masterListArray = Array.from(colonySet);
-        
         await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
-        
         loadColonyList();
     }
 
@@ -763,8 +780,6 @@
         if (w) w.style.display = 'none'; 
         
         // SEQUENCED MODAL HANDOFF:
-        // If the penguin is unhatched (doesn't have a custom name yet), 
-        // open the First Discovery modal right after they finish reading the welcome story.
         if (!globalNamedEntry && !isViewOnlyMode) {
             const f = document.getElementById('first-find-modal');
             if (f) f.style.display = 'flex';
@@ -799,7 +814,7 @@
 
         let stopCounter = 1;
         globalLogData.forEach((log) => {
-            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note)) return;
+            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
             const logLatLng = [log.latitude, log.longitude];
             pathCoords.push(logLatLng);
 
@@ -863,6 +878,15 @@
         </svg>`;
     }
 
+    function getAvatarThumbnail(color, customUrl, styleId) {
+        if (customUrl) return `<img src="${customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+        if (styleId) {
+            const s = globalStyles.find(x => x.id === styleId);
+            if (s && s.image_url) return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+        }
+        return getPenguinSvg(color || '#38bdf8');
+    }
+
     function initAvatarGrid() {
         const grid = document.getElementById('avatar-grid');
         if (!grid) return; grid.innerHTML = '';
@@ -879,7 +903,28 @@
     function openEditModal() {
         document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
         selectedAvatarColor = activeAvatarColor || '#38bdf8';
-        initAvatarGrid();
+        document.getElementById('edit-avatar-upload').value = "";
+        
+        const fallbackSec = document.getElementById('fallback-avatar-section');
+        const styleSec = document.getElementById('style-avatar-section');
+
+        if (activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if(styleObj) {
+                fallbackSec.style.display = 'none';
+                styleSec.style.display = 'block';
+                document.getElementById('edit-style-preview').src = styleObj.image_url;
+            } else {
+                fallbackSec.style.display = 'block';
+                styleSec.style.display = 'none';
+                initAvatarGrid();
+            }
+        } else {
+            fallbackSec.style.display = 'block';
+            styleSec.style.display = 'none';
+            initAvatarGrid();
+        }
+
         document.getElementById('edit-profile-modal').style.display = 'flex';
     }
 
@@ -889,17 +934,61 @@
         const newName = document.getElementById('edit-custom-name').value.trim();
         if(!newName) return alert("Penguin name cannot be empty.");
 
-        activeCustomName = newName; activeAvatarColor = selectedAvatarColor;
+        const fileInput = document.getElementById('edit-avatar-upload');
+        const file = fileInput.files[0];
+        const saveBtn = document.getElementById('save-profile-btn');
+
+        let newCustomAvatarUrl = activeCustomAvatarUrl; 
+
+        if (file) {
+            saveBtn.disabled = true;
+            saveBtn.innerText = "Uploading Image...";
+            try {
+                const compressedBlob = await compressImage(file);
+                const fileName = `${penguinId}_avatar_${Date.now()}.jpg`;
+                const { error } = await supabaseClient.storage.from('avatars').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                if (error) throw error;
+                const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+                newCustomAvatarUrl = data.publicUrl;
+            } catch(e) {
+                alert("Image upload failed: " + e.message);
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Save Changes";
+                return;
+            }
+        }
+
+        activeCustomName = newName; 
+        activeAvatarColor = selectedAvatarColor;
+        activeCustomAvatarUrl = newCustomAvatarUrl;
+
+        saveBtn.innerText = "Saving Profile...";
         
-        await supabaseClient.from('penguin_logs').update({ custom_name: activeCustomName, avatar_color: activeAvatarColor }).eq('penguin_id', penguinId);
+        await supabaseClient.from('penguin_logs').update({ 
+            custom_name: activeCustomName, 
+            avatar_color: activeAvatarColor,
+            custom_avatar_url: activeCustomAvatarUrl
+        }).eq('penguin_id', penguinId);
         
-        // Force refresh to instantly sync interface
         location.reload();
     }
 
-    function updateProfileAvatar(colorHex) {
+    function updateProfileAvatarDisplay() {
         const container = document.getElementById('profile-avatar-container');
-        if (container) container.innerHTML = getPenguinSvg(colorHex || '#38bdf8');
+        if (!container) return;
+        
+        if (activeCustomAvatarUrl) {
+            container.innerHTML = `<img src="${activeCustomAvatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; border:3px solid #00e5ff;">`;
+        } else if (activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if (styleObj && styleObj.image_url) {
+                container.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; border:3px solid #39ff14;">`;
+            } else {
+                container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
+            }
+        } else {
+            container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
+        }
     }
 
     // ===================================================
@@ -1104,13 +1193,11 @@
             
             activeCustomName = nameInput;
 
-            // Generate a metadata log that records the name but will not disrupt map data.
             await supabaseClient.from('penguin_logs').insert([{
                 penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                 finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
             }]);
             
-            // Force a hard reload to ensure all UI elements build perfectly
             location.reload();
         } else {
             alert("Please give your penguin a name before starting its journey!");
@@ -1135,20 +1222,28 @@
     }
 
     async function buildLeaderboard() {
-        const { data: allLogs, error } = await supabaseClient.from('penguin_logs').select('penguin_id, latitude, longitude, created_at, custom_name, finder_note').order('created_at', { ascending: true });
+        const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id')
+            .order('created_at', { ascending: true });
+            
         if (error || !allLogs) return;
 
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
+        const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
         allLogs.forEach(log => {
-            if (isFactoryLog(log.finder_note)) return;
+            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
                 
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
                 if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
+                
                 if (log.custom_name && log.custom_name.trim() !== "") namesMap[log.penguin_id] = log.custom_name;
+                if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
+                if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
+                if (log.style_id) styleMap[log.penguin_id] = log.style_id;
             }
         });
 
@@ -1157,7 +1252,17 @@
             let totalDistanceMeters = 0; const points = tracks[id];
             for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
             const totalMiles = totalDistanceMeters * 0.000621371; 
-            leaderboardData.push({ id: id, displayName: namesMap[id] ? `${namesMap[id]}` : id, miles: totalMiles, stopsCount: logsCountMap[id] || 1, monumentsCount: monumentTagsCountMap[id] || 0 });
+            
+            leaderboardData.push({ 
+                id: id, 
+                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
+                miles: totalMiles, 
+                stopsCount: logsCountMap[id] || 1, 
+                monumentsCount: monumentTagsCountMap[id] || 0,
+                avatarColor: avatarMap[id],
+                customAvatar: customAvatarMap[id],
+                styleId: styleMap[id]
+            });
         });
 
         if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
@@ -1217,7 +1322,13 @@
                 ? `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`
                 : `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
 
-            li.innerHTML = `<div><span class="rank-badge">${medal}</span><span class="p-name"><span class="bw-penguin">🐧</span> ${item.displayName}</span></div><div>${rightSideValueMetricsHTML}</div>`;
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <span class="rank-badge">${medal}</span>
+                    <div style="width:28px; height:28px; flex-shrink:0;">${getAvatarThumbnail(item.avatarColor, item.customAvatar, item.styleId)}</div>
+                    <span class="p-name">${item.displayName}</span>
+                </div>
+                <div style="text-align:right;">${rightSideValueMetricsHTML}</div>`;
             
             li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
             listOutput.appendChild(li);
@@ -1235,7 +1346,7 @@
 
         for (let i = logs.length - 1; i >= 0; i--) {
             const entry = logs[i];
-            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note)) {
+            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note) && !isAdminHideLog(entry.finder_note)) {
                 const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
                 const monumentName = matchString ? matchString[1] : "Unknown Landmark";
                 discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
@@ -1286,7 +1397,7 @@
 
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
-            if(isFactoryLog(entry.finder_note)) continue;
+            if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note)) continue;
             
             let cleanNote = entry.finder_note || "";
             if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
@@ -1343,7 +1454,7 @@
 
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color')
+            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
@@ -1383,15 +1494,22 @@
         let resolvedDisplayName = globalNamedEntry ? globalNamedEntry : targetId;
         activeCustomName = resolvedDisplayName;
         
-        const avatarEntry = logs.find(log => log.avatar_color && log.avatar_color.trim() !== "");
+        // Find avatar parameters backwards to get latest configs
+        const avatarEntry = [...logs].reverse().find(log => log.avatar_color && log.avatar_color.trim() !== "");
         activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
+        
+        const customUrlEntry = [...logs].reverse().find(log => log.custom_avatar_url);
+        activeCustomAvatarUrl = customUrlEntry ? customUrlEntry.custom_avatar_url : null;
+        
+        const styleEntry = [...logs].reverse().find(log => log.style_id);
+        activeStyleId = styleEntry ? styleEntry.style_id : null;
         
         const pIdEl = document.getElementById('penguin-id-display');
         if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
         const pNameEl = document.getElementById("penguin-name-display");
         if (pNameEl) pNameEl.innerText = resolvedDisplayName;
 
-        updateProfileAvatar(activeAvatarColor);
+        updateProfileAvatarDisplay();
 
         let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
         const btnPenguin = document.getElementById('tab-my-penguin');
@@ -1408,7 +1526,8 @@
             if (editBtn) editBtn.style.display = 'none';
         }
 
-        const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note));
+        // Apply strict filtering to stops metrics
+        const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note));
         const totalStopsEl = document.getElementById("total-stops-counter");
         if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
 
@@ -1423,7 +1542,7 @@
 
         let validStopCounterForMap = 1;
         logs.forEach((log) => {
-            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note)) {
+            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
                 const latLng = [log.latitude, log.longitude];
                 pathCoordinates.push(latLng);
 
