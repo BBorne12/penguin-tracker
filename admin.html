@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iceberg Command Center | Penguin Tracker™</title>
     
+    <!-- Penguin Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+    <!-- Leaflet Mapping Engine -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -73,6 +75,9 @@
 
         .btn-danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%); border-color: rgba(239, 68, 68, 0.4); }
         .btn-danger:hover { background: rgba(239, 68, 68, 0.3); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
+        
+        .btn-gps { background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; }
+        .btn-gps:hover:not(:disabled) { background: rgba(56, 189, 248, 0.2); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
 
         /* Tables & Lists Matrices */
         .matrix-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
@@ -135,6 +140,7 @@
 
     <div class="layout-section">
 
+        <!-- THE STYLE FORGE -->
         <div class="glass-card">
             <h2>🎨 The Style Forge</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Create and manage custom 3D printed styles and their avatar images.</p>
@@ -156,6 +162,7 @@
             </div>
         </div>
         
+        <!-- FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
@@ -176,6 +183,7 @@
             </div>
         </div>
 
+        <!-- ACTIVE INVENTORY -->
         <div class="glass-card">
             <h2>🐧 The Rookery</h2>
             <div style="overflow-x: auto;">
@@ -198,13 +206,15 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls -->
             <div id="pagination-controls" style="display: flex; justify-content: center; gap: 15px; margin-top: 16px; align-items: center;"></div>
         </div>
 
     </div>
 
+    <!-- BRANDED FOOTER -->
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.15.0</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.0</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -221,6 +231,7 @@
     let forgeSelectedId = null;
     let expandedPenguinId = null; 
     let activeLeafletMap = null;
+    let activeClickMarker = null; // Elevated to global scope for GPS logic
     
     let currentPage = 1;
     const itemsPerPage = 10;
@@ -518,7 +529,7 @@
         if (existingRow) {
             isSameRow = existingRow.previousElementSibling === rowEl;
             existingRow.remove();
-            if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; }
+            if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; activeClickMarker = null; }
         }
 
         if (isSameRow && !forceOpen) {
@@ -553,6 +564,7 @@
             <td colspan="7" style="padding: 24px 16px;">
                 <div style="display: flex; gap: 32px; align-items: flex-start;">
                     
+                    <!-- Left Column: Data & Controls -->
                     <div style="flex: 1;">
                         <h3 style="color: #fae8ff; font-size: 14pt; margin-bottom: 4px;">Auditing: ${node.id}</h3>
                         <span style="font-size: 9pt; color: #cbd5e1; display:block; margin-bottom: 16px;">Current Registry: "${node.activeName}"</span>
@@ -567,6 +579,7 @@
                             </div>
                         </div>
 
+                        <!-- TACTICAL MAP CONTAINER -->
                         <div style="background: rgba(0,0,0,0.4); padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
                             <label style="font-size: 9pt; color: #cbd5e1; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Record Hide Location:</label>
                             <div id="audit-map-container" style="height: 250px; width: 100%; border-radius: 6px; margin-bottom: 12px; z-index: 1; border: 1px solid #333;"></div>
@@ -575,7 +588,7 @@
                                 <input type="hidden" id="hide-lat-${node.id}">
                                 <input type="hidden" id="hide-lng-${node.id}">
                                 <button class="btn-command" id="btn-save-hide-${node.id}" disabled onclick="saveHideLocation('${node.id}')">Save Map Location</button>
-                                <span style="font-size: 8.5pt; color: #94a3b8;">Click the map to drop a coordinate pin.</span>
+                                <button class="btn-command btn-gps" id="btn-gps-hide-${node.id}" onclick="useCurrentLocationForHide('${node.id}')">📍 Use GPS Location</button>
                             </div>
                         </div>
 
@@ -589,6 +602,7 @@
                         </div>
                     </div>
                     
+                    <!-- Right Column: Sticker Render -->
                     <div style="width: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px dashed rgba(255,255,255,0.1);">
                         <span style="font-size: 8pt; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Security Sticker</span>
                         <img id="audit-sticker-${node.id}" style="width: 180px; height: 180px; background: white; border-radius: 6px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); display: none;" alt="QR Sticker">
@@ -604,14 +618,14 @@
             generateStickerImage(node.id, node.secretTag, `audit-sticker-${node.id}`);
         }
 
-        // Initialize Tactical Map
+        // Initialize Tactical Map (Defaults to Carmel, IN)
         setTimeout(() => {
             activeLeafletMap = L.map('audit-map-container').setView([39.9783, -86.1180], 11);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(activeLeafletMap);
 
-            let activeClickMarker;
+            activeClickMarker = null; // Reset for the new row
             const logData = globalCachedLogsArray.filter(l => l.penguin_id === node.id);
             
             if (logData.length > 0) {
@@ -645,6 +659,43 @@
             
             activeLeafletMap.invalidateSize();
         }, 150);
+    }
+
+    function useCurrentLocationForHide(nodeId) {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        const gpsBtn = document.getElementById(`btn-gps-hide-${nodeId}`);
+        gpsBtn.innerText = "Locating...";
+        gpsBtn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                if (activeLeafletMap) {
+                    activeLeafletMap.setView([lat, lng], 16);
+                    if (activeClickMarker) activeLeafletMap.removeLayer(activeClickMarker);
+                    activeClickMarker = L.marker([lat, lng]).addTo(activeLeafletMap);
+                }
+
+                document.getElementById(`hide-lat-${nodeId}`).value = lat;
+                document.getElementById(`hide-lng-${nodeId}`).value = lng;
+                document.getElementById(`btn-save-hide-${nodeId}`).disabled = false;
+
+                gpsBtn.innerText = "📍 Use GPS Location";
+                gpsBtn.disabled = false;
+            },
+            (error) => {
+                alert("Unable to retrieve your location. Please check your permissions.");
+                gpsBtn.innerText = "📍 Use GPS Location";
+                gpsBtn.disabled = false;
+            },
+            { enableHighAccuracy: true }
+        );
     }
 
     async function saveHideLocation(id) {
@@ -686,7 +737,7 @@
         if(!confirm(`Delete ${id}? This action cannot be reversed.`)) return;
         await supabaseClient.from('penguin_logs').delete().eq('penguin_id', id);
         if (expandedPenguinId === id) {
-            if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; }
+            if (activeLeafletMap) { activeLeafletMap.remove(); activeLeafletMap = null; activeClickMarker = null; }
             expandedPenguinId = null;
         }
         loadAdminInventoryMatrix();
