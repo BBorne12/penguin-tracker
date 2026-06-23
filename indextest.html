@@ -174,6 +174,13 @@
             display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);
         }
         .avatar-option:hover { transform: scale(1.05); }
+        
+        .gallery-img-wrapper {
+            aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; cursor: pointer;
+            border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(0,0,0,0.3);
+        }
+        .gallery-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s ease; }
+        .gallery-img-wrapper:hover img { transform: scale(1.05); }
 
         .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
         .app-footer {
@@ -250,10 +257,26 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="closeImageModal()">
-    <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
+<div class="modal-overlay" id="gallery-modal">
+    <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px; max-height: 90vh; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="color: #00e5ff; margin: 0;">Photo Gallery</h2>
+            <button style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;" onclick="closeGalleryModal()">×</button>
+        </div>
+        <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px;">
+            </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="if(event.target === this) closeImageModal()">
+    <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);" onclick="if(event.target === this) closeImageModal()">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-        <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;" onclick="closeImageModal()">×</button>
+        
+        <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 10;" onclick="closeImageModal()">×</button>
+        
+        <button id="img-nav-left" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 28px; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: none; z-index: 10; align-items: center; justify-content: center;" onclick="prevGalleryImage(event)">❮</button>
+        
+        <button id="img-nav-right" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 28px; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: none; z-index: 10; align-items: center; justify-content: center;" onclick="nextGalleryImage(event)">❯</button>
     </div>
 </div>
 
@@ -300,6 +323,8 @@
             <div id="my-penguin-container">
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
+                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openGalleryModal()">🖼️ Gallery</button>
+                    
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
                     <button id="share-profile-btn" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openShareModal()">🔗 Share</button>
@@ -448,7 +473,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.15.1</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.15.2</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -483,6 +508,10 @@
     let activeStyleId = null;
     let globalStyles = [];
     
+    // Gallery State
+    let globalGalleryImages = [];
+    let currentGalleryIndex = -1;
+
     // Avatar Modal Selection State
     let modalAvatarType = 'color'; // 'color', 'style', 'custom'
     let modalAvatarColor = '#38bdf8';
@@ -632,15 +661,18 @@
         const contPenguin = document.getElementById('my-penguin-container');
         const contColony = document.getElementById('colony-container');
         const editBtn = document.getElementById('edit-profile-btn');
+        const galleryBtn = document.getElementById('gallery-profile-btn');
         
         if(tabName === 'penguin') {
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
+            if(galleryBtn && globalGalleryImages.length > 0) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
             if(editBtn) editBtn.style.display = 'none';
+            if(galleryBtn) galleryBtn.style.display = 'none';
             loadColonyList();
         }
     }
@@ -832,7 +864,6 @@
         const w = document.getElementById('welcome-modal'); 
         if (w) w.style.display = 'none'; 
         
-        // SEQUENCED MODAL HANDOFF:
         if (!globalNamedEntry && !isViewOnlyMode) {
             const f = document.getElementById('first-find-modal');
             if (f) f.style.display = 'flex';
@@ -840,12 +871,72 @@
     }
     
     function openImageModal(url) {
-        const m = document.getElementById('image-modal'); const img = document.getElementById('fullscreen-image');
-        if(m && img) { img.src = url; m.style.display = 'flex'; }
+        const index = globalGalleryImages.indexOf(url);
+        if (index !== -1) {
+            openFullscreenGallery(index);
+        } else {
+            document.getElementById('fullscreen-image').src = url;
+            document.getElementById('img-nav-left').style.display = 'none';
+            document.getElementById('img-nav-right').style.display = 'none';
+            document.getElementById('image-modal').style.display = 'flex';
+        }
     }
+    
     function closeImageModal() {
         const m = document.getElementById('image-modal');
         if(m) { m.style.display = 'none'; document.getElementById('fullscreen-image').src = ""; }
+    }
+
+    // ===================================================
+    // PHOTO GALLERY ENGINE
+    // ===================================================
+    function openGalleryModal() {
+        const grid = document.getElementById('gallery-grid');
+        grid.innerHTML = '';
+        
+        globalGalleryImages.forEach((url, idx) => {
+            const div = document.createElement('div');
+            div.className = 'gallery-img-wrapper';
+            div.innerHTML = `<img src="${url}">`;
+            div.onclick = () => openFullscreenGallery(idx);
+            grid.appendChild(div);
+        });
+        
+        document.getElementById('gallery-modal').style.display = 'flex';
+    }
+
+    function closeGalleryModal() {
+        document.getElementById('gallery-modal').style.display = 'none';
+    }
+
+    function openFullscreenGallery(index) {
+        currentGalleryIndex = index;
+        updateFullscreenImage();
+        document.getElementById('image-modal').style.display = 'flex';
+    }
+
+    function updateFullscreenImage() {
+        if (currentGalleryIndex < 0 || currentGalleryIndex >= globalGalleryImages.length) return;
+        document.getElementById('fullscreen-image').src = globalGalleryImages[currentGalleryIndex];
+        
+        document.getElementById('img-nav-left').style.display = currentGalleryIndex > 0 ? 'flex' : 'none';
+        document.getElementById('img-nav-right').style.display = currentGalleryIndex < globalGalleryImages.length - 1 ? 'flex' : 'none';
+    }
+
+    function prevGalleryImage(e) {
+        e.stopPropagation();
+        if (currentGalleryIndex > 0) {
+            currentGalleryIndex--;
+            updateFullscreenImage();
+        }
+    }
+
+    function nextGalleryImage(e) {
+        e.stopPropagation();
+        if (currentGalleryIndex < globalGalleryImages.length - 1) {
+            currentGalleryIndex++;
+            updateFullscreenImage();
+        }
     }
 
     // ===================================================
@@ -1577,6 +1668,19 @@
 
         const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
         globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
+
+        // Populate Gallery Data
+        globalGalleryImages = (logs || [])
+            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
+            .map(log => log.photo_url);
+            
+        const galleryBtn = document.getElementById('gallery-profile-btn');
+        if (galleryBtn && !isViewOnlyMode) {
+            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
+        } else if (galleryBtn) {
+            // Also allow viewers to see the gallery if it exists
+            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
+        }
 
         // SMART MODAL HANDLING
         const welcomeModal = document.getElementById('welcome-modal');
