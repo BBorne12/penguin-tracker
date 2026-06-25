@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iceberg Command Center | Penguin Tracker™</title>
     
-    <!-- Penguin Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <!-- Leaflet Mapping Engine -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -140,7 +138,6 @@
 
     <div class="layout-section">
 
-        <!-- THE STYLE FORGE -->
         <div class="glass-card">
             <h2>🎨 The Style Forge</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Create and manage custom 3D printed styles and their avatar images.</p>
@@ -162,14 +159,13 @@
             </div>
         </div>
         
-        <!-- FLEET PRODUCTION LINE -->
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
             <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
-                <button class="btn-command" onclick="generateNewPenguin()" style="white-space: nowrap;">Generate & Register</button>
+                <button class="btn-command" onclick="generateNewPenguin(event)" style="white-space: nowrap;">Generate & Register</button>
             </div>
             
             <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
@@ -183,7 +179,6 @@
             </div>
         </div>
 
-        <!-- ACTIVE INVENTORY -->
         <div class="glass-card">
             <h2>🐧 The Rookery</h2>
             <div style="overflow-x: auto;">
@@ -206,15 +201,13 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Pagination Controls -->
             <div id="pagination-controls" style="display: flex; justify-content: center; gap: 15px; margin-top: 16px; align-items: center;"></div>
         </div>
 
     </div>
 
-    <!-- BRANDED FOOTER -->
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.0</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.1</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -231,7 +224,7 @@
     let forgeSelectedId = null;
     let expandedPenguinId = null; 
     let activeLeafletMap = null;
-    let activeClickMarker = null; // Elevated to global scope for GPS logic
+    let activeClickMarker = null; 
     
     let currentPage = 1;
     const itemsPerPage = 10;
@@ -271,6 +264,68 @@
         sessionStorage.removeItem("admin_verified");
         location.reload();
     }
+
+    // ===================================================
+    // DIAGNOSTIC PENGUIN HATCH ENGINE
+    // ===================================================
+    async function generateNewPenguin(event) {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        
+        // Visual indicator that the click registered
+        btn.innerText = "Generating...";
+        btn.disabled = true;
+
+        try {
+            const idInputField = document.getElementById('new-penguin-id');
+            const id = idInputField.value.trim();
+            
+            // Validate the input
+            if (id === 'Penguin-' || !id) {
+                alert("Please type a unique number or name after 'Penguin-' (for example: Penguin-007) before clicking Generate!");
+                btn.innerText = originalText;
+                btn.disabled = false;
+                idInputField.focus();
+                return;
+            }
+
+            const secretTag = Math.random().toString(36).substring(2, 10);
+            
+            // Execute Supabase Insert
+            const { data, error } = await supabaseClient.from('penguin_logs').insert([{ 
+                penguin_id: id, 
+                secret_tag: secretTag, 
+                finder_note: 'Initial Factory Registration',
+                latitude: 39.9783, 
+                longitude: -86.1180 
+            }]);
+
+            // HARD CATCH: Alert exact Supabase error if the database rejects it
+            if (error) {
+                alert("Database Error: " + error.message);
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            // Generate visuals and update UI
+            generateStickerImage(id, secretTag, 'final-sticker-img');
+            document.getElementById("qr-url-display").innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
+            document.getElementById("qrcode-container").style.display = "flex";
+            
+            idInputField.value = "Penguin-"; 
+            await loadAdminInventoryMatrix(); 
+
+        } catch (err) {
+            // HARD CATCH: Alert exact Javascript failure
+            alert("System Error: " + err.message);
+        }
+
+        // Restore button state
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+
 
     // ===================================================
     // STYLE FORGE & DATA COMPRESSION PIPELINE
@@ -424,7 +479,6 @@
             if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[log.penguin_id].activeName = log.custom_name;
             if (log.style_id) globalFleetClusters[log.penguin_id].styleId = log.style_id;
 
-            // Explicitly filter out ghost logs from the public aggregations
             if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
 
             globalFleetClusters[log.penguin_id].points.push({ lat: log.latitude, lng: log.longitude });
@@ -564,7 +618,6 @@
             <td colspan="7" style="padding: 24px 16px;">
                 <div style="display: flex; gap: 32px; align-items: flex-start;">
                     
-                    <!-- Left Column: Data & Controls -->
                     <div style="flex: 1;">
                         <h3 style="color: #fae8ff; font-size: 14pt; margin-bottom: 4px;">Auditing: ${node.id}</h3>
                         <span style="font-size: 9pt; color: #cbd5e1; display:block; margin-bottom: 16px;">Current Registry: "${node.activeName}"</span>
@@ -579,7 +632,6 @@
                             </div>
                         </div>
 
-                        <!-- TACTICAL MAP CONTAINER -->
                         <div style="background: rgba(0,0,0,0.4); padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
                             <label style="font-size: 9pt; color: #cbd5e1; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Record Hide Location:</label>
                             <div id="audit-map-container" style="height: 250px; width: 100%; border-radius: 6px; margin-bottom: 12px; z-index: 1; border: 1px solid #333;"></div>
@@ -602,7 +654,6 @@
                         </div>
                     </div>
                     
-                    <!-- Right Column: Sticker Render -->
                     <div style="width: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px dashed rgba(255,255,255,0.1);">
                         <span style="font-size: 8pt; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Security Sticker</span>
                         <img id="audit-sticker-${node.id}" style="width: 180px; height: 180px; background: white; border-radius: 6px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); display: none;" alt="QR Sticker">
@@ -618,14 +669,13 @@
             generateStickerImage(node.id, node.secretTag, `audit-sticker-${node.id}`);
         }
 
-        // Initialize Tactical Map (Defaults to Carmel, IN)
         setTimeout(() => {
             activeLeafletMap = L.map('audit-map-container').setView([39.9783, -86.1180], 11);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(activeLeafletMap);
 
-            activeClickMarker = null; // Reset for the new row
+            activeClickMarker = null; 
             const logData = globalCachedLogsArray.filter(l => l.penguin_id === node.id);
             
             if (logData.length > 0) {
