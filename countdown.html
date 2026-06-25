@@ -71,4 +71,43 @@
     const endDate = new Date("2031-07-26T00:00:00").getTime();
 
     function updateCountdown() {
-        const now = new
+        const now = new Date().getTime();
+        const distance = endDate - now;
+
+        if (distance < 0) {
+            document.getElementById("countdown").innerHTML = "TIME IS UP";
+            document.getElementById("progress-bar").style.width = "100%";
+            document.getElementById("progress-text").innerHTML = "100.000000%";
+            return;
+        }
+
+        // Time calculations
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        // Formatting
+        document.getElementById("countdown").innerHTML = 
+            `${days}<span class="labels">d</span> ${hours.toString().padStart(2, '0')}<span class="labels">h</span> ${minutes.toString().padStart(2, '0')}<span class="labels">m</span> ${seconds.toString().padStart(2, '0')}<span class="labels">s</span>`;
+
+        // Progress Bar calculation
+        const totalDuration = endDate - startDate;
+        const elapsed = now - startDate;
+        let percentage = (elapsed / totalDuration) * 100;
+        
+        // Cap at 0 and 100
+        if (percentage < 0) percentage = 0;
+        if (percentage > 100) percentage = 100;
+
+        document.getElementById("progress-bar").style.width = percentage + "%";
+        document.getElementById("progress-text").innerHTML = percentage.toFixed(6) + "%";
+    }
+
+    // Run every second
+    setInterval(updateCountdown, 1000);
+    // Initial call
+    updateCountdown();
+</script>
+</body>
+</html>
