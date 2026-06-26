@@ -207,7 +207,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.1</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.2</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -272,7 +272,6 @@
         const btn = event.target;
         const originalText = btn.innerText;
         
-        // Visual indicator that the click registered
         btn.innerText = "Generating...";
         btn.disabled = true;
 
@@ -280,7 +279,6 @@
             const idInputField = document.getElementById('new-penguin-id');
             const id = idInputField.value.trim();
             
-            // Validate the input
             if (id === 'Penguin-' || !id) {
                 alert("Please type a unique number or name after 'Penguin-' (for example: Penguin-007) before clicking Generate!");
                 btn.innerText = originalText;
@@ -291,7 +289,6 @@
 
             const secretTag = Math.random().toString(36).substring(2, 10);
             
-            // Execute Supabase Insert
             const { data, error } = await supabaseClient.from('penguin_logs').insert([{ 
                 penguin_id: id, 
                 secret_tag: secretTag, 
@@ -300,7 +297,6 @@
                 longitude: -86.1180 
             }]);
 
-            // HARD CATCH: Alert exact Supabase error if the database rejects it
             if (error) {
                 alert("Database Error: " + error.message);
                 btn.innerText = originalText;
@@ -308,7 +304,6 @@
                 return;
             }
 
-            // Generate visuals and update UI
             generateStickerImage(id, secretTag, 'final-sticker-img');
             document.getElementById("qr-url-display").innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
             document.getElementById("qrcode-container").style.display = "flex";
@@ -317,11 +312,9 @@
             await loadAdminInventoryMatrix(); 
 
         } catch (err) {
-            // HARD CATCH: Alert exact Javascript failure
             alert("System Error: " + err.message);
         }
 
-        // Restore button state
         btn.innerText = originalText;
         btn.disabled = false;
     }
@@ -479,7 +472,8 @@
             if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[log.penguin_id].activeName = log.custom_name;
             if (log.style_id) globalFleetClusters[log.penguin_id].styleId = log.style_id;
 
-            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            // FIX: Reject ANY log that does not have coordinates, as well as ghost/factory logs.
+            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
 
             globalFleetClusters[log.penguin_id].points.push({ lat: log.latitude, lng: log.longitude });
             globalFleetClusters[log.penguin_id].pingsCount++;
@@ -685,6 +679,9 @@
 
                     const isGhost = isAdminHideLog(log.finder_note);
                     const dotColor = isGhost ? '#ef4444' : '#00e5ff';
+
+                    // FIX: Prevent map crashes if a log somehow has missing coordinates
+                    if (!log.latitude || !log.longitude) return;
 
                     L.circleMarker([log.latitude, log.longitude], {
                         color: dotColor,
