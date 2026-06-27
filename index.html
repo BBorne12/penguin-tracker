@@ -152,6 +152,7 @@
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
+        /* MODALS & OVERLAYS */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
@@ -182,6 +183,21 @@
         .gallery-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s ease; }
         .gallery-img-wrapper:hover img { transform: scale(1.05); }
 
+        /* IN-APP TOAST NOTIFICATIONS */
+        #toast-container {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 100000; display: flex; flex-direction: column; gap: 8px;
+            align-items: center; pointer-events: none; width: 90%; max-width: 400px;
+        }
+        .toast {
+            padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 11pt;
+            font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: opacity 0.3s ease; text-align: center; width: 100%;
+        }
+        .toast-success { background: rgba(57, 255, 20, 0.9); border: 1px solid #39ff14; color: #02060d; }
+        .toast-error { background: rgba(239, 68, 68, 0.9); border: 1px solid #ef4444; }
+        .toast-info { background: rgba(56, 189, 248, 0.9); border: 1px solid #38bdf8; color: #02060d; }
+
         .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
         .app-footer {
             text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
@@ -191,6 +207,21 @@
     </style>
 </head>
 <body>
+
+<!-- Toast Notification Container -->
+<div id="toast-container"></div>
+
+<!-- Universal Confirm Modal -->
+<div class="modal-overlay" id="confirm-modal" style="z-index: 100005;">
+    <div class="modal-card">
+        <h2 style="color: #fca5a5; margin-bottom: 12px;">Confirm Action</h2>
+        <p id="confirm-message" style="font-size: 11.5pt; color: #cbd5e1; margin-bottom: 24px; line-height: 1.5;"></p>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-glow" style="background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeConfirm()">Cancel</button>
+            <button class="btn-glow" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%); border-color: #ef4444; color: #fca5a5;" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
 
 <div class="modal-overlay" id="welcome-modal">
     <div class="modal-card" style="text-align: left;">
@@ -213,6 +244,32 @@
         </p>
         <input type="text" id="modal-custom-name" class="modal-input" placeholder="e.g., Captain Waddles..." style="margin-top: 16px;">
         <button onclick="saveCustomNameFromModal(this)" class="btn-glow">Save Name & Start Journey!</button>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="success-modal">
+    <div class="modal-card">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">✅</span>
+        <h2 style="color: #39ff14; font-size: 16pt; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">Stop Logged Successfully!</h2>
+        <p style="font-size: 11.5pt; color: #94a3b8; line-height: 1.5; margin: 6px 0 16px 0;">
+            Awesome! This penguin's adventure continues.
+        </p>
+        
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: left;">
+            <strong style="color: #38bdf8; font-size: 11pt;">📌 Bookmark to Follow</strong>
+            <p style="font-size: 10pt; color: #cbd5e1; margin: 4px 0 8px 0;">Keep track of where this penguin goes next! Bookmark this view-only link in your browser to continue to have access.</p>
+            <p style="font-size: 9.5pt; color: #94a3b8; font-style: italic; margin: 0 0 8px 0;">Note: You will need to scan the penguin's physical QR code again to record a new stop.</p>
+            <input type="text" id="success-view-url" class="modal-input" readonly style="margin: 0; font-size: 9.5pt; padding: 8px; color: #00e5ff; background: rgba(0,229,255,0.05);" onclick="this.select()">
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: left;">
+            <strong style="color: #38bdf8; font-size: 11pt;">🔗 Share the Adventure</strong>
+            <p style="font-size: 10pt; color: #cbd5e1; margin: 4px 0 8px 0;">Share this penguin so that others can track its journey!</p>
+            <button class="btn-glow" style="padding: 10px;" onclick="handleSuccessShareClick()">Share Penguin</button>
+        </div>
+
+        <button class="btn-glow" style="background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeSuccessModal()">Close & View Map</button>
     </div>
 </div>
 
@@ -403,12 +460,12 @@
             <div id="stop-log-container">
                 <div class="input-group" id="notes-input-group">
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
-                    <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Tell us where you are taking it or who you're passing it to..."></textarea>
+                    <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Leave a log of your journey with your penguin. Include a picture to remember the stop."></textarea>
                 </div>
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
-                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Location</button>
+                    <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Stop</button>
                 </div>
             </div>
 
@@ -481,7 +538,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.15.5</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.16.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -508,6 +565,7 @@
     let isPrimaryControl = false;
     let isAuthorizedViewer = false;
     let isViewOnlyMode = true; 
+    let requiresReload = false;
     
     // Global Styling State
     let activeCustomName = "";
@@ -561,8 +619,38 @@
     if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
 
     // --- BULLETPROOF FILTERS ---
-    function isFactoryLog(note) { return note && note.toLowerCase().includes('initial factory registration'); }
-    function isAdminHideLog(note) { return note && note.includes('[ADMIN HIDE LOCATION]'); }
+    const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
+    const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
+
+    // ===================================================
+    // UNIVERSAL IN-APP NOTIFICATION ENGINE
+    // ===================================================
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerText = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    let pendingConfirmAction = null;
+    function showConfirm(message, callback) {
+        document.getElementById('confirm-message').innerText = message;
+        pendingConfirmAction = callback;
+        document.getElementById('confirm-modal').style.display = 'flex';
+    }
+    function executeConfirm() {
+        if(pendingConfirmAction) pendingConfirmAction();
+        closeConfirm();
+    }
+    function closeConfirm() {
+        document.getElementById('confirm-modal').style.display = 'none';
+        pendingConfirmAction = null;
+    }
 
     // ===================================================
     // STATELESS SECURITY GATEWAY LOGIC
@@ -695,7 +783,7 @@
         const { data, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
         
         if (selectError) {
-            alert("Connection error: " + selectError.message);
+            showToast("Connection error: " + selectError.message, "error");
             if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
             return;
         }
@@ -716,7 +804,7 @@
             const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
             
             if (updateError) {
-                alert("Database update rejected: " + updateError.message);
+                showToast("Database update rejected: " + updateError.message, "error");
                 if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
                 return;
             }
@@ -811,31 +899,52 @@
         });
     }
 
-    async function removeFromColony(targetId, event) {
+    function removeFromColony(targetId, event) {
         event.stopPropagation();
         let ownerId = isPrimaryControl ? penguinId : viewerId;
-        if (!ownerId) { alert("You can only remove penguins from your own colony."); return; }
-        if(!confirm(`Remove ${targetId} from your colony?`)) return;
-        
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
-        let colonySet = new Set();
-        if (myLogs) {
-            myLogs.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                }
-            });
+        if (!ownerId) { 
+            showToast("You can only remove penguins from your own colony.", "error"); 
+            return; 
         }
         
-        colonySet.delete(targetId);
-        let masterListArray = Array.from(colonySet);
-        await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
-        loadColonyList();
+        showConfirm(`Remove ${targetId} from your colony?`, async () => {
+            const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
+            let colonySet = new Set();
+            if (myLogs) {
+                myLogs.forEach(log => {
+                    if (log.colony_list) {
+                        log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                    }
+                });
+            }
+            
+            colonySet.delete(targetId);
+            let masterListArray = Array.from(colonySet);
+            await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
+            loadColonyList();
+            showToast(`${targetId} removed from colony.`, "success");
+        });
     }
 
     // ===================================================
-    // SHARE MODAL
+    // SHARE MODAL & SUCCESS MODAL
     // ===================================================
+    function showSuccessModal() {
+        const viewOnlyUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}`;
+        document.getElementById('success-view-url').value = viewOnlyUrl;
+        document.getElementById('success-modal').style.display = 'flex';
+    }
+
+    function closeSuccessModal() {
+        document.getElementById('success-modal').style.display = 'none';
+        if (requiresReload) location.reload();
+    }
+
+    function handleSuccessShareClick() {
+        document.getElementById('success-modal').style.display = 'none';
+        openShareModal();
+    }
+
     function openShareModal() {
         const shareUrl = "https://bborne12.github.io/penguin-tracker/?id=" + encodeURIComponent(penguinId);
         document.getElementById('share-url-input').value = shareUrl;
@@ -844,13 +953,14 @@
     
     function closeShareModal() {
         document.getElementById('share-modal').style.display = 'none';
+        if (requiresReload) location.reload();
     }
     
     function copyShareUrl() {
         const input = document.getElementById('share-url-input');
         input.select();
         document.execCommand('copy');
-        alert('Link copied to clipboard!');
+        showToast('Link copied to clipboard!', 'success');
     }
     
     function shareNative() {
@@ -859,7 +969,7 @@
         if (navigator.share) {
             navigator.share({ title: 'Penguin Tracker™', text: shareText, url: url });
         } else {
-            alert('Native sharing not supported on this browser.');
+            showToast('Native sharing not supported on this browser.', 'error');
         }
     }
     
@@ -1134,7 +1244,7 @@
             initAvatarGrid();
             
         } catch(e) {
-            alert("Image upload failed: " + e.message);
+            showToast("Image upload failed: " + e.message, "error");
         }
         saveBtn.disabled = false;
         saveBtn.innerText = "Save Changes";
@@ -1163,7 +1273,10 @@
 
     async function saveProfileEdit() {
         const newName = document.getElementById('edit-custom-name').value.trim();
-        if(!newName) return alert("Penguin name cannot be empty.");
+        if(!newName) {
+            showToast("Penguin name cannot be empty.", "error");
+            return;
+        }
 
         const saveBtn = document.getElementById('save-profile-btn');
         saveBtn.disabled = true;
@@ -1434,7 +1547,7 @@
             
             location.reload();
         } else {
-            alert("Please give your penguin a name before starting its journey!");
+            showToast("Please give your penguin a name before starting its journey!", "error");
         }
     }
 
@@ -1580,7 +1693,7 @@
 
         for (let i = logs.length - 1; i >= 0; i--) {
             const entry = logs[i];
-            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note) && !isAdminHideLog(entry.finder_note)) {
+            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note) && !isAdminHideLog(entry.finder_note) && entry.latitude && entry.longitude) {
                 const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
                 const monumentName = matchString ? matchString[1] : "Unknown Landmark";
                 discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
@@ -1631,7 +1744,9 @@
 
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
-            if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note)) continue;
+            
+            // STRICT FILTER: Must have coordinates and not be a factory/ghost log to count as a physical stop
+            if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note) || !entry.latitude || !entry.longitude) continue;
             
             let cleanNote = entry.finder_note || "";
             if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
@@ -1788,6 +1903,7 @@
 
         let validStopCounterForMap = 1;
         logs.forEach((log) => {
+            // Only plot valid coordinates that are not factory or ghost logs
             if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
                 const latLng = [log.latitude, log.longitude];
                 pathCoordinates.push(latLng);
@@ -1847,7 +1963,7 @@
                 if (storageError) throw storageError;
                 const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
                 uploadedPhotoUrl = publicUrlData.publicUrl;
-            } catch (err) { alert("Photo submission bypassed safely."); }
+            } catch (err) { showToast("Photo submission bypassed safely.", "info"); }
         }
 
         let cleanedPoiStringValue = selectedPoi;
@@ -1860,7 +1976,14 @@
         };
 
         const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
-        if (error) { alert("Database entry rejected."); if (submitBtn) submitBtn.disabled = false; return; }
+        if (error) { 
+            showToast("Database entry rejected.", "error"); 
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Log Penguin Stop";
+            }
+            return; 
+        }
 
         try {
             const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
@@ -1873,8 +1996,9 @@
             await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
         } catch(e) {}
 
-        alert(`Success! Adventure logged for ${activeCustomName || penguinId}.`);
-        location.reload(); 
+        // Triggers the new Success Modal instead of a raw browser alert
+        requiresReload = true;
+        showSuccessModal(); 
     }
 </script>
 
