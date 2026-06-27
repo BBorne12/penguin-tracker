@@ -1540,11 +1540,27 @@
             
             activeCustomName = nameInput;
 
-            await supabaseClient.from('penguin_logs').insert([{
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
                 penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                 finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
             }]);
+
+            if (error) {
+                showToast("Failed to hatch penguin.", "error");
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerText = "Save Name & Start Journey!";
+                }
+                return;
+            }
             
+            try {
+                const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+                let discordMsg = `🥚 🐧 **A New Penguin Has Hatched!**\n**Base ID:** \`${penguinId}\`\n**Custom Name:** **${activeCustomName}**\n**Location:** The journey begins!`;
+                const message = { username: "Penguin Scout", content: discordMsg };
+                await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+            } catch(e) {}
+
             location.reload();
         } else {
             showToast("Please give your penguin a name before starting its journey!", "error");
