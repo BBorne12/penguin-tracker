@@ -146,8 +146,9 @@
         .value { font-size: 12pt; color: #f8fafc; }
         .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
+        /* INCREASED MAP HEIGHT */
         #map {
-            width: 100% !important; height: 220px !important; background: #030712 !important;
+            width: 100% !important; height: 330px !important; background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
@@ -208,10 +209,8 @@
 </head>
 <body>
 
-<!-- Toast Notification Container -->
 <div id="toast-container"></div>
 
-<!-- Universal Confirm Modal -->
 <div class="modal-overlay" id="confirm-modal" style="z-index: 100005;">
     <div class="modal-card">
         <h2 style="color: #fca5a5; margin-bottom: 12px;">Confirm Action</h2>
@@ -247,7 +246,6 @@
     </div>
 </div>
 
-<!-- Success Modal -->
 <div class="modal-overlay" id="success-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">✅</span>
@@ -314,7 +312,16 @@
     </div>
 </div>
 
-<!-- Photo Gallery Grid Modal -->
+<div class="modal-overlay" id="fullscreen-map-overlay">
+    <div class="modal-card" style="max-width: 95vw; height: 90vh; padding: 16px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="color: #00e5ff; margin: 0; text-align: left;">Fleet Tracker View</h2>
+            <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; line-height: 1;" onclick="closeFullscreenTrackingMap()">×</button>
+        </div>
+        <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="gallery-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px; max-height: 90vh; display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -322,8 +329,7 @@
             <button style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;" onclick="closeGalleryModal()">×</button>
         </div>
         <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px;">
-            <!-- Grid items injected here -->
-        </div>
+            </div>
         <div class="pagination-container" id="gallery-pagination" style="display: none; margin-top: 12px; padding-top: 12px;">
             <button class="page-arrow" id="gallery-prev-btn" onclick="changeGalleryPage(-1)">←</button>
             <span class="page-indicator" id="gallery-page-indicator">Page 1 of 1</span>
@@ -332,7 +338,6 @@
     </div>
 </div>
 
-<!-- Full Screen Image Viewer Modal -->
 <div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="if(event.target === this) closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);" onclick="if(event.target === this) closeImageModal()">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -427,7 +432,10 @@
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
-                <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh</button>
+                <div>
+                    <button type="button" class="btn-inline-refresh" onclick="openFullscreenTrackingMap()" style="margin-right: 8px; font-size: 12pt; padding: 3px 8px; vertical-align: middle;">⛶</button>
+                    <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()" style="vertical-align: middle;">📍 Refresh</button>
+                </div>
             </div>
             <ul class="data-list" id="location-text-elements">
                 <li class="data-item">
@@ -538,7 +546,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.16.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.16.1</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -579,6 +587,11 @@
     let currentGalleryIndex = -1;
     let activeGalleryPage = 1;
     const GALLERY_ITEMS_PER_PAGE = 6;
+
+    // Fullscreen Map State
+    let fsMap = null;
+    let fsLayerGroup = null;
+    let fsCurrentJourneyLine = null;
 
     // Avatar Modal Selection State
     let modalAvatarType = 'color'; // 'color', 'style', 'custom'
@@ -1085,8 +1098,58 @@
     }
 
     // ===================================================
-    // MAP MODAL
+    // MAP & FULLSCREEN MAP MODAL
     // ===================================================
+    function openFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+        
+        if (!fsMap) {
+            fsMap = L.map('fullscreen-tracking-map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
+            fsLayerGroup = L.layerGroup().addTo(fsMap);
+        }
+        
+        // Timeout ensures the container is fully expanded before rendering Leaflet
+        setTimeout(() => {
+            fsMap.invalidateSize();
+            plotFullscreenTrackingMap();
+        }, 100);
+    }
+
+    function closeFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'none';
+    }
+
+    function plotFullscreenTrackingMap() {
+        if (!fsLayerGroup) return;
+        fsLayerGroup.clearLayers();
+        if (fsCurrentJourneyLine) { fsMap.removeLayer(fsCurrentJourneyLine); fsCurrentJourneyLine = null; }
+
+        const pathCoordinates = [];
+        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
+        
+        let stopCounter = 1;
+        globalLogData.forEach((log) => {
+            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                const latLng = [log.latitude, log.longitude];
+                pathCoordinates.push(latLng);
+
+                const dateObj = new Date(log.created_at).toLocaleDateString();
+                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; border: 1px solid rgba(255,255,255,0.2);">` : "";
+                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
+                const stopLabel = activeCustomName ? `<span class="bw-penguin">🐧</span> ${activeCustomName}` : `Stop #${stopCounter}`;
+                
+                L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+                stopCounter++;
+            }
+        });
+
+        if (pathCoordinates.length > 0) {
+            fsCurrentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(fsMap);
+            fsMap.fitBounds(fsCurrentJourneyLine.getBounds(), { padding: [40, 40] });
+        }
+    }
+
     function openMapModal(lat, lng) {
         document.getElementById('map-modal').style.display = 'flex';
         if (!modalMap) {
@@ -1540,11 +1603,27 @@
             
             activeCustomName = nameInput;
 
-            await supabaseClient.from('penguin_logs').insert([{
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
                 penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
                 finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
             }]);
+
+            if (error) {
+                showToast("Failed to hatch penguin.", "error");
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerText = "Save Name & Start Journey!";
+                }
+                return;
+            }
             
+            try {
+                const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+                let discordMsg = `🥚 🐧 **A New Penguin Has Hatched!**\n**Base ID:** \`${penguinId}\`\n**Custom Name:** **${activeCustomName}**\n**Location:** The journey begins!`;
+                const message = { username: "Penguin Scout", content: discordMsg };
+                await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+            } catch(e) {}
+
             location.reload();
         } else {
             showToast("Please give your penguin a name before starting its journey!", "error");
@@ -1819,10 +1898,11 @@
         const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
         globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
 
-        // Populate Gallery Data
+        // Populate Gallery Data (Reversed for newest first)
         globalGalleryImages = (logs || [])
             .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
-            .map(log => log.photo_url);
+            .map(log => log.photo_url)
+            .reverse();
             
         const galleryBtn = document.getElementById('gallery-profile-btn');
         if (galleryBtn && !isViewOnlyMode) {
@@ -1911,7 +1991,7 @@
                 const dateObj = new Date(log.created_at).toLocaleDateString();
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${resolvedDisplayName}` : `Stop #${validStopCounterForMap}`;
+                const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${globalNamedEntry}` : `Stop #${validStopCounterForMap}`;
                 
                 L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${validStopCounterForMap})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
                 validStopCounterForMap++;
