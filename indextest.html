@@ -319,6 +319,12 @@
             <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; line-height: 1;" onclick="closeFullscreenTrackingMap()">×</button>
         </div>
         <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
+        
+        <div class="tab-bar" style="margin-top: 16px; margin-bottom: 0;">
+            <button class="tab-btn active" id="fs-tab-my" onclick="setFullscreenMode('my')">My Penguin</button>
+            <button class="tab-btn" id="fs-tab-colony" onclick="setFullscreenMode('colony')">My Colony</button>
+            <button class="tab-btn" id="fs-tab-all" onclick="setFullscreenMode('all')">All Fleet</button>
+        </div>
     </div>
 </div>
 
@@ -546,7 +552,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.16.1</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.17.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -575,12 +581,17 @@
     let isViewOnlyMode = true; 
     let requiresReload = false;
     
-    // Global Styling State
+    // Global Styling & Data State
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
     let activeCustomAvatarUrl = null;
     let activeStyleId = null;
     let globalStyles = [];
+    
+    // Fleet Data Caches
+    let globalAllFleetLogs = [];
+    let globalMyColonyIds = [];
+    let currentFsMode = 'my';
     
     // Gallery State
     let globalGalleryImages = [];
@@ -591,10 +602,9 @@
     // Fullscreen Map State
     let fsMap = null;
     let fsLayerGroup = null;
-    let fsCurrentJourneyLine = null;
 
     // Avatar Modal Selection State
-    let modalAvatarType = 'color'; // 'color', 'style', 'custom'
+    let modalAvatarType = 'color'; 
     let modalAvatarColor = '#38bdf8';
     let modalCustomUrl = null;
     
@@ -726,22 +736,26 @@
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
+        // Initial Colony Fetch for Global Cache
+        let fetchId = isPrimaryControl ? penguinId : (viewerId ? viewerId : null);
+        if (fetchId) {
+            const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', fetchId);
+            let colonySet = new Set();
+            if (data) {
+                data.forEach(log => {
+                    if (log.colony_list) {
+                        log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                    }
+                });
+            }
+            globalMyColonyIds = Array.from(colonySet);
+        }
+
         if (isAuthorizedViewer && !isPrimaryControl) {
             if(backBtnContainer) backBtnContainer.style.display = 'block';
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
-                
-                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
-                let colonySet = new Set();
-                if (data) {
-                    data.forEach(log => {
-                        if (log.colony_list) {
-                            log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                        }
-                    });
-                }
-                
-                let inColonyHTML = colonySet.has(penguinId)
+                let inColonyHTML = globalMyColonyIds.includes(penguinId)
                     ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
                     : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
 
@@ -793,22 +807,7 @@
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        const { data, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
-        
-        if (selectError) {
-            showToast("Connection error: " + selectError.message, "error");
-            if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
-            return;
-        }
-
-        let colonySet = new Set();
-        if (data && data.length > 0) {
-            data.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if (i.trim()) colonySet.add(i.trim()); });
-                }
-            });
-        }
+        let colonySet = new Set(globalMyColonyIds);
         
         if (!colonySet.has(penguinId)) {
             colonySet.add(penguinId);
@@ -821,6 +820,7 @@
                 if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
                 return;
             }
+            globalMyColonyIds = masterListArray;
         }
         
         if(btn) {
@@ -830,44 +830,26 @@
 
     async function loadColonyList() {
         const listEl = document.getElementById('colony-list-output');
-        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying database pipelines... Data are aggregating.</li>`;
         
-        let queryId = penguinId; 
-
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', queryId);
-        let colonySet = new Set();
-        if (myLogs) {
-            myLogs.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                }
-            });
-        }
-        
-        let colonyIds = Array.from(colonySet);
-        
-        if (colonyIds.length === 0) {
+        if (globalMyColonyIds.length === 0) {
             listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
             return;
         }
 
-        const { data: allLogs } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note, custom_avatar_url, style_id')
-            .in('penguin_id', colonyIds)
-            .order('created_at', { ascending: true });
-            
         const colonyStats = {};
-        colonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
+        globalMyColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
         
-        if (allLogs) {
-            allLogs.forEach(log => {
-                if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
-                if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
-                if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
-                if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
+        if (globalAllFleetLogs.length > 0) {
+            globalAllFleetLogs.forEach(log => {
+                if (colonyStats[log.penguin_id]) {
+                    if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                    if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
+                    if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
+                    if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
 
-                if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
-                    colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                        colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                    }
                 }
             });
         }
@@ -883,7 +865,7 @@
             if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
-        colonyIds.forEach(id => {
+        globalMyColonyIds.forEach(id => {
             let miles = 0;
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
@@ -921,19 +903,12 @@
         }
         
         showConfirm(`Remove ${targetId} from your colony?`, async () => {
-            const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
-            let colonySet = new Set();
-            if (myLogs) {
-                myLogs.forEach(log => {
-                    if (log.colony_list) {
-                        log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                    }
-                });
-            }
-            
+            let colonySet = new Set(globalMyColonyIds);
             colonySet.delete(targetId);
             let masterListArray = Array.from(colonySet);
+            
             await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
+            globalMyColonyIds = masterListArray;
             loadColonyList();
             showToast(`${targetId} removed from colony.`, "success");
         });
@@ -1021,7 +996,7 @@
     }
 
     // ===================================================
-    // PAGINATED PHOTO GALLERY ENGINE
+    // PAGINATED PHOTO GALLERY ENGINE (REVERSE CHRONO)
     // ===================================================
     function openGalleryModal() {
         activeGalleryPage = 1;
@@ -1109,10 +1084,9 @@
             fsLayerGroup = L.layerGroup().addTo(fsMap);
         }
         
-        // Timeout ensures the container is fully expanded before rendering Leaflet
         setTimeout(() => {
             fsMap.invalidateSize();
-            plotFullscreenTrackingMap();
+            setFullscreenMode('my'); 
         }, 100);
     }
 
@@ -1120,33 +1094,85 @@
         document.getElementById('fullscreen-map-overlay').style.display = 'none';
     }
 
-    function plotFullscreenTrackingMap() {
-        if (!fsLayerGroup) return;
-        fsLayerGroup.clearLayers();
-        if (fsCurrentJourneyLine) { fsMap.removeLayer(fsCurrentJourneyLine); fsCurrentJourneyLine = null; }
+    function setFullscreenMode(mode) {
+        currentFsMode = mode;
+        document.getElementById('fs-tab-my').classList.toggle('active', mode === 'my');
+        document.getElementById('fs-tab-colony').classList.toggle('active', mode === 'colony');
+        document.getElementById('fs-tab-all').classList.toggle('active', mode === 'all');
+        plotFullscreenTrackingMap();
+    }
 
-        const pathCoordinates = [];
-        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
+    function plotFullscreenTrackingMap() {
+        if (!fsLayerGroup || !fsMap) return;
+        fsLayerGroup.clearLayers();
         
-        let stopCounter = 1;
-        globalLogData.forEach((log) => {
-            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+        let logsToProcess = [];
+        
+        if (currentFsMode === 'my') {
+            logsToProcess = globalAllFleetLogs.filter(log => log.penguin_id === penguinId);
+        } else if (currentFsMode === 'colony') {
+            const allowedIds = new Set(globalMyColonyIds);
+            allowedIds.add(penguinId);
+            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
+        } else {
+            logsToProcess = globalAllFleetLogs;
+        }
+
+        const tracks = {};
+        logsToProcess.forEach(log => {
+            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (!tracks[log.penguin_id]) tracks[log.penguin_id] = [];
+            tracks[log.penguin_id].push(log);
+        });
+
+        const palette = ['#00e5ff', '#39ff14', '#f472b6', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#e879f9', '#fb923c'];
+        
+        let colorIndex = 0;
+        const allBounds = L.latLngBounds();
+        let hasValidPoints = false;
+
+        Object.keys(tracks).forEach(pId => {
+            const pLogs = tracks[pId];
+            if (pLogs.length === 0) return;
+            
+            const pColor = pId === penguinId ? '#00e5ff' : palette[colorIndex % palette.length];
+            if (pId !== penguinId) colorIndex++;
+
+            const pathCoords = [];
+            const historicalIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${pColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px ${pColor};'></div>`, 
+                iconSize: [12, 12], 
+                iconAnchor: [6, 6] 
+            });
+
+            let stopCounter = 1;
+            pLogs.forEach(log => {
                 const latLng = [log.latitude, log.longitude];
-                pathCoordinates.push(latLng);
+                pathCoords.push(latLng);
+                allBounds.extend(latLng);
+                hasValidPoints = true;
 
                 const dateObj = new Date(log.created_at).toLocaleDateString();
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                const stopLabel = activeCustomName ? `<span class="bw-penguin">🐧</span> ${activeCustomName}` : `Stop #${stopCounter}`;
                 
-                L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
+                const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
+                
+                L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup)
+                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+                
                 stopCounter++;
+            });
+
+            if (pathCoords.length > 0) {
+                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(fsLayerGroup);
             }
         });
 
-        if (pathCoordinates.length > 0) {
-            fsCurrentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(fsMap);
-            fsMap.fitBounds(fsCurrentJourneyLine.getBounds(), { padding: [40, 40] });
+        if (hasValidPoints) {
+            fsMap.fitBounds(allBounds, { padding: [40, 40] });
         }
     }
 
@@ -1654,6 +1680,8 @@
             
         if (error || !allLogs) return;
 
+        globalAllFleetLogs = allLogs; // Cached for full-screen map mode
+        
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
         const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
