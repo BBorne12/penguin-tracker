@@ -146,8 +146,9 @@
         .value { font-size: 12pt; color: #f8fafc; }
         .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
+        /* INCREASED MAP HEIGHT */
         #map {
-            width: 100% !important; height: 220px !important; background: #030712 !important;
+            width: 100% !important; height: 330px !important; background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
@@ -208,10 +209,8 @@
 </head>
 <body>
 
-<!-- Toast Notification Container -->
 <div id="toast-container"></div>
 
-<!-- Universal Confirm Modal -->
 <div class="modal-overlay" id="confirm-modal" style="z-index: 100005;">
     <div class="modal-card">
         <h2 style="color: #fca5a5; margin-bottom: 12px;">Confirm Action</h2>
@@ -247,7 +246,6 @@
     </div>
 </div>
 
-<!-- Success Modal -->
 <div class="modal-overlay" id="success-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">✅</span>
@@ -314,7 +312,22 @@
     </div>
 </div>
 
-<!-- Photo Gallery Grid Modal -->
+<div class="modal-overlay" id="fullscreen-map-overlay">
+    <div class="modal-card" style="max-width: 95vw; height: 90vh; padding: 16px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="color: #00e5ff; margin: 0; text-align: left;">Fleet Tracker View</h2>
+            <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; line-height: 1;" onclick="closeFullscreenTrackingMap()">×</button>
+        </div>
+        <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
+        
+        <div class="tab-bar" style="margin-top: 16px; margin-bottom: 0;">
+            <button class="tab-btn active" id="fs-tab-my" onclick="setFullscreenMode('my')">My Penguin</button>
+            <button class="tab-btn" id="fs-tab-colony" onclick="setFullscreenMode('colony')">My Colony</button>
+            <button class="tab-btn" id="fs-tab-all" onclick="setFullscreenMode('all')">All Fleet</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="gallery-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px; max-height: 90vh; display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -322,8 +335,7 @@
             <button style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;" onclick="closeGalleryModal()">×</button>
         </div>
         <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px;">
-            <!-- Grid items injected here -->
-        </div>
+            </div>
         <div class="pagination-container" id="gallery-pagination" style="display: none; margin-top: 12px; padding-top: 12px;">
             <button class="page-arrow" id="gallery-prev-btn" onclick="changeGalleryPage(-1)">←</button>
             <span class="page-indicator" id="gallery-page-indicator">Page 1 of 1</span>
@@ -332,7 +344,6 @@
     </div>
 </div>
 
-<!-- Full Screen Image Viewer Modal -->
 <div class="modal-overlay" id="image-modal" style="padding: 0;" onclick="if(event.target === this) closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);" onclick="if(event.target === this) closeImageModal()">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -427,7 +438,10 @@
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
-                <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()">📍 Refresh</button>
+                <div>
+                    <button type="button" class="btn-inline-refresh" onclick="openFullscreenTrackingMap()" style="margin-right: 8px; font-size: 12pt; padding: 3px 8px; vertical-align: middle;">⛶</button>
+                    <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()" style="vertical-align: middle;">📍 Refresh</button>
+                </div>
             </div>
             <ul class="data-list" id="location-text-elements">
                 <li class="data-item">
@@ -538,7 +552,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.16.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.17.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -567,12 +581,17 @@
     let isViewOnlyMode = true; 
     let requiresReload = false;
     
-    // Global Styling State
+    // Global Styling & Data State
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
     let activeCustomAvatarUrl = null;
     let activeStyleId = null;
     let globalStyles = [];
+    
+    // Fleet Data Caches
+    let globalAllFleetLogs = [];
+    let globalMyColonyIds = [];
+    let currentFsMode = 'my';
     
     // Gallery State
     let globalGalleryImages = [];
@@ -580,8 +599,12 @@
     let activeGalleryPage = 1;
     const GALLERY_ITEMS_PER_PAGE = 6;
 
+    // Fullscreen Map State
+    let fsMap = null;
+    let fsLayerGroup = null;
+
     // Avatar Modal Selection State
-    let modalAvatarType = 'color'; // 'color', 'style', 'custom'
+    let modalAvatarType = 'color'; 
     let modalAvatarColor = '#38bdf8';
     let modalCustomUrl = null;
     
@@ -713,22 +736,26 @@
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
+        // Initial Colony Fetch for Global Cache
+        let fetchId = isPrimaryControl ? penguinId : (viewerId ? viewerId : null);
+        if (fetchId) {
+            const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', fetchId);
+            let colonySet = new Set();
+            if (data) {
+                data.forEach(log => {
+                    if (log.colony_list) {
+                        log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
+                    }
+                });
+            }
+            globalMyColonyIds = Array.from(colonySet);
+        }
+
         if (isAuthorizedViewer && !isPrimaryControl) {
             if(backBtnContainer) backBtnContainer.style.display = 'block';
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
-                
-                const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
-                let colonySet = new Set();
-                if (data) {
-                    data.forEach(log => {
-                        if (log.colony_list) {
-                            log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                        }
-                    });
-                }
-                
-                let inColonyHTML = colonySet.has(penguinId)
+                let inColonyHTML = globalMyColonyIds.includes(penguinId)
                     ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
                     : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
 
@@ -780,22 +807,7 @@
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        const { data, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
-        
-        if (selectError) {
-            showToast("Connection error: " + selectError.message, "error");
-            if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
-            return;
-        }
-
-        let colonySet = new Set();
-        if (data && data.length > 0) {
-            data.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if (i.trim()) colonySet.add(i.trim()); });
-                }
-            });
-        }
+        let colonySet = new Set(globalMyColonyIds);
         
         if (!colonySet.has(penguinId)) {
             colonySet.add(penguinId);
@@ -808,6 +820,7 @@
                 if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
                 return;
             }
+            globalMyColonyIds = masterListArray;
         }
         
         if(btn) {
@@ -817,44 +830,26 @@
 
     async function loadColonyList() {
         const listEl = document.getElementById('colony-list-output');
-        listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Querying database pipelines... Data are aggregating.</li>`;
         
-        let queryId = penguinId; 
-
-        const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', queryId);
-        let colonySet = new Set();
-        if (myLogs) {
-            myLogs.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                }
-            });
-        }
-        
-        let colonyIds = Array.from(colonySet);
-        
-        if (colonyIds.length === 0) {
+        if (globalMyColonyIds.length === 0) {
             listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
             return;
         }
 
-        const { data: allLogs } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, custom_name, avatar_color, latitude, longitude, finder_note, custom_avatar_url, style_id')
-            .in('penguin_id', colonyIds)
-            .order('created_at', { ascending: true });
-            
         const colonyStats = {};
-        colonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
+        globalMyColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
         
-        if (allLogs) {
-            allLogs.forEach(log => {
-                if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
-                if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
-                if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
-                if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
+        if (globalAllFleetLogs.length > 0) {
+            globalAllFleetLogs.forEach(log => {
+                if (colonyStats[log.penguin_id]) {
+                    if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                    if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
+                    if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
+                    if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
 
-                if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
-                    colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                        colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                    }
                 }
             });
         }
@@ -870,7 +865,7 @@
             if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
-        colonyIds.forEach(id => {
+        globalMyColonyIds.forEach(id => {
             let miles = 0;
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
@@ -908,19 +903,12 @@
         }
         
         showConfirm(`Remove ${targetId} from your colony?`, async () => {
-            const { data: myLogs } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', ownerId);
-            let colonySet = new Set();
-            if (myLogs) {
-                myLogs.forEach(log => {
-                    if (log.colony_list) {
-                        log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                    }
-                });
-            }
-            
+            let colonySet = new Set(globalMyColonyIds);
             colonySet.delete(targetId);
             let masterListArray = Array.from(colonySet);
+            
             await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
+            globalMyColonyIds = masterListArray;
             loadColonyList();
             showToast(`${targetId} removed from colony.`, "success");
         });
@@ -1008,7 +996,7 @@
     }
 
     // ===================================================
-    // PAGINATED PHOTO GALLERY ENGINE
+    // PAGINATED PHOTO GALLERY ENGINE (REVERSE CHRONO)
     // ===================================================
     function openGalleryModal() {
         activeGalleryPage = 1;
@@ -1085,8 +1073,109 @@
     }
 
     // ===================================================
-    // MAP MODAL
+    // MAP & FULLSCREEN MAP MODAL
     // ===================================================
+    function openFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+        
+        if (!fsMap) {
+            fsMap = L.map('fullscreen-tracking-map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
+            fsLayerGroup = L.layerGroup().addTo(fsMap);
+        }
+        
+        setTimeout(() => {
+            fsMap.invalidateSize();
+            setFullscreenMode('my'); 
+        }, 100);
+    }
+
+    function closeFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'none';
+    }
+
+    function setFullscreenMode(mode) {
+        currentFsMode = mode;
+        document.getElementById('fs-tab-my').classList.toggle('active', mode === 'my');
+        document.getElementById('fs-tab-colony').classList.toggle('active', mode === 'colony');
+        document.getElementById('fs-tab-all').classList.toggle('active', mode === 'all');
+        plotFullscreenTrackingMap();
+    }
+
+    function plotFullscreenTrackingMap() {
+        if (!fsLayerGroup || !fsMap) return;
+        fsLayerGroup.clearLayers();
+        
+        let logsToProcess = [];
+        
+        if (currentFsMode === 'my') {
+            logsToProcess = globalAllFleetLogs.filter(log => log.penguin_id === penguinId);
+        } else if (currentFsMode === 'colony') {
+            const allowedIds = new Set(globalMyColonyIds);
+            allowedIds.add(penguinId);
+            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
+        } else {
+            logsToProcess = globalAllFleetLogs;
+        }
+
+        const tracks = {};
+        logsToProcess.forEach(log => {
+            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (!tracks[log.penguin_id]) tracks[log.penguin_id] = [];
+            tracks[log.penguin_id].push(log);
+        });
+
+        const palette = ['#00e5ff', '#39ff14', '#f472b6', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#e879f9', '#fb923c'];
+        
+        let colorIndex = 0;
+        const allBounds = L.latLngBounds();
+        let hasValidPoints = false;
+
+        Object.keys(tracks).forEach(pId => {
+            const pLogs = tracks[pId];
+            if (pLogs.length === 0) return;
+            
+            const pColor = pId === penguinId ? '#00e5ff' : palette[colorIndex % palette.length];
+            if (pId !== penguinId) colorIndex++;
+
+            const pathCoords = [];
+            const historicalIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${pColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px ${pColor};'></div>`, 
+                iconSize: [12, 12], 
+                iconAnchor: [6, 6] 
+            });
+
+            let stopCounter = 1;
+            pLogs.forEach(log => {
+                const latLng = [log.latitude, log.longitude];
+                pathCoords.push(latLng);
+                allBounds.extend(latLng);
+                hasValidPoints = true;
+
+                const dateObj = new Date(log.created_at).toLocaleDateString();
+                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; border: 1px solid rgba(255,255,255,0.2);">` : "";
+                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
+                
+                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
+                const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
+                
+                L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup)
+                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+                
+                stopCounter++;
+            });
+
+            if (pathCoords.length > 0) {
+                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(fsLayerGroup);
+            }
+        });
+
+        if (hasValidPoints) {
+            fsMap.fitBounds(allBounds, { padding: [40, 40] });
+        }
+    }
+
     function openMapModal(lat, lng) {
         document.getElementById('map-modal').style.display = 'flex';
         if (!modalMap) {
@@ -1591,6 +1680,8 @@
             
         if (error || !allLogs) return;
 
+        globalAllFleetLogs = allLogs; // Cached for full-screen map mode
+        
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
         const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
@@ -1835,10 +1926,11 @@
         const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
         globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
 
-        // Populate Gallery Data
+        // Populate Gallery Data (Reversed for newest first)
         globalGalleryImages = (logs || [])
             .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
-            .map(log => log.photo_url);
+            .map(log => log.photo_url)
+            .reverse();
             
         const galleryBtn = document.getElementById('gallery-profile-btn');
         if (galleryBtn && !isViewOnlyMode) {
@@ -1927,7 +2019,7 @@
                 const dateObj = new Date(log.created_at).toLocaleDateString();
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${resolvedDisplayName}` : `Stop #${validStopCounterForMap}`;
+                const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${globalNamedEntry}` : `Stop #${validStopCounterForMap}`;
                 
                 L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${validStopCounterForMap})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
                 validStopCounterForMap++;
