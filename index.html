@@ -146,9 +146,9 @@
         .value { font-size: 12pt; color: #f8fafc; }
         .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
-        /* INCREASED MAP HEIGHT */
+        /* HEIGHT SET TO 300px */
         #map {
-            width: 100% !important; height: 330px !important; background: #030712 !important;
+            width: 100% !important; height: 300px !important; background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
@@ -453,6 +453,13 @@
                 </li>
             </ul>
             <div id="map"></div>
+            
+            <div class="tab-bar" style="margin-top: 12px; margin-bottom: 0;">
+                <button class="tab-btn active" id="main-tab-my" onclick="setMainMapMode('my')">My Penguin</button>
+                <button class="tab-btn" id="main-tab-colony" onclick="setMainMapMode('colony')">My Colony</button>
+                <button class="tab-btn" id="main-tab-all" onclick="setMainMapMode('all')">All Penguins</button>
+            </div>
+            
             <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
             
             <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
@@ -552,7 +559,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.18.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.19.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -592,6 +599,7 @@
     let globalAllFleetLogs = [];
     let globalMyColonyIds = [];
     let currentFsMode = 'my';
+    let currentMainMode = 'my';
     
     // Gallery State
     let globalGalleryImages = [];
@@ -632,7 +640,7 @@
     if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
 
     let map = null; let marker = null; let historyLayerGroup = null; let poiLayerGroup = null; 
-    let currentJourneyLine = null; let poiMarkersMap = {}; 
+    let poiMarkersMap = {}; 
     let modalMap = null; let modalLayerGroup = null;
 
     const coordinatesDisplay = document.getElementById("coordinates-display");
@@ -1073,44 +1081,41 @@
     }
 
     // ===================================================
-    // MAP & FULLSCREEN MAP MODAL
+    // SHARED MAP RENDERING ENGINE (MAIN & FULLSCREEN)
     // ===================================================
-    function openFullscreenTrackingMap() {
-        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
-        
-        if (!fsMap) {
-            fsMap = L.map('fullscreen-tracking-map').setView([39.8283, -98.5795], 4);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
-            fsLayerGroup = L.layerGroup().addTo(fsMap);
-        }
-        
-        setTimeout(() => {
-            fsMap.invalidateSize();
-            setFullscreenMode('my'); 
-        }, 100);
-    }
-
-    function closeFullscreenTrackingMap() {
-        document.getElementById('fullscreen-map-overlay').style.display = 'none';
-    }
-
     function setFullscreenMode(mode) {
         currentFsMode = mode;
         document.getElementById('fs-tab-my').classList.toggle('active', mode === 'my');
         document.getElementById('fs-tab-colony').classList.toggle('active', mode === 'colony');
         document.getElementById('fs-tab-all').classList.toggle('active', mode === 'all');
-        plotFullscreenTrackingMap();
+        renderFleetOnMap(fsMap, fsLayerGroup, currentFsMode);
     }
 
-    function plotFullscreenTrackingMap() {
-        if (!fsLayerGroup || !fsMap) return;
-        fsLayerGroup.clearLayers();
+    function setMainMapMode(mode) {
+        currentMainMode = mode;
+        document.getElementById('main-tab-my').classList.toggle('active', mode === 'my');
+        document.getElementById('main-tab-colony').classList.toggle('active', mode === 'colony');
+        document.getElementById('main-tab-all').classList.toggle('active', mode === 'all');
+        renderFleetOnMap(map, historyLayerGroup, currentMainMode);
+    }
+
+    function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
+        if (!targetLayerGroup || !targetMap) return;
+        
+        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
+        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
+        if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
+
+        targetLayerGroup.clearLayers();
         
         let logsToProcess = [];
         
-        if (currentFsMode === 'my') {
-            logsToProcess = globalAllFleetLogs.filter(log => log.penguin_id === penguinId);
-        } else if (currentFsMode === 'colony') {
+        if (mode === 'my') {
+            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
+            logsToProcess = globalAllFleetLogs.length > 0 
+                ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
+                : globalLogData;
+        } else if (mode === 'colony') {
             const allowedIds = new Set(globalMyColonyIds);
             allowedIds.add(penguinId);
             logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
@@ -1155,27 +1160,45 @@
 
                 const dateObj = new Date(log.created_at).toLocaleDateString();
                 
-                // CORRECTED: Restored the onclick trigger so photos open seamlessly from the fullscreen map
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
                 
                 let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
                 const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
                 
-                L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup)
+                L.marker(latLng, { icon: historicalIcon }).addTo(targetLayerGroup)
                  .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
                 
                 stopCounter++;
             });
 
             if (pathCoords.length > 0) {
-                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(fsLayerGroup);
+                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(targetLayerGroup);
             }
         });
 
         if (hasValidPoints) {
-            fsMap.fitBounds(allBounds, { padding: [40, 40] });
+            targetMap.fitBounds(allBounds, { padding: [40, 40] });
         }
+    }
+
+    function openFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+        
+        if (!fsMap) {
+            fsMap = L.map('fullscreen-tracking-map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
+            fsLayerGroup = L.layerGroup().addTo(fsMap);
+        }
+        
+        setTimeout(() => {
+            fsMap.invalidateSize();
+            setFullscreenMode(currentMainMode); 
+        }, 100);
+    }
+
+    function closeFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'none';
     }
 
     function openMapModal(lat, lng) {
@@ -1482,7 +1505,9 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
-                if (map) map.setView([verifiedLat, verifiedLng], 15);
+                if (map && currentMainMode === 'my') { 
+                    map.setView([verifiedLat, verifiedLng], 15); 
+                }
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 updateDistanceToLastStop();
 
@@ -1676,7 +1701,6 @@
     }
 
     async function buildLeaderboard() {
-        // CORRECTED: Added photo_url to the global query so pictures load in the fullscreen map
         const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
             .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url')
             .order('created_at', { ascending: true });
@@ -1908,7 +1932,6 @@
     // MAIN DATA ENGINE
     // ===================================================
     async function loadPenguinHistory(targetId) {
-        if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
         if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
 
         const { data: rawLogs, error } = await supabaseClient
@@ -2009,33 +2032,15 @@
             fetchLastStopCity(lastLogLat, lastLogLng); updateDistanceToLastStop();
         }
 
-        const pathCoordinates = [];
-        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
-
-        let validStopCounterForMap = 1;
-        logs.forEach((log) => {
-            // Only plot valid coordinates that are not factory or ghost logs
-            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
-                const latLng = [log.latitude, log.longitude];
-                pathCoordinates.push(latLng);
-
-                const dateObj = new Date(log.created_at).toLocaleDateString();
-                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
-                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${globalNamedEntry}` : `Stop #${validStopCounterForMap}`;
-                
-                L.marker(latLng, { icon: historicalIcon }).addTo(historyLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${validStopCounterForMap})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
-                validStopCounterForMap++;
-            }
-        });
+        // Instant local render for the primary map
+        renderFleetOnMap(map, historyLayerGroup, 'my');
 
         compilePassportLogsHistory(logs);
         compileAllStopsHistory(logs);
-
-        if (pathCoordinates.length > 0 && map) {
-            currentJourneyLine = L.polyline(pathCoordinates, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(map);
-            map.fitBounds(currentJourneyLine.getBounds(), { padding: [40, 40] });
-            if (!isViewOnlyMode) { const lastIdxPosition = pathCoordinates[pathCoordinates.length - 1]; lookupNearbyMonuments(lastIdxPosition[0], lastIdxPosition[1]); }
+        
+        if (validStops.length > 0 && !isViewOnlyMode) {
+            const lastIdxPosition = validStops[validStops.length - 1]; 
+            lookupNearbyMonuments(lastIdxPosition.latitude, lastIdxPosition.longitude); 
         }
     }
 
