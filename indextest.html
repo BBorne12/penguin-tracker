@@ -358,7 +358,7 @@
     </div>
 </div>
 
-<!-- Full Screen Image Viewer Modal -->
+<!-- Full Screen Image Viewer Modal (Increased Z-Index to float above map modal) -->
 <div class="modal-overlay" id="image-modal" style="padding: 0; z-index: 100020;" onclick="if(event.target === this) closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);" onclick="if(event.target === this) closeImageModal()">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -575,7 +575,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.23.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.24.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -614,7 +614,7 @@
     
     // Fleet Data Caches
     let globalAllFleetLogs = [];
-    let globalMyColonyIds = [];
+    let globalViewedColonyIds = []; // Stores the colony array of the currently viewed profile
     let currentFsMode = 'my';
     let currentMainMode = 'my';
     
@@ -762,26 +762,34 @@
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
-        // Initial Colony Fetch for Global Cache
-        let fetchId = isPrimaryControl ? penguinId : (viewerId ? viewerId : null);
-        if (fetchId) {
-            const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', fetchId);
-            let colonySet = new Set();
-            if (data) {
-                data.forEach(log => {
-                    if (log.colony_list) {
-                        log.colony_list.split(',').forEach(i => { if(i.trim()) colonySet.add(i.trim()); });
-                    }
-                });
-            }
-            globalMyColonyIds = Array.from(colonySet);
+        // Initial Colony Fetch for the currently VIEWED profile
+        const { data: viewedData } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
+        let viewedSet = new Set();
+        if (viewedData) {
+            viewedData.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if(i.trim()) viewedSet.add(i.trim()); });
+                }
+            });
         }
+        globalViewedColonyIds = Array.from(viewedSet);
 
+        // Stranger action button relies on the viewer's colony, not the viewed profile's colony
         if (isAuthorizedViewer && !isPrimaryControl) {
             if(backBtnContainer) backBtnContainer.style.display = 'block';
             if(strangerActionRow) {
                 strangerActionRow.style.display = 'flex';
-                let inColonyHTML = globalMyColonyIds.includes(penguinId)
+                const { data: viewerData } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+                let viewerSet = new Set();
+                if (viewerData) {
+                    viewerData.forEach(log => {
+                        if (log.colony_list) {
+                            log.colony_list.split(',').forEach(i => { if(i.trim()) viewerSet.add(i.trim()); });
+                        }
+                    });
+                }
+                
+                let inColonyHTML = Array.from(viewerSet).includes(penguinId)
                     ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
                     : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
 
@@ -812,15 +820,18 @@
         const contPenguin = document.getElementById('my-penguin-container');
         const contColony = document.getElementById('colony-container');
         const editBtn = document.getElementById('edit-profile-btn');
+        const galleryBtn = document.getElementById('gallery-profile-btn');
         
         if(tabName === 'penguin') {
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
+            if(galleryBtn) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
             if(editBtn) editBtn.style.display = 'none';
+            if(galleryBtn) galleryBtn.style.display = 'none';
             loadColonyList();
         }
     }
@@ -830,11 +841,26 @@
         const btn = document.getElementById('add-colony-btn');
         if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
 
-        let colonySet = new Set(globalMyColonyIds);
+        const { data: viewerData, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
         
-        if (!colonySet.has(penguinId)) {
-            colonySet.add(penguinId);
-            let masterListArray = Array.from(colonySet);
+        if (selectError) {
+            showToast("Connection error: " + selectError.message, "error");
+            if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
+            return;
+        }
+
+        let viewerColonySet = new Set();
+        if (viewerData && viewerData.length > 0) {
+            viewerData.forEach(log => {
+                if (log.colony_list) {
+                    log.colony_list.split(',').forEach(i => { if (i.trim()) viewerColonySet.add(i.trim()); });
+                }
+            });
+        }
+        
+        if (!viewerColonySet.has(penguinId)) {
+            viewerColonySet.add(penguinId);
+            let masterListArray = Array.from(viewerColonySet);
             
             const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
             
@@ -843,7 +869,6 @@
                 if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
                 return;
             }
-            globalMyColonyIds = masterListArray;
         }
         
         if(btn) {
@@ -854,13 +879,13 @@
     async function loadColonyList() {
         const listEl = document.getElementById('colony-list-output');
         
-        if (globalMyColonyIds.length === 0) {
+        if (globalViewedColonyIds.length === 0) {
             listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
             return;
         }
 
         const colonyStats = {};
-        globalMyColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
+        globalViewedColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
         
         if (globalAllFleetLogs.length > 0) {
             globalAllFleetLogs.forEach(log => {
@@ -888,11 +913,12 @@
             if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
-        globalMyColonyIds.forEach(id => {
+        globalViewedColonyIds.forEach(id => {
             let miles = 0;
             let pts = colonyStats[id].points;
             for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
             
+            // Only allow removing from the colony if you are viewing your OWN profile
             let removeButtonHTML = isPrimaryControl 
                 ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
                 : "";
@@ -919,19 +945,19 @@
 
     function removeFromColony(targetId, event) {
         event.stopPropagation();
-        let ownerId = isPrimaryControl ? penguinId : viewerId;
+        let ownerId = isPrimaryControl ? penguinId : null;
         if (!ownerId) { 
             showToast("You can only remove penguins from your own colony.", "error"); 
             return; 
         }
         
         showConfirm(`Remove ${targetId} from your colony?`, async () => {
-            let colonySet = new Set(globalMyColonyIds);
+            let colonySet = new Set(globalViewedColonyIds);
             colonySet.delete(targetId);
             let masterListArray = Array.from(colonySet);
             
             await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
-            globalMyColonyIds = masterListArray;
+            globalViewedColonyIds = masterListArray;
             loadColonyList();
             showToast(`${targetId} removed from colony.`, "success");
         });
@@ -1038,7 +1064,7 @@
         if (currentGalleryMode === 'my') {
             logsToProcess = globalAllFleetLogs.length > 0 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId) : globalLogData;
         } else if (currentGalleryMode === 'colony') {
-            const allowedIds = new Set(globalMyColonyIds);
+            const allowedIds = new Set(globalViewedColonyIds);
             allowedIds.add(penguinId);
             logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
         } else {
@@ -1137,17 +1163,23 @@
     // ===================================================
     function setFullscreenMode(mode) {
         currentFsMode = mode;
-        document.getElementById('fs-tab-my').classList.toggle('active', mode === 'my');
-        document.getElementById('fs-tab-colony').classList.toggle('active', mode === 'colony');
-        document.getElementById('fs-tab-all').classList.toggle('active', mode === 'all');
+        const fsTabMy = document.getElementById('fs-tab-my');
+        const fsTabColony = document.getElementById('fs-tab-colony');
+        const fsTabAll = document.getElementById('fs-tab-all');
+        if (fsTabMy) fsTabMy.classList.toggle('active', mode === 'my');
+        if (fsTabColony) fsTabColony.classList.toggle('active', mode === 'colony');
+        if (fsTabAll) fsTabAll.classList.toggle('active', mode === 'all');
         renderFleetOnMap(fsMap, fsLayerGroup, currentFsMode);
     }
 
     function setMainMapMode(mode) {
         currentMainMode = mode;
-        document.getElementById('main-tab-my').classList.toggle('active', mode === 'my');
-        document.getElementById('main-tab-colony').classList.toggle('active', mode === 'colony');
-        document.getElementById('main-tab-all').classList.toggle('active', mode === 'all');
+        const mainTabMy = document.getElementById('main-tab-my');
+        const mainTabColony = document.getElementById('main-tab-colony');
+        const mainTabAll = document.getElementById('main-tab-all');
+        if (mainTabMy) mainTabMy.classList.toggle('active', mode === 'my');
+        if (mainTabColony) mainTabColony.classList.toggle('active', mode === 'colony');
+        if (mainTabAll) mainTabAll.classList.toggle('active', mode === 'all');
         renderFleetOnMap(map, historyLayerGroup, currentMainMode);
     }
 
@@ -1165,7 +1197,7 @@
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
         } else if (mode === 'colony') {
-            const allowedIds = new Set(globalMyColonyIds);
+            const allowedIds = new Set(globalViewedColonyIds);
             allowedIds.add(penguinId);
             logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
         } else {
@@ -1212,7 +1244,6 @@
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
                 
-                // Safe name resolution using global profiles object to prevent loss if a specific log lacked the name
                 let displayName = globalFleetProfiles[pId] && globalFleetProfiles[pId].name ? globalFleetProfiles[pId].name : pId;
                 const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
                 
@@ -1249,6 +1280,27 @@
 
     function closeFullscreenTrackingMap() {
         document.getElementById('fullscreen-map-overlay').style.display = 'none';
+    }
+
+    // ===================================================
+    // TABS
+    // ===================================================
+    function switchStopsTab(tabName) {
+        if (activeStopsTab === tabName) return; activeStopsTab = tabName;
+        document.getElementById('tab-stop-log').classList.toggle('active', tabName === 'log');
+        document.getElementById('tab-stop-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('stop-log-container').style.display = (tabName === 'log') ? 'block' : 'none';
+        document.getElementById('stop-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
+    }
+
+    function switchLandmarkTab(tabName) {
+        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
+        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
+        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
+        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
+        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
+        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
     }
 
     // ===================================================
@@ -1452,7 +1504,8 @@
 
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id')
+            // CORRECTED: Restored penguin_id to query list
+            .select('penguin_id, latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
@@ -1465,8 +1518,8 @@
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
-        // BULLETPROOF PROFILE EXTRACTION: Scan oldest to newest. 
-        // Always captures the most recent valid setting without tripping on empty logs.
+        // BULLETPROOF PROFILE EXTRACTION
+        // Loop forward to always capture the most recent profile state, regardless of log type
         let resolvedDisplayName = targetId;
         let resolvedColor = '#38bdf8';
         let resolvedCustomUrl = null;
@@ -1515,22 +1568,46 @@
         updateProfileAvatarDisplay();
 
         let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
+        
         const btnPenguin = document.getElementById('tab-my-penguin');
         const btnColony = document.getElementById('tab-my-colony');
         const editBtn = document.getElementById('edit-profile-btn');
         const galleryBtn = document.getElementById('gallery-profile-btn');
         
-        // Force the gallery button to show now that it can browse the whole fleet
+        // Grab DYNAMIC button elements
+        const galTabMy = document.getElementById('gal-tab-my');
+        const galTabColony = document.getElementById('gal-tab-colony');
+        const mainTabMy = document.getElementById('main-tab-my');
+        const mainTabColony = document.getElementById('main-tab-colony');
+        const fsTabMy = document.getElementById('fs-tab-my');
+        const fsTabColony = document.getElementById('fs-tab-colony');
+        
         if (galleryBtn) galleryBtn.style.display = 'block';
         
         if (isPrimaryControl) {
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
             if (editBtn) editBtn.style.display = 'block';
+            
+            // Standard Map/Gallery Buttons
+            if (galTabMy) galTabMy.innerText = `My Penguin`;
+            if (galTabColony) galTabColony.innerText = `My Colony`;
+            if (mainTabMy) mainTabMy.innerText = `My Penguin`;
+            if (mainTabColony) mainTabColony.innerText = `My Colony`;
+            if (fsTabMy) fsTabMy.innerText = `My Penguin`;
+            if (fsTabColony) fsTabColony.innerText = `My Colony`;
         } else {
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
+            
+            // Dynamic Map/Gallery Buttons mapping to stranger's name
+            if (galTabMy) galTabMy.innerText = resolvedDisplayName;
+            if (galTabColony) galTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
+            if (mainTabMy) mainTabMy.innerText = resolvedDisplayName;
+            if (mainTabColony) mainTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
+            if (fsTabMy) fsTabMy.innerText = resolvedDisplayName;
+            if (fsTabColony) fsTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
         }
 
         // Apply strict filtering to stops metrics
