@@ -146,6 +146,7 @@
         .value { font-size: 12pt; color: #f8fafc; }
         .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
+        /* INCREASED MAP HEIGHT */
         #map {
             width: 100% !important; height: 300px !important; background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
@@ -414,7 +415,7 @@
             <div id="my-penguin-container">
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openGalleryModal()">🖼️ Gallery</button>
+                    <button id="gallery-profile-btn" style="position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openGalleryModal()">🖼️ Gallery</button>
                     
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -575,7 +576,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.20.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.22.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -610,6 +611,7 @@
     let activeCustomAvatarUrl = null;
     let activeStyleId = null;
     let globalStyles = [];
+    let globalFleetProfiles = {};
     
     // Fleet Data Caches
     let globalAllFleetLogs = [];
@@ -817,9 +819,7 @@
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
-            // Determine visibility based on the initial 'my' gallery images available
-            const myPhotos = globalLogData.filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note));
-            if(galleryBtn && myPhotos.length > 0) galleryBtn.style.display = 'block';
+            if(galleryBtn) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
@@ -1216,7 +1216,8 @@
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
                 
-                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
+                // Safe name resolution using global profiles object to prevent loss if a specific log lacked the name
+                let displayName = globalFleetProfiles[pId] && globalFleetProfiles[pId].name ? globalFleetProfiles[pId].name : pId;
                 const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
                 
                 L.marker(latLng, { icon: historicalIcon }).addTo(targetLayerGroup)
@@ -1253,43 +1254,6 @@
     function closeFullscreenTrackingMap() {
         document.getElementById('fullscreen-map-overlay').style.display = 'none';
     }
-
-    function openMapModal(lat, lng) {
-        document.getElementById('map-modal').style.display = 'flex';
-        if (!modalMap) {
-            modalMap = L.map('modal-map').setView([lat, lng], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
-            modalLayerGroup = L.layerGroup().addTo(modalMap);
-        } else {
-            modalMap.setView([lat, lng], 14);
-        }
-        modalLayerGroup.clearLayers();
-        const pathCoords = []; let targetMarker = null;
-
-        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
-
-        let stopCounter = 1;
-        globalLogData.forEach((log) => {
-            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
-            const logLatLng = [log.latitude, log.longitude];
-            pathCoords.push(logLatLng);
-
-            const dateObj = new Date(log.created_at).toLocaleDateString();
-            let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
-            const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-            const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${globalNamedEntry}` : `Stop #${stopCounter}`;
-            
-            const newMarker = L.marker(logLatLng, { icon: historicalIcon }).addTo(modalLayerGroup)
-                .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
-            
-            if (Math.abs(log.latitude - lat) < 0.0001 && Math.abs(log.longitude - lng) < 0.0001) targetMarker = newMarker;
-            stopCounter++;
-        });
-
-        if (pathCoords.length > 0) L.polyline(pathCoords, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(modalLayerGroup);
-        setTimeout(() => { modalMap.invalidateSize(); if (targetMarker) targetMarker.openPopup(); }, 150);
-    }
-    function closeMapModal() { document.getElementById('map-modal').style.display = 'none'; }
 
     // ===================================================
     // TABS
@@ -1754,7 +1718,6 @@
     }
 
     async function buildLeaderboard() {
-        // CORRECTED: Added photo_url to the global query so pictures load in the fullscreen map and gallery
         const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
             .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url')
             .order('created_at', { ascending: true });
@@ -1767,18 +1730,39 @@
         const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
         allLogs.forEach(log => {
+            // ALWAYS capture the profile metadata FIRST, even if it's from a factory log!
+            if (log.penguin_id) {
+                if (!globalFleetProfiles[log.penguin_id]) {
+                    globalFleetProfiles[log.penguin_id] = { name: log.penguin_id, color: '#38bdf8', customAvatar: null, styleId: null };
+                }
+                
+                if (log.custom_name && log.custom_name.trim() !== "") {
+                    namesMap[log.penguin_id] = log.custom_name;
+                    globalFleetProfiles[log.penguin_id].name = log.custom_name;
+                }
+                if (log.avatar_color) {
+                    avatarMap[log.penguin_id] = log.avatar_color;
+                    globalFleetProfiles[log.penguin_id].color = log.avatar_color;
+                }
+                if (log.custom_avatar_url) {
+                    customAvatarMap[log.penguin_id] = log.custom_avatar_url;
+                    globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
+                }
+                if (log.style_id) {
+                    styleMap[log.penguin_id] = log.style_id;
+                    globalFleetProfiles[log.penguin_id].styleId = log.style_id;
+                }
+            }
+
+            // NOW filter out factory logs so they don't count towards the leaderboard tracks
             if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
                 
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
                 if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
-                
-                if (log.custom_name && log.custom_name.trim() !== "") namesMap[log.penguin_id] = log.custom_name;
-                if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
-                if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
-                if (log.style_id) styleMap[log.penguin_id] = log.style_id;
             }
         });
 
@@ -1807,14 +1791,6 @@
 
         computedLeaderboardArray = leaderboardData.slice(0, 100); 
         activeLeaderboardPage = 1; renderLeaderboardPage();
-        
-        // After global logs load, verify if "My" gallery button should be updated based on loaded fleet
-        // (Just in case the fast-loaded single penguin missed something, though rare)
-        const galleryBtn = document.getElementById('gallery-profile-btn');
-        if (galleryBtn) {
-            const myHasPhotos = globalAllFleetLogs.some(log => log.penguin_id === penguinId && log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note));
-            if (myHasPhotos) galleryBtn.style.display = 'block';
-        }
     }
 
     function renderLeaderboardPage() {
@@ -2012,7 +1988,8 @@
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
-        const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
+        // Safely extract the most recent custom name by reversing a shallow copy of the logs array
+        const namedEntry = [...logs].reverse().find(log => log.custom_name && log.custom_name.trim() !== "");
         globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
 
         // SMART MODAL HANDLING
@@ -2062,13 +2039,7 @@
         const editBtn = document.getElementById('edit-profile-btn');
         const galleryBtn = document.getElementById('gallery-profile-btn');
         
-        // Fast local check for gallery photos to instantly display the button
-        const myPhotos = logs.filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note));
-        if (galleryBtn && !isViewOnlyMode) {
-            galleryBtn.style.display = myPhotos.length > 0 ? 'block' : 'none';
-        } else if (galleryBtn) {
-            galleryBtn.style.display = myPhotos.length > 0 ? 'block' : 'none';
-        }
+        if (galleryBtn) galleryBtn.style.display = 'block';
         
         if (isPrimaryControl) {
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
