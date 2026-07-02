@@ -146,7 +146,7 @@
         .value { font-size: 12pt; color: #f8fafc; }
         .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
-        /* HEIGHT SET TO 300px */
+        /* INCREASED MAP HEIGHT */
         #map {
             width: 100% !important; height: 300px !important; background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
@@ -209,8 +209,10 @@
 </head>
 <body>
 
+<!-- Toast Notification Container -->
 <div id="toast-container"></div>
 
+<!-- Universal Confirm Modal -->
 <div class="modal-overlay" id="confirm-modal" style="z-index: 100005;">
     <div class="modal-card">
         <h2 style="color: #fca5a5; margin-bottom: 12px;">Confirm Action</h2>
@@ -246,6 +248,7 @@
     </div>
 </div>
 
+<!-- Success Modal -->
 <div class="modal-overlay" id="success-modal">
     <div class="modal-card">
         <span style="font-size: 40pt; display: block; margin-bottom: 8px;">✅</span>
@@ -312,6 +315,7 @@
     </div>
 </div>
 
+<!-- FULLSCREEN TRACKING MAP MODAL -->
 <div class="modal-overlay" id="fullscreen-map-overlay">
     <div class="modal-card" style="max-width: 95vw; height: 90vh; padding: 16px; display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -320,6 +324,7 @@
         </div>
         <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
         
+        <!-- Map Mode Toggles -->
         <div class="tab-bar" style="margin-top: 16px; margin-bottom: 0;">
             <button class="tab-btn active" id="fs-tab-my" onclick="setFullscreenMode('my')">My Penguin</button>
             <button class="tab-btn" id="fs-tab-colony" onclick="setFullscreenMode('colony')">My Colony</button>
@@ -328,14 +333,24 @@
     </div>
 </div>
 
+<!-- Photo Gallery Grid Modal -->
 <div class="modal-overlay" id="gallery-modal">
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px; max-height: 90vh; display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="color: #00e5ff; margin: 0;">Photo Gallery</h2>
             <button style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;" onclick="closeGalleryModal()">×</button>
         </div>
+        
+        <!-- Gallery Mode Toggles -->
+        <div class="tab-bar" style="margin-bottom: 12px;">
+            <button class="tab-btn active" id="gal-tab-my" onclick="setGalleryMode('my')">My Penguin</button>
+            <button class="tab-btn" id="gal-tab-colony" onclick="setGalleryMode('colony')">My Colony</button>
+            <button class="tab-btn" id="gal-tab-all" onclick="setGalleryMode('all')">All Penguins</button>
+        </div>
+
         <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px;">
-            </div>
+            <!-- Grid items injected here -->
+        </div>
         <div class="pagination-container" id="gallery-pagination" style="display: none; margin-top: 12px; padding-top: 12px;">
             <button class="page-arrow" id="gallery-prev-btn" onclick="changeGalleryPage(-1)">←</button>
             <span class="page-indicator" id="gallery-page-indicator">Page 1 of 1</span>
@@ -344,6 +359,7 @@
     </div>
 </div>
 
+<!-- Full Screen Image Viewer Modal (Increased Z-Index to float above map modal) -->
 <div class="modal-overlay" id="image-modal" style="padding: 0; z-index: 100020;" onclick="if(event.target === this) closeImageModal()">
     <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);" onclick="if(event.target === this) closeImageModal()">
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -454,6 +470,7 @@
             </ul>
             <div id="map"></div>
             
+            <!-- MAIN MAP MODE TOGGLES -->
             <div class="tab-bar" style="margin-top: 12px; margin-bottom: 0;">
                 <button class="tab-btn active" id="main-tab-my" onclick="setMainMapMode('my')">My Penguin</button>
                 <button class="tab-btn" id="main-tab-colony" onclick="setMainMapMode('colony')">My Colony</button>
@@ -559,7 +576,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.19.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.21.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -603,6 +620,7 @@
     
     // Gallery State
     let globalGalleryImages = [];
+    let currentGalleryMode = 'my';
     let currentGalleryIndex = -1;
     let activeGalleryPage = 1;
     const GALLERY_ITEMS_PER_PAGE = 6;
@@ -800,7 +818,7 @@
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
-            if(galleryBtn && globalGalleryImages.length > 0) galleryBtn.style.display = 'block';
+            if(galleryBtn) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
@@ -1006,8 +1024,39 @@
     // ===================================================
     // PAGINATED PHOTO GALLERY ENGINE (REVERSE CHRONO)
     // ===================================================
+    function setGalleryMode(mode) {
+        currentGalleryMode = mode;
+        document.getElementById('gal-tab-my').classList.toggle('active', mode === 'my');
+        document.getElementById('gal-tab-colony').classList.toggle('active', mode === 'colony');
+        document.getElementById('gal-tab-all').classList.toggle('active', mode === 'all');
+        
+        compileGalleryImages();
+        activeGalleryPage = 1;
+        renderGalleryPage();
+    }
+
+    function compileGalleryImages() {
+        let logsToProcess = [];
+        
+        if (currentGalleryMode === 'my') {
+            logsToProcess = globalAllFleetLogs.length > 0 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId) : globalLogData;
+        } else if (currentGalleryMode === 'colony') {
+            const allowedIds = new Set(globalMyColonyIds);
+            allowedIds.add(penguinId);
+            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
+        } else {
+            logsToProcess = globalAllFleetLogs;
+        }
+
+        globalGalleryImages = logsToProcess
+            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .map(log => log.photo_url);
+    }
+
     function openGalleryModal() {
         activeGalleryPage = 1;
+        compileGalleryImages();
         renderGalleryPage();
         document.getElementById('gallery-modal').style.display = 'flex';
     }
@@ -1020,6 +1069,12 @@
         const grid = document.getElementById('gallery-grid');
         const paginationEl = document.getElementById('gallery-pagination');
         grid.innerHTML = '';
+        
+        if (globalGalleryImages.length === 0) {
+            grid.innerHTML = '<div style="color:#94a3b8; width:100%; text-align:center; padding:20px; font-size:11pt; grid-column: 1 / -1;">No photos found for this filter.</div>';
+            paginationEl.style.display = 'none';
+            return;
+        }
         
         const totalPages = Math.ceil(globalGalleryImages.length / GALLERY_ITEMS_PER_PAGE);
         
@@ -1102,8 +1157,6 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
-        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
-        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1111,7 +1164,6 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
-            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
@@ -1701,13 +1753,14 @@
     }
 
     async function buildLeaderboard() {
+        // CORRECTED: Added photo_url to the global query so pictures load in the fullscreen map and gallery
         const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
             .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url')
             .order('created_at', { ascending: true });
             
         if (error || !allLogs) return;
 
-        globalAllFleetLogs = allLogs; // Cached for full-screen map mode
+        globalAllFleetLogs = allLogs; // Cached for full-screen map mode & gallery filter
         
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
         const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
@@ -1932,6 +1985,7 @@
     // MAIN DATA ENGINE
     // ===================================================
     async function loadPenguinHistory(targetId) {
+        if (currentJourneyLine) { map.removeLayer(currentJourneyLine); currentJourneyLine = null; }
         if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
 
         const { data: rawLogs, error } = await supabaseClient
@@ -1951,19 +2005,6 @@
 
         const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
         globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
-
-        // Populate Gallery Data (Reversed for newest first)
-        globalGalleryImages = (logs || [])
-            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
-            .map(log => log.photo_url)
-            .reverse();
-            
-        const galleryBtn = document.getElementById('gallery-profile-btn');
-        if (galleryBtn && !isViewOnlyMode) {
-            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
-        } else if (galleryBtn) {
-            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
-        }
 
         // SMART MODAL HANDLING
         const welcomeModal = document.getElementById('welcome-modal');
@@ -2010,6 +2051,9 @@
         const btnPenguin = document.getElementById('tab-my-penguin');
         const btnColony = document.getElementById('tab-my-colony');
         const editBtn = document.getElementById('edit-profile-btn');
+        const galleryBtn = document.getElementById('gallery-profile-btn');
+        
+        if (galleryBtn) galleryBtn.style.display = 'block';
         
         if (isPrimaryControl) {
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
