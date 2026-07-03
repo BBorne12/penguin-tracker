@@ -146,7 +146,6 @@
         .value { font-size: 12pt; color: #f8fafc; }
         .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
-        /* HEIGHT SET TO 300px */
         #map {
             width: 100% !important; height: 300px !important; background: #030712 !important;
             border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
@@ -565,7 +564,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.19.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.31.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -610,6 +609,7 @@
     
     // Gallery State
     let globalGalleryImages = [];
+    let currentGalleryMode = 'my';
     let currentGalleryIndex = -1;
     let activeGalleryPage = 1;
     const GALLERY_ITEMS_PER_PAGE = 6;
@@ -935,7 +935,7 @@
             
             await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
             globalMyColonyIds = masterListArray;
-            globalViewedColonyIds = masterListArray; // ADD THIS SO IT RENDERS CORRECTLY
+            globalViewedColonyIds = masterListArray;
             loadColonyList();
             showToast(`${targetId} removed from colony.`, "success");
         });
@@ -1421,7 +1421,7 @@
     }
 
     function openEditModal() {
-        document.getElementById('edit-custom-name').value = activeCustomName || penguinId;
+        document.getElementById('edit-custom-name').value = activeCustomName === penguinId ? "" : activeCustomName;
         
         if (activeCustomAvatarUrl === 'USE_COLOR') {
             modalAvatarType = 'color'; modalAvatarColor = activeAvatarColor;
@@ -2015,7 +2015,11 @@
             .reverse();
             
         const galleryBtn = document.getElementById('gallery-profile-btn');
-        if (galleryBtn) galleryBtn.style.display = 'block';
+        if (galleryBtn && !isViewOnlyMode) {
+            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
+        } else if (galleryBtn) {
+            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
+        }
 
         // SMART MODAL HANDLING
         const welcomeModal = document.getElementById('welcome-modal');
@@ -2073,6 +2077,7 @@
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
             if (editBtn) editBtn.style.display = 'block';
+            
             if (galTabMy) galTabMy.innerText = `My Penguin`;
             if (galTabColony) galTabColony.innerText = `My Colony`;
             if (mainTabMy) mainTabMy.innerText = `My Penguin`;
@@ -2083,6 +2088,7 @@
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
+            
             if (galTabMy) galTabMy.innerText = resolvedDisplayName;
             if (galTabColony) galTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (mainTabMy) mainTabMy.innerText = resolvedDisplayName;
