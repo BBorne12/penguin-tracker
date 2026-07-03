@@ -113,7 +113,21 @@
         .btn-stone:hover { background: rgba(255,255,255,0.15); }
         .btn-stone.stoned { 
             background: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.4); color: #f97316; 
-            cursor: default; box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); 
+            box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); 
+        }
+
+        /* NEW UPPER-RIGHT STONE BUTTON FOR CAROUSEL */
+        .sighting-stone-btn {
+            position: absolute; top: 8px; right: 8px; z-index: 10;
+            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2); color: #fff;
+            font-size: 9pt; padding: 4px 10px; border-radius: 20px;
+            cursor: pointer; transition: all 0.2s; display: flex;
+            align-items: center; gap: 4px; font-weight: bold;
+        }
+        .sighting-stone-btn:hover { background: rgba(0, 0, 0, 0.7); border-color: rgba(249, 115, 22, 0.6); }
+        .sighting-stone-btn.stoned { 
+            background: rgba(249, 115, 22, 0.2); border-color: rgba(249, 115, 22, 0.6); color: #f97316; 
         }
 
         .tab-bar {
@@ -470,11 +484,10 @@
                     </li>
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Total Stops So Far</span></div>
-                        <div><span class="value ice-glow" id="total-stops-counter">0 Passport Stops Logged</span></div>
-                    </li>
-                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div><span class="label">Stones Collected</span></div>
-                        <div><span class="value" id="total-stones-counter" style="color: #f97316; font-weight: bold; text-shadow: 0 0 8px rgba(249, 115, 22, 0.4);">0 🪨</span></div>
+                        <div style="text-align: right;">
+                            <span class="value ice-glow" id="total-stops-counter" style="display:block;">0 Passport Stops Logged</span>
+                            <span class="stat-subtext" id="total-stones-counter" style="color: #f97316; font-weight: bold; margin-top: 2px;">0 Stones Collected</span>
+                        </div>
                     </li>
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Last Stop</span></div>
@@ -626,7 +639,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.37.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.38.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -865,7 +878,13 @@
     // ===================================================
     // STONES SOCIAL ENGINE
     // ===================================================
-    async function giveStone(logId, targetId, event) {
+    function getPebbleSvg(isStoned = false) {
+        const fill = isStoned ? "#f97316" : "#94a3b8";
+        const highlight = isStoned ? "#fdba74" : "#cbd5e1";
+        return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5));"><path d="M12.5 2C16.5 2 20.5 5 21.5 10C22.5 15 18.5 21 11.5 21.5C4.5 22 1.5 16 2.5 10.5C3.5 5 8.5 2 12.5 2Z" fill="${fill}"/><path d="M11 4C14 4 17 6 18 9" stroke="${highlight}" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    }
+
+    async function toggleStone(logId, targetId, event) {
         if (event) event.stopPropagation();
         
         if (!activeUserId || activeUserId === "Mystery Penguin") {
@@ -873,35 +892,47 @@
             return;
         }
 
-        const btns = document.querySelectorAll(`.stone-btn-${logId}`);
-        if (btns.length > 0 && btns[0].classList.contains('stoned')) return;
+        if (activeUserId === targetId) {
+            showToast("You can't give a stone to your own penguin!", "warning");
+            return;
+        }
 
         const { data, error } = await supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single();
         if (error) { showToast("Network error.", "error"); return; }
         
         let currentStones = data.stones_received ? data.stones_received.split(',').map(s=>s.trim()).filter(s=>s) : [];
+        let isAdding = true;
+
         if (currentStones.includes(activeUserId)) {
-            showToast("You already gave a stone to this stop!", "info");
-            return;
+            // Remove stone
+            currentStones = currentStones.filter(id => id !== activeUserId);
+            isAdding = false;
+        } else {
+            // Add stone
+            currentStones.push(activeUserId);
+            isAdding = true;
         }
         
-        currentStones.push(activeUserId);
         let updatePayload = { stones_received: currentStones.join(',') };
         
-        if (targetId !== activeUserId) {
+        if (isAdding && targetId !== activeUserId) {
             updatePayload.has_unread_stones = true;
         }
 
         const { error: updateErr } = await supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId);
+        
         if (!updateErr) {
             document.querySelectorAll(`.stone-btn-${logId}`).forEach(b => {
-                b.innerHTML = `🪨 ${currentStones.length}`;
-                b.className = `btn-stone stoned stone-btn-${logId}`;
-                b.onclick = null;
+                b.innerHTML = `${getPebbleSvg(isAdding)} ${currentStones.length}`;
+                if (isAdding) {
+                    b.classList.add('stoned');
+                } else {
+                    b.classList.remove('stoned');
+                }
             });
-            showToast("Stone given! 🪨", "success");
+            if (isAdding) showToast("Stone given!", "success");
         } else {
-            showToast("Failed to give stone.", "error");
+            showToast("Failed to update stone.", "error");
         }
     }
 
@@ -1268,6 +1299,8 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
+        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
+        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1275,6 +1308,7 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
+            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
@@ -2063,7 +2097,7 @@
             } else if (activeTab === "monuments") {
                 rightSideValueMetricsHTML = `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
             } else {
-                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">🪨 ${item.stonesCount} Stones</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">${getPebbleSvg(true)} ${item.stonesCount} Stones</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
             }
 
             li.innerHTML = `
@@ -2191,7 +2225,7 @@
                 <div style="text-align:right;">
                     <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
                         <span class="passport-list-date" style="color:#00e5ff; text-shadow:none;">${stop.date}</span>
-                        <button class="btn-stone ${hasStoned ? 'stoned' : ''} stone-btn-${stop.logId}" ${hasStoned ? '' : `onclick="giveStone('${stop.logId}', '${stop.targetId}', event)"`}>🪨 ${stonesCount}</button>
+                        <button class="btn-stone ${hasStoned ? 'stoned' : ''} stone-btn-${stop.logId}" title="Like this stop by giving a stone" onclick="toggleStone('${stop.logId}', '${stop.targetId}', event)">${getPebbleSvg(hasStoned)} ${stonesCount}</button>
                     </div>
                     <span style="display:block; font-size:9pt; color:#4b5563; font-family:monospace; margin-top:4px;">${stop.lat.toFixed(3)}°, ${stop.lng.toFixed(3)}°</span>
                 </div>`;
@@ -2238,7 +2272,7 @@
         globalGalleryImages = recentPhotos.map(log => log.photo_url);
 
         recentPhotos.forEach((log, index) => {
-            let displayName = globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
+            let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
             let note = log.finder_note || "No note.";
             if (note.includes('[Tagged at Monument:')) note = note.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
 
@@ -2249,6 +2283,9 @@
             const card = document.createElement('div');
             card.className = 'sighting-card';
             card.innerHTML = `
+                <button class="sighting-stone-btn ${hasStoned ? 'stoned' : ''} stone-btn-${log.id}" title="Like this stop by giving a stone" onclick="toggleStone('${log.id}', '${log.penguin_id}', event)">
+                    ${getPebbleSvg(hasStoned)} ${stonesCount}
+                </button>
                 <img src="${log.photo_url}" class="sighting-img" loading="lazy" onclick="openFullscreenGallery(${index})">
                 <div class="sighting-overlay">
                     <span class="sighting-name">🐧 ${displayName}</span>
@@ -2256,7 +2293,6 @@
                     <div class="sighting-btn-row">
                         <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Penguin</button>
                         <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Stop</button>
-                        <button class="btn-stone ${hasStoned ? 'stoned' : ''} stone-btn-${log.id}" style="flex:0 0 auto;" ${hasStoned ? '' : `onclick="giveStone('${log.id}', '${log.penguin_id}', event)"`}>🪨 ${stonesCount}</button>
                     </div>
                 </div>
             `;
@@ -2386,7 +2422,7 @@
         });
 
         const totalStonesEl = document.getElementById("total-stones-counter");
-        if (totalStonesEl) totalStonesEl.innerText = `${totalStones} 🪨`;
+        if (totalStonesEl) totalStonesEl.innerText = `${totalStones} Stones Collected`;
 
         const unreadBadge = document.getElementById("unread-stones-badge");
         if (isPrimaryControl && hasUnread && unreadBadge) {
