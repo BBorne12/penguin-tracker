@@ -152,6 +152,35 @@
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
+        /* CAROUSEL STYLES */
+        .sightings-carousel {
+            display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px;
+            scroll-snap-type: x mandatory; scrollbar-width: none;
+        }
+        .sightings-carousel::-webkit-scrollbar { display: none; }
+        .sighting-card {
+            flex: 0 0 220px; height: 220px; border-radius: 12px; overflow: hidden;
+            position: relative; scroll-snap-align: start;
+            border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
+        }
+        .sighting-img {
+            width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s ease;
+        }
+        .sighting-card:hover .sighting-img { transform: scale(1.05); }
+        .sighting-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 12px 12px;
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
+            display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none;
+        }
+        .sighting-name { color: #fff; font-weight: bold; font-size: 11pt; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
+        .sighting-note { color: #cbd5e1; font-size: 9pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+        .sighting-profile-btn {
+            pointer-events: auto; align-self: flex-start; background: rgba(56, 189, 248, 0.15);
+            border: 1px solid #38bdf8; color: #e0f2fe; font-size: 8.5pt; padding: 5px 10px; font-weight: bold;
+            border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+        }
+        .sighting-profile-btn:hover { background: rgba(56, 189, 248, 0.35); box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
+
         /* MODALS & OVERLAYS */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -507,6 +536,13 @@
             </div>
         </div>
 
+        <div class="glass-card" id="global-sightings-card">
+            <h2>📸 Recent Adventures</h2>
+            <div class="sightings-carousel" id="sightings-carousel-output">
+                <div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">Loading global sightings...</div>
+            </div>
+        </div>
+
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -564,7 +600,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.31.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.32.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -818,7 +854,7 @@
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
-            if(galleryBtn && globalGalleryImages.length > 0) galleryBtn.style.display = 'block';
+            if(galleryBtn) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
@@ -1158,8 +1194,6 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
-        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
-        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1167,7 +1201,6 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
-            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
@@ -1219,7 +1252,7 @@
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
                 
-                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
+                let displayName = globalFleetProfiles[pId] && globalFleetProfiles[pId].name ? globalFleetProfiles[pId].name : pId;
                 const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
                 
                 L.marker(latLng, { icon: historicalIcon }).addTo(targetLayerGroup)
@@ -1809,6 +1842,9 @@
 
         computedLeaderboardArray = leaderboardData.slice(0, 100); 
         activeLeaderboardPage = 1; renderLeaderboardPage();
+
+        // Render the new global sightings carousel after the leaderboard is compiled
+        renderGlobalSightings();
     }
 
     function renderLeaderboardPage() {
@@ -1985,6 +2021,60 @@
     function changeAllStopsPage(directionOffset) { activeAllStopsPage += directionOffset; renderAllStopsPageLayout(); const card = document.getElementById('journey-stops-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
 
     // ===================================================
+    // GLOBAL SIGHTINGS CAROUSEL
+    // ===================================================
+    function renderGlobalSightings() {
+        const carousel = document.getElementById('sightings-carousel-output');
+        if (!carousel) return;
+        
+        // Filter for valid photos from the fleet logs
+        const photoLogs = globalAllFleetLogs.filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note));
+        
+        // Sort newest first
+        photoLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        // Slice the top 12 most recent photos
+        const recentPhotos = photoLogs.slice(0, 12);
+        
+        if (recentPhotos.length === 0) {
+            carousel.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">No adventures with photos yet!</div>`;
+            return;
+        }
+        
+        carousel.innerHTML = "";
+        
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
+        // We push all photo URLs into the global gallery array so the image modal can scroll through them
+        globalGalleryImages = recentPhotos.map(log => log.photo_url);
+
+        recentPhotos.forEach((log, index) => {
+            let displayName = globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
+            let note = log.finder_note || "No note.";
+            if (note.includes('[Tagged at Monument:')) note = note.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+
+            const card = document.createElement('div');
+            card.className = 'sighting-card';
+            card.innerHTML = `
+                <img src="${log.photo_url}" class="sighting-img" loading="lazy" onclick="openFullscreenGallery(${index})">
+                <div class="sighting-overlay">
+                    <span class="sighting-name">🐧 ${displayName}</span>
+                    <span class="sighting-note">"${note}"</span>
+                    <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+                </div>
+            `;
+            carousel.appendChild(card);
+        });
+    }
+
+    // ===================================================
     // MAIN DATA ENGINE
     // ===================================================
     async function loadPenguinHistory(targetId) {
@@ -2007,19 +2097,6 @@
 
         const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
         globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
-
-        // Populate Gallery Data (Reversed for newest first)
-        globalGalleryImages = (logs || [])
-            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
-            .map(log => log.photo_url)
-            .reverse();
-            
-        const galleryBtn = document.getElementById('gallery-profile-btn');
-        if (galleryBtn && !isViewOnlyMode) {
-            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
-        } else if (galleryBtn) {
-            galleryBtn.style.display = globalGalleryImages.length > 0 ? 'block' : 'none';
-        }
 
         // SMART MODAL HANDLING
         const welcomeModal = document.getElementById('welcome-modal');
@@ -2072,6 +2149,12 @@
         const mainTabColony = document.getElementById('main-tab-colony');
         const fsTabMy = document.getElementById('fs-tab-my');
         const fsTabColony = document.getElementById('fs-tab-colony');
+        
+        // ALWAYS display the gallery button so users can see Colony/All photos
+        const galleryBtn = document.getElementById('gallery-profile-btn');
+        if (galleryBtn) {
+            galleryBtn.style.display = 'block';
+        }
         
         if (isPrimaryControl) {
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
