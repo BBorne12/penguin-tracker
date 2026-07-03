@@ -600,7 +600,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.32.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.33.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -635,6 +635,7 @@
     let activeCustomAvatarUrl = null;
     let activeStyleId = null;
     let globalStyles = [];
+    let globalFleetProfiles = {};
     
     // Fleet Data Caches
     let globalAllFleetLogs = [];
@@ -1194,6 +1195,8 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
+        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
+        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1201,6 +1204,7 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
+            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
