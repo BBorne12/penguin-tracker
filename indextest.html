@@ -152,7 +152,7 @@
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
-        /* CAROUSEL STYLES - SCROLLBAR FIX APPLIED */
+        /* CAROUSEL STYLES */
         .sightings-carousel {
             display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px;
             scroll-snap-type: x mandatory; 
@@ -178,9 +178,11 @@
         }
         .sighting-name { color: #fff; font-weight: bold; font-size: 11pt; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
         .sighting-note { color: #cbd5e1; font-size: 9pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+        
+        .sighting-btn-row { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
         .sighting-profile-btn {
-            pointer-events: auto; align-self: flex-start; background: rgba(56, 189, 248, 0.15);
-            border: 1px solid #38bdf8; color: #e0f2fe; font-size: 8.5pt; padding: 5px 10px; font-weight: bold;
+            pointer-events: auto; flex: 1; background: rgba(56, 189, 248, 0.15); text-align: center;
+            border: 1px solid #38bdf8; color: #e0f2fe; font-size: 8pt; padding: 6px 0; font-weight: bold;
             border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
         }
         .sighting-profile-btn:hover { background: rgba(56, 189, 248, 0.35); box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
@@ -472,6 +474,13 @@
             </div>
         </div>
 
+        <div class="glass-card" id="global-sightings-card">
+            <h2>📸 Recent Adventures</h2>
+            <div class="sightings-carousel" id="sightings-carousel-output">
+                <div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">Loading global sightings...</div>
+            </div>
+        </div>
+
         <div class="glass-card" id="tracking-card-block">
             <div class="card-header-flex" style="margin-bottom: 6px;">
                 <h2 id="tracking-card-title">Location</h2>
@@ -540,13 +549,6 @@
             </div>
         </div>
 
-        <div class="glass-card" id="global-sightings-card">
-            <h2>📸 Recent Adventures</h2>
-            <div class="sightings-carousel" id="sightings-carousel-output">
-                <div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">Loading global sightings...</div>
-            </div>
-        </div>
-
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -604,7 +606,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.34.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.36.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -1199,6 +1201,8 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
+        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
+        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1206,6 +1210,7 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
+            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
@@ -1293,6 +1298,81 @@
 
     function closeFullscreenTrackingMap() {
         document.getElementById('fullscreen-map-overlay').style.display = 'none';
+    }
+    
+    // Specifically tailored function to open the map and zoom in on a specific carousel stop
+    function openFullscreenForSighting(pId, lat, lng) {
+        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+        
+        if (!fsMap) {
+            fsMap = L.map('fullscreen-tracking-map').setView([lat, lng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
+            fsLayerGroup = L.layerGroup().addTo(fsMap);
+        }
+        
+        // Deactivate standard tabs to visually indicate we are in a custom filter mode
+        document.getElementById('fs-tab-my').classList.remove('active');
+        document.getElementById('fs-tab-colony').classList.remove('active');
+        document.getElementById('fs-tab-all').classList.remove('active');
+        
+        setTimeout(() => {
+            fsMap.invalidateSize();
+            if (!fsLayerGroup || !fsMap) return;
+            fsLayerGroup.clearLayers();
+            
+            const logsToProcess = globalAllFleetLogs.filter(log => log.penguin_id === pId);
+            const tracks = [];
+            
+            logsToProcess.forEach(log => {
+                if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+                tracks.push(log);
+            });
+
+            if (tracks.length === 0) return;
+
+            let pColor = globalFleetProfiles[pId] && globalFleetProfiles[pId].color ? globalFleetProfiles[pId].color : '#00e5ff';
+            
+            const historicalIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${pColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px ${pColor};'></div>`, 
+                iconSize: [12, 12], 
+                iconAnchor: [6, 6] 
+            });
+
+            const pathCoords = [];
+            let stopCounter = 1;
+            let targetMarker = null;
+
+            tracks.forEach(log => {
+                const latLng = [log.latitude, log.longitude];
+                pathCoords.push(latLng);
+
+                const dateObj = new Date(log.created_at).toLocaleDateString();
+                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
+                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
+                
+                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : pId;
+                const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
+                
+                const m = L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup)
+                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+                
+                if (Math.abs(log.latitude - lat) < 0.0001 && Math.abs(log.longitude - lng) < 0.0001) {
+                    targetMarker = m;
+                }
+                
+                stopCounter++;
+            });
+
+            if (pathCoords.length > 0) {
+                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(fsLayerGroup);
+            }
+
+            fsMap.setView([lat, lng], 14);
+            if (targetMarker) {
+                targetMarker.openPopup();
+            }
+        }, 100);
     }
 
     function openMapModal(lat, lng) {
@@ -2073,7 +2153,7 @@
         globalGalleryImages = recentPhotos.map(log => log.photo_url);
 
         recentPhotos.forEach((log, index) => {
-            let displayName = globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
+            let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
             let note = log.finder_note || "No note.";
             if (note.includes('[Tagged at Monument:')) note = note.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
 
@@ -2084,7 +2164,10 @@
                 <div class="sighting-overlay">
                     <span class="sighting-name">🐧 ${displayName}</span>
                     <span class="sighting-note">"${note}"</span>
-                    <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+                    <div class="sighting-btn-row">
+                        <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Penguin</button>
+                        <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Stop</button>
+                    </div>
                 </div>
             `;
             carousel.appendChild(card);
