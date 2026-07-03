@@ -104,6 +104,18 @@
         }
         .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
 
+        /* STONE BUTTONS */
+        .btn-stone {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); 
+            color: #fff; font-size: 9pt; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 4px; font-weight:bold; height: 100%; justify-content: center;
+        }
+        .btn-stone:hover { background: rgba(255,255,255,0.15); }
+        .btn-stone.stoned { 
+            background: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.4); color: #f97316; 
+            cursor: default; box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); 
+        }
+
         .tab-bar {
             display: flex; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.15);
             border-radius: 8px; padding: 4px; margin-bottom: 12px;
@@ -179,7 +191,7 @@
         .sighting-name { color: #fff; font-weight: bold; font-size: 11pt; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
         .sighting-note { color: #cbd5e1; font-size: 9pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
         
-        .sighting-btn-row { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+        .sighting-btn-row { display: flex; gap: 6px; width: 100%; margin-top: 4px; }
         .sighting-profile-btn {
             pointer-events: auto; flex: 1; background: rgba(56, 189, 248, 0.15); text-align: center;
             border: 1px solid #38bdf8; color: #e0f2fe; font-size: 8pt; padding: 6px 0; font-weight: bold;
@@ -438,13 +450,16 @@
             <div id="my-penguin-container">
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openGalleryModal()">🖼️ Gallery</button>
+                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openGalleryModal()">🖼️ Gallery</button>
                     
-                    <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
+                    <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openEditModal()">✏️ Edit</button>
                     
-                    <button id="share-profile-btn" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openShareModal()">🔗 Share</button>
+                    <button id="share-profile-btn" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openShareModal()">🔗 Share</button>
 
-                    <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
+                    <div style="position: relative; display: inline-block;">
+                        <div id="unread-stones-badge" style="display:none; position:absolute; top:-5px; right:-10px; background:#ef4444; color:#fff; border-radius:12px; padding:2px 6px; font-size:8pt; font-weight:bold; box-shadow:0 0 8px #ef4444; z-index:10;">New 🪨!</div>
+                        <div id="profile-avatar-container" style="width: 80px; height: 80px; margin: 0 auto; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4));"></div>
+                    </div>
                     <div class="ice-glow" id="penguin-name-display" style="margin-top: 8px; font-size: 16pt; font-weight: 600;">Detecting...</div>
                 </div>
 
@@ -456,6 +471,10 @@
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Total Stops So Far</span></div>
                         <div><span class="value ice-glow" id="total-stops-counter">0 Passport Stops Logged</span></div>
+                    </li>
+                    <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div><span class="label">Stones Collected</span></div>
+                        <div><span class="value" id="total-stones-counter" style="color: #f97316; font-weight: bold; text-shadow: 0 0 8px rgba(249, 115, 22, 0.4);">0 🪨</span></div>
                     </li>
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Last Stop</span></div>
@@ -557,6 +576,7 @@
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
                 <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button>
+                <button class="tab-btn" id="tab-stones" onclick="switchLeaderboardTab('stones')">🪨 Stones</button>
             </div>
 
             <ul class="leaderboard-list" id="leaderboard-output">
@@ -606,7 +626,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.36.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.37.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -634,6 +654,7 @@
     let isAuthorizedViewer = false;
     let isViewOnlyMode = true; 
     let requiresReload = false;
+    let activeUserId = null;
     
     // Global Styling & Data State
     let activeCustomName = "";
@@ -782,6 +803,9 @@
         } else {
             isViewOnlyMode = true; 
         }
+        
+        // Assign the correct active user ID for giving stones
+        activeUserId = isPrimaryControl ? penguinId : (isAuthorizedViewer ? viewerId : null);
 
         if (isViewOnlyMode) {
             const viewBanner = document.getElementById('view-mode-banner');
@@ -837,6 +861,49 @@
             buildLeaderboard();
         }, 150);
     });
+    
+    // ===================================================
+    // STONES SOCIAL ENGINE
+    // ===================================================
+    async function giveStone(logId, targetId, event) {
+        if (event) event.stopPropagation();
+        
+        if (!activeUserId || activeUserId === "Mystery Penguin") {
+            showToast("You need an active penguin profile to give stones!", "error");
+            return;
+        }
+
+        const btns = document.querySelectorAll(`.stone-btn-${logId}`);
+        if (btns.length > 0 && btns[0].classList.contains('stoned')) return;
+
+        const { data, error } = await supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single();
+        if (error) { showToast("Network error.", "error"); return; }
+        
+        let currentStones = data.stones_received ? data.stones_received.split(',').map(s=>s.trim()).filter(s=>s) : [];
+        if (currentStones.includes(activeUserId)) {
+            showToast("You already gave a stone to this stop!", "info");
+            return;
+        }
+        
+        currentStones.push(activeUserId);
+        let updatePayload = { stones_received: currentStones.join(',') };
+        
+        if (targetId !== activeUserId) {
+            updatePayload.has_unread_stones = true;
+        }
+
+        const { error: updateErr } = await supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId);
+        if (!updateErr) {
+            document.querySelectorAll(`.stone-btn-${logId}`).forEach(b => {
+                b.innerHTML = `🪨 ${currentStones.length}`;
+                b.className = `btn-stone stoned stone-btn-${logId}`;
+                b.onclick = null;
+            });
+            showToast("Stone given! 🪨", "success");
+        } else {
+            showToast("Failed to give stone.", "error");
+        }
+    }
 
     // ===================================================
     // COLONY FEATURES & ROUTING LOGIC
@@ -861,7 +928,7 @@
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
-            if(galleryBtn) galleryBtn.style.display = 'block';
+            if(galleryBtn && globalGalleryImages.length > 0) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
@@ -1201,8 +1268,6 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
-        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
-        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1210,7 +1275,6 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
-            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
@@ -1300,7 +1364,6 @@
         document.getElementById('fullscreen-map-overlay').style.display = 'none';
     }
     
-    // Specifically tailored function to open the map and zoom in on a specific carousel stop
     function openFullscreenForSighting(pId, lat, lng) {
         document.getElementById('fullscreen-map-overlay').style.display = 'flex';
         
@@ -1310,7 +1373,6 @@
             fsLayerGroup = L.layerGroup().addTo(fsMap);
         }
         
-        // Deactivate standard tabs to visually indicate we are in a custom filter mode
         document.getElementById('fs-tab-my').classList.remove('active');
         document.getElementById('fs-tab-colony').classList.remove('active');
         document.getElementById('fs-tab-all').classList.remove('active');
@@ -1876,6 +1938,7 @@
         if (activeTab === tabName) return; activeTab = tabName;
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
         document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        document.getElementById('tab-stones').classList.toggle('active', tabName === 'stones');
         activeLeaderboardPage = 1; buildLeaderboard();
     }
 
@@ -1888,7 +1951,7 @@
 
     async function buildLeaderboard() {
         const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url')
+            .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received')
             .order('created_at', { ascending: true });
             
         if (error || !allLogs) return;
@@ -1896,7 +1959,7 @@
         globalAllFleetLogs = allLogs; // Cached for full-screen map mode
         
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
-        const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
+        const stonesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
         allLogs.forEach(log => {
             if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
@@ -1907,6 +1970,10 @@
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
                 if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
                 
+                if (log.stones_received) {
+                    stonesCountMap[log.penguin_id] = (stonesCountMap[log.penguin_id] || 0) + log.stones_received.split(',').filter(s=>s).length;
+                }
+
                 if (log.custom_name && log.custom_name.trim() !== "") namesMap[log.penguin_id] = log.custom_name;
                 if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
                 if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
@@ -1926,6 +1993,7 @@
                 miles: totalMiles, 
                 stopsCount: logsCountMap[id] || 1, 
                 monumentsCount: monumentTagsCountMap[id] || 0,
+                stonesCount: stonesCountMap[id] || 0,
                 avatarColor: avatarMap[id],
                 customAvatar: customAvatarMap[id],
                 styleId: styleMap[id]
@@ -1933,7 +2001,8 @@
         });
 
         if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
-        else { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
+        else if (activeTab === "monuments") { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
+        else if (activeTab === "stones") { leaderboardData.sort((a, b) => b.stonesCount - a.stonesCount || b.miles - a.miles); }
 
         leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
 
@@ -1988,9 +2057,14 @@
             let rankClass = ""; let medal = `#${absoluteRank}`;
             if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
 
-            let rightSideValueMetricsHTML = (activeTab === "distance") 
-                ? `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`
-                : `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
+            let rightSideValueMetricsHTML = "";
+            if (activeTab === "distance") { 
+                rightSideValueMetricsHTML = `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            } else if (activeTab === "monuments") {
+                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
+            } else {
+                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">🪨 ${item.stonesCount} Stones</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            }
 
             li.innerHTML = `
                 <div style="display:flex; align-items:center; gap: 8px;">
@@ -2020,7 +2094,7 @@
                 const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
                 const monumentName = matchString ? matchString[1] : "Unknown Landmark";
                 discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
-                computedPassportStampsArray.push({ name: monumentName, date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude });
+                computedPassportStampsArray.push({ logId: entry.id, targetId: entry.penguin_id, name: monumentName, date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude });
             }
         }
         activePassportPage = 1; renderPassportPageLayout();
@@ -2075,6 +2149,7 @@
             if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
 
             computedAllStopsArray.push({
+                logId: entry.id, targetId: entry.penguin_id, stonesStr: entry.stones_received,
                 stopNumber: validStopIndex, note: cleanNote || "No adventure notes left.",
                 date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude
             });
@@ -2106,10 +2181,20 @@
         const pageItemsSlice = computedAllStopsArray.slice(startIdx, startIdx + STOPS_ITEMS_PER_PAGE);
 
         pageItemsSlice.forEach(stop => {
+            let stonesArr = stop.stonesStr ? stop.stonesStr.split(',').map(s=>s.trim()).filter(s=>s) : [];
+            let hasStoned = activeUserId ? stonesArr.includes(activeUserId) : false;
+            let stonesCount = stonesArr.length;
+
             const rowLi = document.createElement('li'); rowLi.className = 'passport-history-row';
             rowLi.innerHTML = `
                 <div><span class="passport-icon-badge">📍</span><span class="p-name">Stop #${stop.stopNumber}</span><span style="display:block; font-size:10.5pt; color:#cbd5e1; font-style:italic; font-weight:normal; margin-top:2px;">"${stop.note}"</span></div>
-                <div style="text-align:right;"><span class="passport-list-date" style="color:#00e5ff; text-shadow:none;">${stop.date}</span><span style="display:block; font-size:9pt; color:#4b5563; font-family:monospace;">${stop.lat.toFixed(3)}°, ${stop.lng.toFixed(3)}°</span></div>`;
+                <div style="text-align:right;">
+                    <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+                        <span class="passport-list-date" style="color:#00e5ff; text-shadow:none;">${stop.date}</span>
+                        <button class="btn-stone ${hasStoned ? 'stoned' : ''} stone-btn-${stop.logId}" ${hasStoned ? '' : `onclick="giveStone('${stop.logId}', '${stop.targetId}', event)"`}>🪨 ${stonesCount}</button>
+                    </div>
+                    <span style="display:block; font-size:9pt; color:#4b5563; font-family:monospace; margin-top:4px;">${stop.lat.toFixed(3)}°, ${stop.lng.toFixed(3)}°</span>
+                </div>`;
             rowLi.onclick = function() { openMapModal(stop.lat, stop.lng); };
             outputEl.appendChild(rowLi);
         });
@@ -2153,9 +2238,13 @@
         globalGalleryImages = recentPhotos.map(log => log.photo_url);
 
         recentPhotos.forEach((log, index) => {
-            let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
+            let displayName = globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
             let note = log.finder_note || "No note.";
             if (note.includes('[Tagged at Monument:')) note = note.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+
+            let stonesArr = log.stones_received ? log.stones_received.split(',').map(s=>s.trim()).filter(s=>s) : [];
+            let hasStoned = activeUserId ? stonesArr.includes(activeUserId) : false;
+            let stonesCount = stonesArr.length;
 
             const card = document.createElement('div');
             card.className = 'sighting-card';
@@ -2167,6 +2256,7 @@
                     <div class="sighting-btn-row">
                         <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Penguin</button>
                         <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Stop</button>
+                        <button class="btn-stone ${hasStoned ? 'stoned' : ''} stone-btn-${log.id}" style="flex:0 0 auto;" ${hasStoned ? '' : `onclick="giveStone('${log.id}', '${log.penguin_id}', event)"`}>🪨 ${stonesCount}</button>
                     </div>
                 </div>
             `;
@@ -2182,7 +2272,7 @@
 
         const { data: rawLogs, error } = await supabaseClient
             .from('penguin_logs')
-            .select('latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id')
+            .select('id, penguin_id, latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id, stones_received, has_unread_stones')
             .eq('penguin_id', targetId)
             .order('created_at', { ascending: true });
 
@@ -2284,6 +2374,28 @@
         const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note));
         const totalStopsEl = document.getElementById("total-stops-counter");
         if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
+
+        // CALCULATE TOTAL STONES & UNREAD BADGE
+        let totalStones = 0;
+        let hasUnread = false;
+        logs.forEach(l => {
+            if (l.stones_received) {
+                totalStones += l.stones_received.split(',').filter(s=>s).length;
+            }
+            if (l.has_unread_stones) hasUnread = true;
+        });
+
+        const totalStonesEl = document.getElementById("total-stones-counter");
+        if (totalStonesEl) totalStonesEl.innerText = `${totalStones} 🪨`;
+
+        const unreadBadge = document.getElementById("unread-stones-badge");
+        if (isPrimaryControl && hasUnread && unreadBadge) {
+            unreadBadge.style.display = 'block';
+            // Silently clear unread flags in DB
+            supabaseClient.from('penguin_logs').update({ has_unread_stones: false }).eq('penguin_id', targetId).eq('has_unread_stones', true).then(()=>{});
+        } else if (unreadBadge) {
+            unreadBadge.style.display = 'none';
+        }
 
         if (validStops.length > 0) {
             const lastLog = validStops[validStops.length - 1];
