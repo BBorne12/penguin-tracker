@@ -152,12 +152,16 @@
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
-        /* CAROUSEL STYLES */
+        /* CAROUSEL STYLES - SCROLLBAR FIX APPLIED */
         .sightings-carousel {
             display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px;
-            scroll-snap-type: x mandatory; scrollbar-width: none;
+            scroll-snap-type: x mandatory; 
         }
-        .sightings-carousel::-webkit-scrollbar { display: none; }
+        .sightings-carousel::-webkit-scrollbar { height: 8px; }
+        .sightings-carousel::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+        .sightings-carousel::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 4px; }
+        .sightings-carousel::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.8); }
+
         .sighting-card {
             flex: 0 0 220px; height: 220px; border-radius: 12px; overflow: hidden;
             position: relative; scroll-snap-align: start;
@@ -600,7 +604,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.33.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.34.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -1195,8 +1199,6 @@
     function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
         if (!targetLayerGroup || !targetMap) return;
         
-        // If fleet logs aren't loaded yet (can happen if user clicks fast), gracefully abort.
-        // It will auto-draw 'my' penguin using local logs first, then allow fleet drawing once loaded.
         if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
 
         targetLayerGroup.clearLayers();
@@ -1204,7 +1206,6 @@
         let logsToProcess = [];
         
         if (mode === 'my') {
-            // If the massive fleet list hasn't loaded yet, fall back to our fast local load for 'my' penguin
             logsToProcess = globalAllFleetLogs.length > 0 
                 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
                 : globalLogData;
@@ -1659,7 +1660,12 @@
             if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
             
             const fetchRes = await fetch(overpassUrl);
-            const resJson = await fetchRes.json();
+            
+            if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
+            const textContent = await fetchRes.text();
+            if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
+            
+            const resJson = JSON.parse(textContent);
             
             if (resJson && resJson.elements && resJson.elements.length > 0) {
                 if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby landmark --</option>';
@@ -1726,7 +1732,14 @@
                     poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:"; poiLabelStatus.style.color = "#94a3b8"; poiLabelStatus.style.textShadow = "none";
                 }
             }
-        } catch (poiErr) { console.warn("POI fallback bypass: ", poiErr); }
+        } catch (poiErr) { 
+            console.warn("POI fallback bypass: ", poiErr); 
+            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:11pt;">⚠️ Landmark scanner temporarily unavailable (API Timeout).</li>`;
+            if (poiSelector && poiLabelStatus) {
+                poiSelector.innerHTML = '<option value="">-- Landmark scanning offline --</option>'; poiSelector.disabled = true;
+                poiLabelStatus.innerText = "🏛️ Landmark Scanner Unavailable"; poiLabelStatus.style.color = "#fca5a5"; poiLabelStatus.style.textShadow = "none";
+            }
+        }
     }
 
     function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
