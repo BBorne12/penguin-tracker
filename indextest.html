@@ -414,7 +414,7 @@
             <div id="my-penguin-container">
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <button id="gallery-profile-btn" style="position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openGalleryModal()">🖼️ Gallery</button>
+                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openGalleryModal()">🖼️ Gallery</button>
                     
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -575,22 +575,19 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.26.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 4.27.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- CONNECT CREDENTIALS ---
+    // --- 1. CONNECT CREDENTIALS & GLOBALS (DECLARED FIRST) ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let urlParams = new URLSearchParams(window.location.search);
-    
-    // --- GLOBAL ID NORMALIZATION ---
     let rawId = urlParams.get('id') || "Mystery Penguin";
     let penguinId = (rawId !== "Mystery Penguin" && !rawId.startsWith("Penguin-")) ? `Penguin-${rawId}` : rawId;
     let securityTagParam = urlParams.get('tag') || null; 
@@ -604,7 +601,6 @@
     let isViewOnlyMode = true; 
     let requiresReload = false;
     
-    // Global Styling & Data State
     let activeCustomName = "";
     let activeAvatarColor = "#38bdf8"; 
     let activeCustomAvatarUrl = null;
@@ -612,24 +608,20 @@
     let globalStyles = [];
     let globalFleetProfiles = {};
     
-    // Fleet Data Caches
     let globalAllFleetLogs = [];
     let globalViewedColonyIds = []; 
     let currentFsMode = 'my';
     let currentMainMode = 'my';
     
-    // Gallery State
     let globalGalleryImages = [];
     let currentGalleryMode = 'my';
     let currentGalleryIndex = -1;
     let activeGalleryPage = 1;
     const GALLERY_ITEMS_PER_PAGE = 6;
 
-    // Fullscreen Map State
     let fsMap = null;
     let fsLayerGroup = null;
 
-    // Avatar Modal Selection State
     let modalAvatarType = 'color'; 
     let modalAvatarColor = '#38bdf8';
     let modalCustomUrl = null;
@@ -650,32 +642,20 @@
     let discoveredMonumentsSet = new Set(); 
     let globalLogData = []; let globalNamedEntry = null;
 
-    // Location Trackers
     let verifiedLat = null; let verifiedLng = null;
     let lastLogLat = null; let lastLogLng = null;
 
-    const penguinIdHeader = document.getElementById('penguin-id-display');
-    if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
-
     let map = null; let marker = null; let historyLayerGroup = null; let poiLayerGroup = null; 
     let poiMarkersMap = {}; 
-    let modalMap = null; let modalLayerGroup = null;
+    let modalMap = null; let modalLayerGroup = null; let currentJourneyLine = null;
 
-    const coordinatesDisplay = document.getElementById("coordinates-display");
-    const lockBadge = document.getElementById("lock-badge");
-    const customCameraBtn = document.getElementById("custom-camera-btn");
-    const penguinNameDisplayEl = document.getElementById("penguin-name-display");
-    if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
-
-    // --- BULLETPROOF FILTERS ---
     const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
     const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
 
-    // ===================================================
-    // UNIVERSAL IN-APP NOTIFICATION ENGINE
-    // ===================================================
+    // --- 2. UTILITY & HELPER FUNCTIONS ---
     function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
+        if(!container) return;
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.innerText = message;
@@ -701,21 +681,12 @@
         pendingConfirmAction = null;
     }
 
-    // ===================================================
-    // STATELESS SECURITY GATEWAY LOGIC
-    // ===================================================
     async function verifyPenguinSecurity(id, tag) {
         const numericId = parseInt(id.replace("Penguin-", ""), 10);
         if (!isNaN(numericId) && numericId < 66) return true; 
-
         if (!tag) return false;
-
         const { data, error } = await supabaseClient.from('penguin_logs').select('secret_tag').eq('penguin_id', id);
-        
-        if (!data || data.length === 0) {
-            return true; 
-        }
-
+        if (!data || data.length === 0) return true; 
         return data.some(log => log.secret_tag === tag);
     }
 
@@ -724,96 +695,75 @@
         if (!error && data) globalStyles = data;
     }
 
-    window.addEventListener("DOMContentLoaded", async function() {
-        await fetchStyles();
-        
-        initializeLiveMap();
-        updateProfileAvatarDisplay(); 
-        
-        if (penguinId !== "Mystery Penguin") {
-            isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam);
-        }
-
-        if (viewerId) {
-            isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam);
-        }
-
-        if (isAuthorizedViewer && viewerId !== penguinId) {
-            isPrimaryControl = false;
-        }
-
-        if (isPrimaryControl) {
-            isViewOnlyMode = false;
-            verifyCurrentGPS(); 
-        } else if (isAuthorizedViewer) {
-            isViewOnlyMode = true; 
-        } else {
-            isViewOnlyMode = true; 
-        }
-
-        if (isViewOnlyMode) {
-            const viewBanner = document.getElementById('view-mode-banner');
-            if (viewBanner && !isAuthorizedViewer) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
-            activateViewOnlyUI();
-            const poiOutput = document.getElementById("poi-proximity-output");
-            if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
-        }
-
-        const backBtnContainer = document.getElementById('back-to-my-penguin-container');
-        const strangerActionRow = document.getElementById('stranger-action-row');
-
-        // Initial Colony Fetch for the currently VIEWED profile
-        const { data: viewedData } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
-        let viewedSet = new Set();
-        if (viewedData) {
-            viewedData.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if(i.trim()) viewedSet.add(i.trim()); });
-                }
-            });
-        }
-        globalViewedColonyIds = Array.from(viewedSet);
-
-        // Stranger action button relies on the viewer's colony, not the viewed profile's colony
-        if (isAuthorizedViewer && !isPrimaryControl) {
-            if(backBtnContainer) backBtnContainer.style.display = 'block';
-            if(strangerActionRow) {
-                strangerActionRow.style.display = 'flex';
-                const { data: viewerData } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
-                let viewerSet = new Set();
-                if (viewerData) {
-                    viewerData.forEach(log => {
-                        if (log.colony_list) {
-                            log.colony_list.split(',').forEach(i => { if(i.trim()) viewerSet.add(i.trim()); });
-                        }
-                    });
-                }
-                
-                let inColonyHTML = Array.from(viewerSet).includes(penguinId)
-                    ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
-                    : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
-
-                strangerActionRow.innerHTML = inColonyHTML;
-            }
-        }
-
-        setTimeout(function() {
-            loadPenguinHistory(penguinId);
-            buildLeaderboard();
-        }, 150);
-    });
-
-    // ===================================================
-    // COLONY FEATURES & ROUTING LOGIC
-    // ===================================================
-    function goBackToMyPenguin() {
-        if (isAuthorizedViewer && viewerId) {
-            let url = `?id=${viewerId}`;
-            if (viewerTagParam) url += `&tag=${viewerTagParam}`;
-            window.location.href = url;
-        }
+    function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
+    function getPenguinSvg(bgColor) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
+            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
+            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
+            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
+            <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
+            <circle cx="36" cy="45" r="15" fill="#ffffff"/>
+            <circle cx="64" cy="45" r="15" fill="#ffffff"/>
+            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
+            <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
+            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
+        </svg>`;
+    }
+
+    function getAvatarThumbnail(color, customUrl, styleId) {
+        if (customUrl === 'USE_COLOR') return getPenguinSvg(color || '#38bdf8');
+        if (customUrl === 'USE_STYLE' && styleId) {
+            const s = globalStyles.find(x => x.id === styleId);
+            if (s && s.image_url) return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        }
+        if (customUrl && customUrl.startsWith('http')) return `<img src="${customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        if (styleId) {
+            const s = globalStyles.find(x => x.id === styleId);
+            if (s && s.image_url) return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        }
+        return getPenguinSvg(color || '#38bdf8');
+    }
+
+    function updateProfileAvatarDisplay() {
+        const container = document.getElementById('profile-avatar-container');
+        if (!container) return;
+        if (activeCustomAvatarUrl === 'USE_COLOR') {
+            container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
+            return;
+        }
+        if (activeCustomAvatarUrl === 'USE_STYLE' && activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if (styleObj && styleObj.image_url) {
+                container.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
+                return;
+            }
+        }
+        if (activeCustomAvatarUrl && activeCustomAvatarUrl.startsWith('http')) {
+            container.innerHTML = `<img src="${activeCustomAvatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
+            return;
+        }
+        if (activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if (styleObj && styleObj.image_url) {
+                container.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
+                return;
+            }
+        }
+        container.innerHTML = getPenguinSvg(activeAvatarColor || '#38bdf8');
+    }
+
+    // --- 3. MODAL & UI FUNCTIONS ---
     function switchProfileTab(tabName) {
         const btnPenguin = document.getElementById('tab-my-penguin');
         const btnColony = document.getElementById('tab-my-colony');
@@ -836,136 +786,24 @@
         }
     }
 
-    async function addToColony() {
-        if (!isAuthorizedViewer || !viewerId) return;
-        const btn = document.getElementById('add-colony-btn');
-        if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
-
-        const { data: viewerData, error: selectError } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
-        
-        if (selectError) {
-            showToast("Connection error: " + selectError.message, "error");
-            if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
-            return;
-        }
-
-        let viewerColonySet = new Set();
-        if (viewerData && viewerData.length > 0) {
-            viewerData.forEach(log => {
-                if (log.colony_list) {
-                    log.colony_list.split(',').forEach(i => { if (i.trim()) viewerColonySet.add(i.trim()); });
-                }
-            });
-        }
-        
-        if (!viewerColonySet.has(penguinId)) {
-            viewerColonySet.add(penguinId);
-            let masterListArray = Array.from(viewerColonySet);
-            
-            const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
-            
-            if (updateError) {
-                showToast("Database update rejected: " + updateError.message, "error");
-                if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
-                return;
-            }
-        }
-        
-        if(btn) {
-            btn.outerHTML = `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`;
-        }
+    function switchStopsTab(tabName) {
+        if (activeStopsTab === tabName) return; activeStopsTab = tabName;
+        document.getElementById('tab-stop-log').classList.toggle('active', tabName === 'log');
+        document.getElementById('tab-stop-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('stop-log-container').style.display = (tabName === 'log') ? 'block' : 'none';
+        document.getElementById('stop-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
     }
 
-    async function loadColonyList() {
-        const listEl = document.getElementById('colony-list-output');
-        
-        if (globalViewedColonyIds.length === 0) {
-            listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
-            return;
-        }
-
-        const colonyStats = {};
-        globalViewedColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
-        
-        if (globalAllFleetLogs.length > 0) {
-            globalAllFleetLogs.forEach(log => {
-                if (colonyStats[log.penguin_id]) {
-                    if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
-                    if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
-                    if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
-                    if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
-
-                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
-                        colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
-                    }
-                }
-            });
-        }
-        
-        listEl.innerHTML = "";
-
-        let linkViewerParams = "";
-        if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}`;
-            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
-        } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}`;
-            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
-        }
-
-        globalViewedColonyIds.forEach(id => {
-            let miles = 0;
-            let pts = colonyStats[id].points;
-            for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
-            
-            // Only allow removing from the colony if you are viewing your OWN profile
-            let removeButtonHTML = isPrimaryControl 
-                ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
-                : "";
-
-            const li = document.createElement('li');
-            li.className = 'leaderboard-row'; 
-            li.innerHTML = `
-                <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="width:34px; height:34px; flex-shrink:0;">${getAvatarThumbnail(colonyStats[id].avatarColor, colonyStats[id].customAvatar, colonyStats[id].styleId)}</div>
-                    <span class="p-name" style="font-size:11pt;"><span class="bw-penguin">🐧</span> ${colonyStats[id].name}</span>
-                </div>
-                <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="text-align:right;">
-                        <span class="p-dist" style="font-size:10pt;">${miles.toFixed(1)} mi</span>
-                        <span class="stat-subtext">${pts.length} stops</span>
-                    </div>
-                    ${removeButtonHTML}
-                </div>
-            `;
-            li.onclick = () => { window.location.href = `?id=${id}${linkViewerParams}`; }
-            listEl.appendChild(li);
-        });
+    function switchLandmarkTab(tabName) {
+        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
+        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
+        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
+        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
+        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
+        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
     }
 
-    function removeFromColony(targetId, event) {
-        event.stopPropagation();
-        let ownerId = isPrimaryControl ? penguinId : null;
-        if (!ownerId) { 
-            showToast("You can only remove penguins from your own colony.", "error"); 
-            return; 
-        }
-        
-        showConfirm(`Remove ${targetId} from your colony?`, async () => {
-            let colonySet = new Set(globalViewedColonyIds);
-            colonySet.delete(targetId);
-            let masterListArray = Array.from(colonySet);
-            
-            await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
-            globalViewedColonyIds = masterListArray;
-            loadColonyList();
-            showToast(`${targetId} removed from colony.`, "success");
-        });
-    }
-
-    // ===================================================
-    // SHARE MODAL & SUCCESS MODAL
-    // ===================================================
     function showSuccessModal() {
         const viewOnlyUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}`;
         document.getElementById('success-view-url').value = viewOnlyUrl;
@@ -1014,13 +852,9 @@
     function shareTwitter() { window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(document.getElementById('share-url-input').value)}&text=Track%20my%20penguin!`, '_blank'); }
     function shareWhatsApp() { window.open(`https://api.whatsapp.com/send?text=Track%20my%20penguin!%20${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
 
-    // ===================================================
-    // WELCOME MODAL & IMAGE VIEWER
-    // ===================================================
     function closeWelcomeModal() { 
         const w = document.getElementById('welcome-modal'); 
         if (w) w.style.display = 'none'; 
-        
         if (!globalNamedEntry && !isViewOnlyMode) {
             const f = document.getElementById('first-find-modal');
             if (f) f.style.display = 'flex';
@@ -1044,9 +878,102 @@
         if(m) { m.style.display = 'none'; document.getElementById('fullscreen-image').src = ""; }
     }
 
-    // ===================================================
-    // MAP INIT & GPS
-    // ===================================================
+    function initAvatarGrid() {
+        const grid = document.getElementById('avatar-grid');
+        if (!grid) return; grid.innerHTML = '';
+        
+        AVATAR_COLORS.forEach(color => {
+            const div = document.createElement('div');
+            div.className = 'avatar-option';
+            div.style.border = (modalAvatarType === 'color' && modalAvatarColor === color) ? '3px solid #39ff14' : '2px solid transparent';
+            div.innerHTML = getPenguinSvg(color);
+            div.onclick = () => { modalAvatarType = 'color'; modalAvatarColor = color; initAvatarGrid(); };
+            grid.appendChild(div);
+        });
+        
+        if (activeStyleId) {
+            const styleObj = globalStyles.find(s => s.id === activeStyleId);
+            if (styleObj && styleObj.image_url) {
+                const div = document.createElement('div');
+                div.className = 'avatar-option';
+                div.style.border = (modalAvatarType === 'style') ? '3px solid #39ff14' : '2px solid transparent';
+                div.innerHTML = `<img src="${styleObj.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+                div.onclick = () => { modalAvatarType = 'style'; initAvatarGrid(); };
+                grid.appendChild(div);
+            }
+        }
+        
+        const customDiv = document.createElement('div');
+        customDiv.className = 'avatar-option';
+        customDiv.style.border = (modalAvatarType === 'custom') ? '3px solid #39ff14' : '2px solid rgba(255,255,255,0.2)';
+        if (modalAvatarType === 'custom' && modalCustomUrl) {
+            customDiv.innerHTML = `<img src="${modalCustomUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+        } else {
+            customDiv.innerHTML = `<span style="font-size:20pt;">📸</span>`;
+        }
+        customDiv.onclick = () => { document.getElementById('hidden-avatar-upload').click(); };
+        grid.appendChild(customDiv);
+    }
+
+    async function handleModalAvatarUpload() {
+        const fileInput = document.getElementById('hidden-avatar-upload');
+        const file = fileInput.files[0];
+        if (!file) return;
+        const saveBtn = document.getElementById('save-profile-btn');
+        saveBtn.disabled = true; saveBtn.innerText = "Processing Image...";
+        try {
+            const compressedBlob = await compressImage(file);
+            const fileName = `${penguinId}_avatar_${Date.now()}.jpg`;
+            const { error } = await supabaseClient.storage.from('avatars').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+            if (error) throw error;
+            const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+            modalCustomUrl = data.publicUrl; modalAvatarType = 'custom';
+            initAvatarGrid();
+        } catch(e) {
+            showToast("Image upload failed: " + e.message, "error");
+        }
+        saveBtn.disabled = false; saveBtn.innerText = "Save Changes";
+    }
+
+    function openEditModal() {
+        document.getElementById('edit-custom-name').value = activeCustomName === penguinId ? "" : activeCustomName;
+        if (activeCustomAvatarUrl === 'USE_COLOR') {
+            modalAvatarType = 'color'; modalAvatarColor = activeAvatarColor;
+        } else if (activeCustomAvatarUrl === 'USE_STYLE') {
+            modalAvatarType = 'style';
+        } else if (activeCustomAvatarUrl && activeCustomAvatarUrl.startsWith('http')) {
+            modalAvatarType = 'custom'; modalCustomUrl = activeCustomAvatarUrl;
+        } else if (activeStyleId) {
+            modalAvatarType = 'style';
+        } else {
+            modalAvatarType = 'color'; modalAvatarColor = activeAvatarColor || '#38bdf8';
+        }
+        initAvatarGrid();
+        document.getElementById('edit-profile-modal').style.display = 'flex';
+    }
+
+    function closeEditModal() { document.getElementById('edit-profile-modal').style.display = 'none'; }
+
+    async function saveProfileEdit() {
+        const newName = document.getElementById('edit-custom-name').value.trim();
+        if(!newName) { showToast("Penguin name cannot be empty.", "error"); return; }
+        const saveBtn = document.getElementById('save-profile-btn');
+        saveBtn.disabled = true; saveBtn.innerText = "Saving Profile...";
+
+        let finalCustomUrlVal = null; let finalAvatarColor = activeAvatarColor;
+        if (modalAvatarType === 'color') { finalCustomUrlVal = 'USE_COLOR'; finalAvatarColor = modalAvatarColor; } 
+        else if (modalAvatarType === 'style') { finalCustomUrlVal = 'USE_STYLE'; } 
+        else if (modalAvatarType === 'custom') { finalCustomUrlVal = modalCustomUrl; }
+
+        activeCustomName = newName; activeAvatarColor = finalAvatarColor; activeCustomAvatarUrl = finalCustomUrlVal;
+        
+        await supabaseClient.from('penguin_logs').update({ 
+            custom_name: activeCustomName, avatar_color: activeAvatarColor, custom_avatar_url: activeCustomAvatarUrl
+        }).eq('penguin_id', penguinId);
+        location.reload();
+    }
+
+    // --- 4. MAP RENDERING ENGINE ---
     function initializeLiveMap() {
         try {
             map = L.map('map').setView([39.8283, -98.5795], 4);
@@ -1066,6 +993,139 @@
         if (marker) { marker.remove(); marker = null; }
     }
 
+    function setFullscreenMode(mode) {
+        currentFsMode = mode;
+        const fsTabMy = document.getElementById('fs-tab-my');
+        const fsTabColony = document.getElementById('fs-tab-colony');
+        const fsTabAll = document.getElementById('fs-tab-all');
+        if (fsTabMy) fsTabMy.classList.toggle('active', mode === 'my');
+        if (fsTabColony) fsTabColony.classList.toggle('active', mode === 'colony');
+        if (fsTabAll) fsTabAll.classList.toggle('active', mode === 'all');
+        renderFleetOnMap(fsMap, fsLayerGroup, currentFsMode);
+    }
+
+    function setMainMapMode(mode) {
+        currentMainMode = mode;
+        const mainTabMy = document.getElementById('main-tab-my');
+        const mainTabColony = document.getElementById('main-tab-colony');
+        const mainTabAll = document.getElementById('main-tab-all');
+        if (mainTabMy) mainTabMy.classList.toggle('active', mode === 'my');
+        if (mainTabColony) mainTabColony.classList.toggle('active', mode === 'colony');
+        if (mainTabAll) mainTabAll.classList.toggle('active', mode === 'all');
+        renderFleetOnMap(map, historyLayerGroup, currentMainMode);
+    }
+
+    function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
+        if (!targetLayerGroup || !targetMap) return;
+        if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
+        targetLayerGroup.clearLayers();
+        
+        let logsToProcess = [];
+        if (mode === 'my') {
+            logsToProcess = globalAllFleetLogs.length > 0 
+                ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
+                : globalLogData;
+        } else if (mode === 'colony') {
+            const allowedIds = new Set(globalViewedColonyIds);
+            allowedIds.add(penguinId);
+            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
+        } else {
+            logsToProcess = globalAllFleetLogs;
+        }
+
+        const tracks = {};
+        logsToProcess.forEach(log => {
+            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (!tracks[log.penguin_id]) tracks[log.penguin_id] = [];
+            tracks[log.penguin_id].push(log);
+        });
+
+        const palette = ['#00e5ff', '#39ff14', '#f472b6', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#e879f9', '#fb923c'];
+        let colorIndex = 0; const allBounds = L.latLngBounds(); let hasValidPoints = false;
+
+        Object.keys(tracks).forEach(pId => {
+            const pLogs = tracks[pId];
+            if (pLogs.length === 0) return;
+            
+            const pColor = pId === penguinId ? '#00e5ff' : palette[colorIndex % palette.length];
+            if (pId !== penguinId) colorIndex++;
+
+            const pathCoords = [];
+            const historicalIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${pColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px ${pColor};'></div>`, 
+                iconSize: [12, 12], iconAnchor: [6, 6] 
+            });
+
+            let stopCounter = 1;
+            pLogs.forEach(log => {
+                const latLng = [log.latitude, log.longitude];
+                pathCoords.push(latLng); allBounds.extend(latLng); hasValidPoints = true;
+                const dateObj = new Date(log.created_at).toLocaleDateString();
+                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
+                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
+                let displayName = globalFleetProfiles[pId] && globalFleetProfiles[pId].name ? globalFleetProfiles[pId].name : pId;
+                const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
+                
+                L.marker(latLng, { icon: historicalIcon }).addTo(targetLayerGroup)
+                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+                stopCounter++;
+            });
+
+            if (pathCoords.length > 0) {
+                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(targetLayerGroup);
+            }
+        });
+
+        if (hasValidPoints) targetMap.fitBounds(allBounds, { padding: [40, 40] });
+    }
+
+    function openFullscreenTrackingMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+        if (!fsMap) {
+            fsMap = L.map('fullscreen-tracking-map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
+            fsLayerGroup = L.layerGroup().addTo(fsMap);
+        }
+        setTimeout(() => { fsMap.invalidateSize(); setFullscreenMode(currentMainMode); }, 100);
+    }
+
+    function closeFullscreenTrackingMap() { document.getElementById('fullscreen-map-overlay').style.display = 'none'; }
+
+    function openMapModal(lat, lng) {
+        document.getElementById('map-modal').style.display = 'flex';
+        if (!modalMap) {
+            modalMap = L.map('modal-map').setView([lat, lng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
+            modalLayerGroup = L.layerGroup().addTo(modalMap);
+        } else {
+            modalMap.setView([lat, lng], 14);
+        }
+        modalLayerGroup.clearLayers();
+        const pathCoords = []; let targetMarker = null;
+        const historicalIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#00e5ff; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px #00e5ff;'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
+
+        let stopCounter = 1;
+        globalLogData.forEach((log) => {
+            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            const logLatLng = [log.latitude, log.longitude]; pathCoords.push(logLatLng);
+            const dateObj = new Date(log.created_at).toLocaleDateString();
+            let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
+            const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
+            const stopLabel = globalNamedEntry ? `<span class="bw-penguin">🐧</span> ${globalNamedEntry}` : `Stop #${stopCounter}`;
+            
+            const newMarker = L.marker(logLatLng, { icon: historicalIcon }).addTo(modalLayerGroup).bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
+            if (Math.abs(log.latitude - lat) < 0.0001 && Math.abs(log.longitude - lng) < 0.0001) targetMarker = newMarker;
+            stopCounter++;
+        });
+
+        if (pathCoords.length > 0) L.polyline(pathCoords, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(modalLayerGroup);
+        setTimeout(() => { modalMap.invalidateSize(); if (targetMarker) targetMarker.openPopup(); }, 150);
+    }
+
+    function closeMapModal() { document.getElementById('map-modal').style.display = 'none'; }
+
+    // --- 5. GPS & POI ENGINE ---
     function verifyCurrentGPS() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -1075,8 +1135,7 @@
                 if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
                 if (lockBadge) { lockBadge.innerText = "✓ LOCATION DETECTED"; lockBadge.style.color = "#39ff14"; }
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
-                lookupNearbyMonuments(verifiedLat, verifiedLng);
-                updateDistanceToLastStop();
+                lookupNearbyMonuments(verifiedLat, verifiedLng); updateDistanceToLastStop();
             }, (err) => { 
                 if (coordinatesDisplay) coordinatesDisplay.innerText = "Location permission required.";
                 if (lockBadge) { lockBadge.innerText = "LOCKED"; lockBadge.style.color = "#ef4444"; }
@@ -1097,9 +1156,7 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
-                if (map && currentMainMode === 'my') { 
-                    map.setView([verifiedLat, verifiedLng], 15); 
-                }
+                if (map && currentMainMode === 'my') { map.setView([verifiedLat, verifiedLng], 15); }
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 updateDistanceToLastStop();
 
@@ -1112,13 +1169,6 @@
                 if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh"; refreshBtnMap.disabled = false; }
             }, { enableHighAccuracy: true });
         }
-    }
-
-    function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
-        const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
     }
 
     async function fetchLastStopCity(lat, lng) {
@@ -1139,9 +1189,6 @@
         if (distEl) distEl.innerText = `${distanceMiles.toFixed(1)} miles away`;
     }
 
-    // ===================================================
-    // DUAL-RADIUS POI ENGINE
-    // ===================================================
     async function lookupNearbyMonuments(lat, lng) {
         if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
         const poiSelector = document.getElementById('poi-selector');
@@ -1151,14 +1198,11 @@
         const offset = 0.090; 
         const minLat = lat - offset; const maxLat = lat + offset;
         const minLng = lng - offset; const maxLng = lng + offset;
-
         const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
 
         try {
             if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
-            
-            const fetchRes = await fetch(overpassUrl);
-            const resJson = await fetchRes.json();
+            const fetchRes = await fetch(overpassUrl); const resJson = await fetchRes.json();
             
             if (resJson && resJson.elements && resJson.elements.length > 0) {
                 if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby landmark --</option>';
@@ -1228,220 +1272,84 @@
         } catch (poiErr) { console.warn("POI fallback bypass: ", poiErr); }
     }
 
-    function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
-    function handleFileSelectionChange() {
-        const fileInput = document.getElementById('penguin-photo'); const customCameraBtn = document.getElementById('custom-camera-btn');
-        if (fileInput && fileInput.files[0] && customCameraBtn) { customCameraBtn.innerHTML = "📸"; customCameraBtn.classList.add("photo-attached"); } 
-        else if (customCameraBtn) { customCameraBtn.innerHTML = "📷"; customCameraBtn.classList.remove("photo-attached"); }
+    // --- 6. GALLERY ENGINE ---
+    function setGalleryMode(mode) {
+        currentGalleryMode = mode;
+        const galTabMy = document.getElementById('gal-tab-my');
+        const galTabColony = document.getElementById('gal-tab-colony');
+        const galTabAll = document.getElementById('gal-tab-all');
+        if (galTabMy) galTabMy.classList.toggle('active', mode === 'my');
+        if (galTabColony) galTabColony.classList.toggle('active', mode === 'colony');
+        if (galTabAll) galTabAll.classList.toggle('active', mode === 'all');
+        compileGalleryImages(); activeGalleryPage = 1; renderGalleryPage();
     }
 
-    // ===================================================
-    // LAZY MINTING HATCH FIX & SEQUENCED MODALS
-    // ===================================================
-    async function saveCustomNameFromModal(btnElement) {
-        const nameInput = document.getElementById('modal-custom-name').value.trim();
-        if (nameInput) {
-            if (btnElement) {
-                btnElement.disabled = true;
-                btnElement.innerText = "Hatching...";
-            }
-            
-            activeCustomName = nameInput;
-
-            const { error } = await supabaseClient.from('penguin_logs').insert([{
-                penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
-                finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
-            }]);
-
-            if (error) {
-                showToast("Failed to hatch penguin.", "error");
-                if (btnElement) {
-                    btnElement.disabled = false;
-                    btnElement.innerText = "Save Name & Start Journey!";
-                }
-                return;
-            }
-            
-            try {
-                const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
-                let discordMsg = `🥚 🐧 **A New Penguin Has Hatched!**\n**Base ID:** \`${penguinId}\`\n**Custom Name:** **${activeCustomName}**\n**Location:** The journey begins!`;
-                const message = { username: "Penguin Scout", content: discordMsg };
-                await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
-            } catch(e) {}
-
-            location.reload();
+    function compileGalleryImages() {
+        let logsToProcess = [];
+        if (currentGalleryMode === 'my') {
+            logsToProcess = globalAllFleetLogs.length > 0 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId) : globalLogData;
+        } else if (currentGalleryMode === 'colony') {
+            const allowedIds = new Set(globalViewedColonyIds); allowedIds.add(penguinId);
+            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
         } else {
-            showToast("Please give your penguin a name before starting its journey!", "error");
+            logsToProcess = globalAllFleetLogs;
         }
+        globalGalleryImages = logsToProcess.filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(log => log.photo_url);
     }
 
-    // ===================================================
-    // LEADERBOARD LOGIC
-    // ===================================================
-    function switchLeaderboardTab(tabName) {
-        if (activeTab === tabName) return; activeTab = tabName;
-        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
-        activeLeaderboardPage = 1; buildLeaderboard();
+    function openGalleryModal() {
+        activeGalleryPage = 1; compileGalleryImages(); renderGalleryPage(); document.getElementById('gallery-modal').style.display = 'flex';
     }
 
-    function handleLeaderboardSearch() {
-        const inputEl = document.getElementById('leaderboard-search-input');
-        currentSearchQuery = inputEl ? inputEl.value.toLowerCase().trim() : "";
-        activeLeaderboardPage = 1;
-        renderLeaderboardPage();
-    }
+    function closeGalleryModal() { document.getElementById('gallery-modal').style.display = 'none'; }
 
-    async function buildLeaderboard() {
-        const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url')
-            .order('created_at', { ascending: true });
-            
-        if (error || !allLogs) return;
-
-        globalAllFleetLogs = allLogs; // Cached for full-screen map mode & gallery filter
+    function renderGalleryPage() {
+        const grid = document.getElementById('gallery-grid'); const paginationEl = document.getElementById('gallery-pagination');
+        grid.innerHTML = '';
         
-        const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
-        const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
-
-        allLogs.forEach(log => {
-            // ALWAYS capture the profile metadata FIRST, even if it's from a factory log!
-            if (log.penguin_id) {
-                if (!globalFleetProfiles[log.penguin_id]) {
-                    globalFleetProfiles[log.penguin_id] = { name: log.penguin_id, color: '#38bdf8', customAvatar: null, styleId: null };
-                }
-                
-                if (log.custom_name && log.custom_name.trim() !== "") {
-                    namesMap[log.penguin_id] = log.custom_name;
-                    globalFleetProfiles[log.penguin_id].name = log.custom_name;
-                }
-                if (log.avatar_color) {
-                    avatarMap[log.penguin_id] = log.avatar_color;
-                    globalFleetProfiles[log.penguin_id].color = log.avatar_color;
-                }
-                if (log.custom_avatar_url) {
-                    customAvatarMap[log.penguin_id] = log.custom_avatar_url;
-                    globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
-                }
-                if (log.style_id) {
-                    styleMap[log.penguin_id] = log.style_id;
-                    globalFleetProfiles[log.penguin_id].styleId = log.style_id;
-                }
-            }
-
-            // NOW filter out factory logs so they don't count towards the leaderboard tracks
-            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
-
-            if (log.penguin_id) {
-                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
-                if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
-                
-                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
-                if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
-            }
-        });
-
-        const leaderboardData = [];
-        Object.keys(tracks).forEach(id => {
-            let totalDistanceMeters = 0; const points = tracks[id];
-            for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
-            const totalMiles = totalDistanceMeters * 0.000621371; 
-            
-            leaderboardData.push({ 
-                id: id, 
-                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
-                miles: totalMiles, 
-                stopsCount: logsCountMap[id] || 1, 
-                monumentsCount: monumentTagsCountMap[id] || 0,
-                avatarColor: avatarMap[id],
-                customAvatar: customAvatarMap[id],
-                styleId: styleMap[id]
-            });
-        });
-
-        if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
-        else { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
-
-        leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
-
-        computedLeaderboardArray = leaderboardData.slice(0, 100); 
-        activeLeaderboardPage = 1; renderLeaderboardPage();
+        if (globalGalleryImages.length === 0) {
+            grid.innerHTML = '<div style="color:#94a3b8; width:100%; text-align:center; padding:20px; font-size:11pt; grid-column: 1 / -1;">No photos found for this filter.</div>';
+            paginationEl.style.display = 'none'; return;
+        }
         
-        // After global logs load, verify if "My" gallery button should be updated based on loaded fleet
-        // (Just in case the fast-loaded single penguin missed something, though rare)
-        const galleryBtn = document.getElementById('gallery-profile-btn');
-        if (galleryBtn) {
-            const myHasPhotos = globalAllFleetLogs.some(log => log.penguin_id === penguinId && log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note));
-            if (myHasPhotos) galleryBtn.style.display = 'block';
-        }
-    }
-
-    function renderLeaderboardPage() {
-        const listOutput = document.getElementById('leaderboard-output'); const paginationEl = document.getElementById('leaderboard-pagination');
-        if (!listOutput) return; listOutput.innerHTML = "";
-
-        let filteredArray = computedLeaderboardArray;
-        if (currentSearchQuery !== "") {
-            filteredArray = computedLeaderboardArray.filter(item => 
-                item.displayName.toLowerCase().includes(currentSearchQuery) || 
-                item.id.toLowerCase().includes(currentSearchQuery)
-            );
+        const totalPages = Math.ceil(globalGalleryImages.length / GALLERY_ITEMS_PER_PAGE);
+        if (totalPages > 1) {
+            paginationEl.style.display = 'flex';
+            document.getElementById('gallery-page-indicator').innerText = `Page ${activeGalleryPage} of ${totalPages}`;
+            document.getElementById('gallery-prev-btn').disabled = (activeGalleryPage === 1);
+            document.getElementById('gallery-next-btn').disabled = (activeGalleryPage === totalPages);
+        } else {
+            paginationEl.style.display = 'none';
         }
 
-        if (filteredArray.length === 0) {
-            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No penguins found matching "${currentSearchQuery}"</li>`;
-            if (paginationEl) paginationEl.style.display = "none";
-            return;
-        }
+        const startIdx = (activeGalleryPage - 1) * GALLERY_ITEMS_PER_PAGE;
+        const pageItemsSlice = globalGalleryImages.slice(startIdx, startIdx + GALLERY_ITEMS_PER_PAGE);
 
-        const totalPages = Math.ceil(filteredArray.length / LEADERBOARD_ITEMS_PER_PAGE);
-        if (paginationEl) {
-            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
-            document.getElementById('leaderboard-page-indicator').innerText = `Page ${activeLeaderboardPage} of ${totalPages}`;
-            document.getElementById('leaderboard-prev-btn').disabled = (activeLeaderboardPage === 1);
-            document.getElementById('leaderboard-next-btn').disabled = (activeLeaderboardPage === totalPages);
-        }
-
-        const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
-        const pageItemsSlice = filteredArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
-
-        let linkViewerParams = "";
-        if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}`;
-            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
-        } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}`;
-            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
-        }
-
-        pageItemsSlice.forEach((item) => {
-            const li = document.createElement('li'); li.className = 'leaderboard-row';
-            let absoluteRank = item.originalRank; 
-            let rankClass = ""; let medal = `#${absoluteRank}`;
-            if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
-
-            let rightSideValueMetricsHTML = (activeTab === "distance") 
-                ? `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`
-                : `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
-
-            li.innerHTML = `
-                <div style="display:flex; align-items:center; gap: 8px;">
-                    <span class="rank-badge">${medal}</span>
-                    <div style="width:28px; height:28px; flex-shrink:0;">${getAvatarThumbnail(item.avatarColor, item.customAvatar, item.styleId)}</div>
-                    <span class="p-name">${item.displayName}</span>
-                </div>
-                <div style="text-align:right;">${rightSideValueMetricsHTML}</div>`;
-            
-            li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
-            listOutput.appendChild(li);
+        pageItemsSlice.forEach((url, relativeIdx) => {
+            const absoluteIdx = startIdx + relativeIdx;
+            const div = document.createElement('div'); div.className = 'gallery-img-wrapper'; div.innerHTML = `<img src="${url}">`;
+            div.onclick = () => openFullscreenGallery(absoluteIdx); grid.appendChild(div);
         });
     }
 
-    function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
+    function changeGalleryPage(direction) { activeGalleryPage += direction; renderGalleryPage(); }
 
-    // ===================================================
-    // LANDMARK HISTORY PASSPORT SYSTEM
-    // ===================================================
+    function openFullscreenGallery(index) {
+        currentGalleryIndex = index; updateFullscreenImage(); document.getElementById('image-modal').style.display = 'flex';
+    }
+
+    function updateFullscreenImage() {
+        if (currentGalleryIndex < 0 || currentGalleryIndex >= globalGalleryImages.length) return;
+        document.getElementById('fullscreen-image').src = globalGalleryImages[currentGalleryIndex];
+        document.getElementById('img-nav-left').style.display = currentGalleryIndex > 0 ? 'flex' : 'none';
+        document.getElementById('img-nav-right').style.display = currentGalleryIndex < globalGalleryImages.length - 1 ? 'flex' : 'none';
+    }
+
+    function prevGalleryImage(e) { e.stopPropagation(); if (currentGalleryIndex > 0) { currentGalleryIndex--; updateFullscreenImage(); } }
+    function nextGalleryImage(e) { e.stopPropagation(); if (currentGalleryIndex < globalGalleryImages.length - 1) { currentGalleryIndex++; updateFullscreenImage(); } }
+
+    // --- 7. DATA ENGINES (History, Passports, Leaderboard) ---
     function compilePassportLogsHistory(logs) {
         computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
         if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
@@ -1488,19 +1396,13 @@
 
     function changePassportPage(directionOffset) { activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
 
-    // ===================================================
-    // ALL STOPS HISTORY SYSTEM
-    // ===================================================
     function compileAllStopsHistory(logs) {
         computedAllStopsArray = [];
         if (!logs || logs.length === 0) { renderAllStopsPageLayout(); return; }
-        
         let validStopIndex = 1;
 
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
-            
-            // STRICT FILTER: Must have coordinates and not be a factory/ghost log to count as a physical stop
             if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note) || !entry.latitude || !entry.longitude) continue;
             
             let cleanNote = entry.finder_note || "";
@@ -1512,9 +1414,7 @@
             });
             validStopIndex++;
         }
-        
-        computedAllStopsArray.reverse();
-        activeAllStopsPage = 1; renderAllStopsPageLayout();
+        computedAllStopsArray.reverse(); activeAllStopsPage = 1; renderAllStopsPageLayout();
     }
 
     function renderAllStopsPageLayout() {
@@ -1549,251 +1449,259 @@
 
     function changeAllStopsPage(directionOffset) { activeAllStopsPage += directionOffset; renderAllStopsPageLayout(); const card = document.getElementById('journey-stops-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
 
-    // ===================================================
-    // PAGINATED PHOTO GALLERY ENGINE (REVERSE CHRONO)
-    // ===================================================
-    function setGalleryMode(mode) {
-        currentGalleryMode = mode;
-        document.getElementById('gal-tab-my').classList.toggle('active', mode === 'my');
-        document.getElementById('gal-tab-colony').classList.toggle('active', mode === 'colony');
-        document.getElementById('gal-tab-all').classList.toggle('active', mode === 'all');
-        
-        compileGalleryImages();
-        activeGalleryPage = 1;
-        renderGalleryPage();
+    function switchLeaderboardTab(tabName) {
+        if (activeTab === tabName) return; activeTab = tabName;
+        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        activeLeaderboardPage = 1; buildLeaderboard();
     }
 
-    function compileGalleryImages() {
-        let logsToProcess = [];
-        
-        if (currentGalleryMode === 'my') {
-            logsToProcess = globalAllFleetLogs.length > 0 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId) : globalLogData;
-        } else if (currentGalleryMode === 'colony') {
-            const allowedIds = new Set(globalViewedColonyIds);
-            allowedIds.add(penguinId);
-            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
-        } else {
-            logsToProcess = globalAllFleetLogs;
-        }
-
-        globalGalleryImages = logsToProcess
-            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .map(log => log.photo_url);
+    function handleLeaderboardSearch() {
+        const inputEl = document.getElementById('leaderboard-search-input');
+        currentSearchQuery = inputEl ? inputEl.value.toLowerCase().trim() : "";
+        activeLeaderboardPage = 1; renderLeaderboardPage();
     }
 
-    function openGalleryModal() {
-        activeGalleryPage = 1;
-        compileGalleryImages();
-        renderGalleryPage();
-        document.getElementById('gallery-modal').style.display = 'flex';
-    }
-
-    function closeGalleryModal() {
-        document.getElementById('gallery-modal').style.display = 'none';
-    }
-
-    function renderGalleryPage() {
-        const grid = document.getElementById('gallery-grid');
-        const paginationEl = document.getElementById('gallery-pagination');
-        grid.innerHTML = '';
-        
-        if (globalGalleryImages.length === 0) {
-            grid.innerHTML = '<div style="color:#94a3b8; width:100%; text-align:center; padding:20px; font-size:11pt; grid-column: 1 / -1;">No photos found for this filter.</div>';
-            paginationEl.style.display = 'none';
-            return;
-        }
-        
-        const totalPages = Math.ceil(globalGalleryImages.length / GALLERY_ITEMS_PER_PAGE);
-        
-        if (totalPages > 1) {
-            paginationEl.style.display = 'flex';
-            document.getElementById('gallery-page-indicator').innerText = `Page ${activeGalleryPage} of ${totalPages}`;
-            document.getElementById('gallery-prev-btn').disabled = (activeGalleryPage === 1);
-            document.getElementById('gallery-next-btn').disabled = (activeGalleryPage === totalPages);
-        } else {
-            paginationEl.style.display = 'none';
-        }
-
-        const startIdx = (activeGalleryPage - 1) * GALLERY_ITEMS_PER_PAGE;
-        const pageItemsSlice = globalGalleryImages.slice(startIdx, startIdx + GALLERY_ITEMS_PER_PAGE);
-
-        pageItemsSlice.forEach((url, relativeIdx) => {
-            const absoluteIdx = startIdx + relativeIdx;
-            const div = document.createElement('div');
-            div.className = 'gallery-img-wrapper';
-            div.innerHTML = `<img src="${url}">`;
-            div.onclick = () => openFullscreenGallery(absoluteIdx);
-            grid.appendChild(div);
-        });
-    }
-
-    function changeGalleryPage(direction) {
-        activeGalleryPage += direction;
-        renderGalleryPage();
-    }
-
-    function openFullscreenGallery(index) {
-        currentGalleryIndex = index;
-        updateFullscreenImage();
-        document.getElementById('image-modal').style.display = 'flex';
-    }
-
-    function updateFullscreenImage() {
-        if (currentGalleryIndex < 0 || currentGalleryIndex >= globalGalleryImages.length) return;
-        document.getElementById('fullscreen-image').src = globalGalleryImages[currentGalleryIndex];
-        
-        document.getElementById('img-nav-left').style.display = currentGalleryIndex > 0 ? 'flex' : 'none';
-        document.getElementById('img-nav-right').style.display = currentGalleryIndex < globalGalleryImages.length - 1 ? 'flex' : 'none';
-    }
-
-    function prevGalleryImage(e) {
-        e.stopPropagation();
-        if (currentGalleryIndex > 0) {
-            currentGalleryIndex--;
-            updateFullscreenImage();
-        }
-    }
-
-    function nextGalleryImage(e) {
-        e.stopPropagation();
-        if (currentGalleryIndex < globalGalleryImages.length - 1) {
-            currentGalleryIndex++;
-            updateFullscreenImage();
-        }
-    }
-
-    // ===================================================
-    // SHARED MAP RENDERING ENGINE (MAIN & FULLSCREEN)
-    // ===================================================
-    function setFullscreenMode(mode) {
-        currentFsMode = mode;
-        const fsTabMy = document.getElementById('fs-tab-my');
-        const fsTabColony = document.getElementById('fs-tab-colony');
-        const fsTabAll = document.getElementById('fs-tab-all');
-        if (fsTabMy) fsTabMy.classList.toggle('active', mode === 'my');
-        if (fsTabColony) fsTabColony.classList.toggle('active', mode === 'colony');
-        if (fsTabAll) fsTabAll.classList.toggle('active', mode === 'all');
-        renderFleetOnMap(fsMap, fsLayerGroup, currentFsMode);
-    }
-
-    function setMainMapMode(mode) {
-        currentMainMode = mode;
-        const mainTabMy = document.getElementById('main-tab-my');
-        const mainTabColony = document.getElementById('main-tab-colony');
-        const mainTabAll = document.getElementById('main-tab-all');
-        if (mainTabMy) mainTabMy.classList.toggle('active', mode === 'my');
-        if (mainTabColony) mainTabColony.classList.toggle('active', mode === 'colony');
-        if (mainTabAll) mainTabAll.classList.toggle('active', mode === 'all');
-        renderFleetOnMap(map, historyLayerGroup, currentMainMode);
-    }
-
-    function renderFleetOnMap(targetMap, targetLayerGroup, mode) {
-        if (!targetLayerGroup || !targetMap) return;
-        
-        if (globalAllFleetLogs.length === 0 && mode !== 'my') return; 
-
-        targetLayerGroup.clearLayers();
-        
-        let logsToProcess = [];
-        
-        if (mode === 'my') {
-            logsToProcess = globalAllFleetLogs.length > 0 
-                ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId)
-                : globalLogData;
-        } else if (mode === 'colony') {
-            const allowedIds = new Set(globalViewedColonyIds);
-            allowedIds.add(penguinId);
-            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
-        } else {
-            logsToProcess = globalAllFleetLogs;
-        }
-
-        const tracks = {};
-        logsToProcess.forEach(log => {
-            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
-            if (!tracks[log.penguin_id]) tracks[log.penguin_id] = [];
-            tracks[log.penguin_id].push(log);
-        });
-
-        const palette = ['#00e5ff', '#39ff14', '#f472b6', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#e879f9', '#fb923c'];
-        
-        let colorIndex = 0;
-        const allBounds = L.latLngBounds();
-        let hasValidPoints = false;
-
-        Object.keys(tracks).forEach(pId => {
-            const pLogs = tracks[pId];
-            if (pLogs.length === 0) return;
+    async function buildLeaderboard() {
+        const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url')
+            .order('created_at', { ascending: true });
             
-            const pColor = pId === penguinId ? '#00e5ff' : palette[colorIndex % palette.length];
-            if (pId !== penguinId) colorIndex++;
+        if (error || !allLogs) return;
 
-            const pathCoords = [];
-            const historicalIcon = L.divIcon({ 
-                className: 'custom-div-icon', 
-                html: `<div style='background-color:${pColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px ${pColor};'></div>`, 
-                iconSize: [12, 12], 
-                iconAnchor: [6, 6] 
-            });
+        globalAllFleetLogs = allLogs; 
+        
+        const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
+        const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
-            let stopCounter = 1;
-            pLogs.forEach(log => {
-                const latLng = [log.latitude, log.longitude];
-                pathCoords.push(latLng);
-                allBounds.extend(latLng);
-                hasValidPoints = true;
-
-                const dateObj = new Date(log.created_at).toLocaleDateString();
-                
-                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
-                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                
-                let displayName = globalFleetProfiles[pId] && globalFleetProfiles[pId].name ? globalFleetProfiles[pId].name : pId;
-                const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
-                
-                L.marker(latLng, { icon: historicalIcon }).addTo(targetLayerGroup)
-                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
-                
-                stopCounter++;
-            });
-
-            if (pathCoords.length > 0) {
-                L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(targetLayerGroup);
+        allLogs.forEach(log => {
+            if (log.penguin_id) {
+                if (!globalFleetProfiles[log.penguin_id]) { globalFleetProfiles[log.penguin_id] = { name: log.penguin_id, color: '#38bdf8', customAvatar: null, styleId: null }; }
+                if (log.custom_name && log.custom_name.trim() !== "") { namesMap[log.penguin_id] = log.custom_name; globalFleetProfiles[log.penguin_id].name = log.custom_name; }
+                if (log.avatar_color) { avatarMap[log.penguin_id] = log.avatar_color; globalFleetProfiles[log.penguin_id].color = log.avatar_color; }
+                if (log.custom_avatar_url) { customAvatarMap[log.penguin_id] = log.custom_avatar_url; globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url; }
+                if (log.style_id) { styleMap[log.penguin_id] = log.style_id; globalFleetProfiles[log.penguin_id].styleId = log.style_id; }
+            }
+            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (log.penguin_id) {
+                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
+                if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
+                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
+                if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
             }
         });
 
-        if (hasValidPoints) {
-            targetMap.fitBounds(allBounds, { padding: [40, 40] });
+        const leaderboardData = [];
+        Object.keys(tracks).forEach(id => {
+            let totalDistanceMeters = 0; const points = tracks[id];
+            for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
+            const totalMiles = totalDistanceMeters * 0.000621371; 
+            leaderboardData.push({ 
+                id: id, displayName: namesMap[id] ? `${namesMap[id]}` : id, miles: totalMiles, stopsCount: logsCountMap[id] || 1, 
+                monumentsCount: monumentTagsCountMap[id] || 0, avatarColor: avatarMap[id], customAvatar: customAvatarMap[id], styleId: styleMap[id]
+            });
+        });
+
+        if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
+        else { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
+
+        leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
+        computedLeaderboardArray = leaderboardData.slice(0, 100); 
+        activeLeaderboardPage = 1; renderLeaderboardPage();
+    }
+
+    function renderLeaderboardPage() {
+        const listOutput = document.getElementById('leaderboard-output'); const paginationEl = document.getElementById('leaderboard-pagination');
+        if (!listOutput) return; listOutput.innerHTML = "";
+        let filteredArray = computedLeaderboardArray;
+        if (currentSearchQuery !== "") { filteredArray = computedLeaderboardArray.filter(item => item.displayName.toLowerCase().includes(currentSearchQuery) || item.id.toLowerCase().includes(currentSearchQuery)); }
+        if (filteredArray.length === 0) { listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No penguins found matching "${currentSearchQuery}"</li>`; if (paginationEl) paginationEl.style.display = "none"; return; }
+
+        const totalPages = Math.ceil(filteredArray.length / LEADERBOARD_ITEMS_PER_PAGE);
+        if (paginationEl) {
+            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
+            document.getElementById('leaderboard-page-indicator').innerText = `Page ${activeLeaderboardPage} of ${totalPages}`;
+            document.getElementById('leaderboard-prev-btn').disabled = (activeLeaderboardPage === 1);
+            document.getElementById('leaderboard-next-btn').disabled = (activeLeaderboardPage === totalPages);
         }
+
+        const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
+        const pageItemsSlice = filteredArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) { linkViewerParams = `&viewer=${penguinId}`; if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`; } 
+        else if (isAuthorizedViewer) { linkViewerParams = `&viewer=${viewerId}`; if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`; }
+
+        pageItemsSlice.forEach((item) => {
+            const li = document.createElement('li'); li.className = 'leaderboard-row';
+            let absoluteRank = item.originalRank; let rankClass = ""; let medal = `#${absoluteRank}`;
+            if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
+
+            let rightSideValueMetricsHTML = (activeTab === "distance") 
+                ? `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`
+                : `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
+
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <span class="rank-badge">${medal}</span>
+                    <div style="width:28px; height:28px; flex-shrink:0;">${getAvatarThumbnail(item.avatarColor, item.customAvatar, item.styleId)}</div>
+                    <span class="p-name">${item.displayName}</span>
+                </div>
+                <div style="text-align:right;">${rightSideValueMetricsHTML}</div>`;
+            li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
+            listOutput.appendChild(li);
+        });
     }
 
-    function openFullscreenTrackingMap() {
-        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+    function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
+
+    async function loadColonyList() {
+        const listEl = document.getElementById('colony-list-output');
+        if (globalViewedColonyIds.length === 0) {
+            listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
+            return;
+        }
+
+        const colonyStats = {};
+        globalViewedColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
         
-        if (!fsMap) {
-            fsMap = L.map('fullscreen-tracking-map').setView([39.8283, -98.5795], 4);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
-            fsLayerGroup = L.layerGroup().addTo(fsMap);
+        if (globalAllFleetLogs.length > 0) {
+            globalAllFleetLogs.forEach(log => {
+                if (colonyStats[log.penguin_id]) {
+                    if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                    if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
+                    if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
+                    if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
+
+                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                        colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                    }
+                }
+            });
         }
         
-        setTimeout(() => {
-            fsMap.invalidateSize();
-            setFullscreenMode(currentMainMode); 
-        }, 100);
+        listEl.innerHTML = "";
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) { linkViewerParams = `&viewer=${penguinId}`; if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`; } 
+        else if (isAuthorizedViewer) { linkViewerParams = `&viewer=${viewerId}`; if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`; }
+
+        globalViewedColonyIds.forEach(id => {
+            let miles = 0; let pts = colonyStats[id].points;
+            for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
+            let removeButtonHTML = isPrimaryControl ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>` : "";
+
+            const li = document.createElement('li'); li.className = 'leaderboard-row'; 
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="width:34px; height:34px; flex-shrink:0;">${getAvatarThumbnail(colonyStats[id].avatarColor, colonyStats[id].customAvatar, colonyStats[id].styleId)}</div>
+                    <span class="p-name" style="font-size:11pt;"><span class="bw-penguin">🐧</span> ${colonyStats[id].name}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="text-align:right;">
+                        <span class="p-dist" style="font-size:10pt;">${miles.toFixed(1)} mi</span>
+                        <span class="stat-subtext">${pts.length} stops</span>
+                    </div>
+                    ${removeButtonHTML}
+                </div>`;
+            li.onclick = () => { window.location.href = `?id=${id}${linkViewerParams}`; }
+            listEl.appendChild(li);
+        });
     }
 
-    function closeFullscreenTrackingMap() {
-        document.getElementById('fullscreen-map-overlay').style.display = 'none';
+    // --- 8. SUBMISSION & HARDWARE ---
+    function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
+    function handleFileSelectionChange() {
+        const fileInput = document.getElementById('penguin-photo'); const customCameraBtn = document.getElementById('custom-camera-btn');
+        if (fileInput && fileInput.files[0] && customCameraBtn) { customCameraBtn.innerHTML = "📸"; customCameraBtn.classList.add("photo-attached"); } 
+        else if (customCameraBtn) { customCameraBtn.innerHTML = "📷"; customCameraBtn.classList.remove("photo-attached"); }
     }
 
-    // ===================================================
-    // MAIN DATA ENGINE
-    // ===================================================
+    async function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader(); reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image(); img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; 
+                    let width = img.width; let height = img.height;
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
+                };
+            };
+        });
+    }
+
+    async function saveCustomNameFromModal(btnElement) {
+        const nameInput = document.getElementById('modal-custom-name').value.trim();
+        if (nameInput) {
+            if (btnElement) { btnElement.disabled = true; btnElement.innerText = "Hatching..."; }
+            activeCustomName = nameInput;
+
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
+                penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
+                finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
+            }]);
+
+            if (error) { showToast("Failed to hatch penguin.", "error"); if (btnElement) { btnElement.disabled = false; btnElement.innerText = "Save Name & Start Journey!"; } return; }
+            try {
+                const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+                let discordMsg = `🥚 🐧 **A New Penguin Has Hatched!**\n**Base ID:** \`${penguinId}\`\n**Custom Name:** **${activeCustomName}**\n**Location:** The journey begins!`;
+                await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "Penguin Scout", content: discordMsg }) });
+            } catch(e) {}
+            location.reload();
+        } else { showToast("Please give your penguin a name before starting its journey!", "error"); }
+    }
+
+    async function submitDiscovery() {
+        if (!verifiedLat || !verifiedLng) return;
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Uploading tracking logs..."; }
+
+        const finderNotesEl = document.getElementById('finder-notes'); let notes = finderNotesEl ? finderNotesEl.value.trim() : "";
+        const poiSelector = document.getElementById('poi-selector'); const selectedPoi = poiSelector ? poiSelector.value : "";
+        const photoInput = document.getElementById('penguin-photo'); const photoFile = photoInput ? photoInput.files[0] : null;
+        let uploadedPhotoUrl = null;
+
+        if (photoFile) {
+            try {
+                const compressedBlob = await compressImage(photoFile);
+                const fileName = `${penguinId}_${Date.now()}.jpg`;
+                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                if (storageError) throw storageError;
+                const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
+                uploadedPhotoUrl = publicUrlData.publicUrl;
+            } catch (err) { showToast("Photo submission bypassed safely.", "info"); }
+        }
+
+        let cleanedPoiStringValue = selectedPoi;
+        if (selectedPoi && selectedPoi.includes(' (')) cleanedPoiStringValue = selectedPoi.split(' (')[0];
+        if (cleanedPoiStringValue) notes = `[Tagged at Monument: ${cleanedPoiStringValue}] ${notes}`.trim();
+
+        const submissionData = { penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, photo_url: uploadedPhotoUrl, custom_name: activeCustomName, avatar_color: activeAvatarColor, secret_tag: securityTagParam };
+
+        const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
+        if (error) { showToast("Database entry rejected.", "error"); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "Log Penguin Stop"; } return; }
+
+        try {
+            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+            const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
+            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
+            if (cleanedPoiStringValue) discordMsg += `🏛️ **Landmark Tagged:** \`${cleanedPoiStringValue}\`\n`;
+            discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
+            const message = { username: "Penguin Scout", content: discordMsg };
+            if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
+            await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+        } catch(e) {}
+        requiresReload = true; showSuccessModal(); 
+    }
+
     async function loadPenguinHistory(targetId) {
-        if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
+        if (historyLayerGroup) historyLayerGroup.clearLayers();
 
-        const { data: rawLogs, error } = await supabaseClient
+        const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
             .select('penguin_id, latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id')
             .eq('penguin_id', targetId)
@@ -1801,21 +1709,15 @@
 
         if (error) return;
 
-        const logs = rawLogs || [];
         discoveredMonumentsSet.clear();
-        globalLogData = logs; 
+        globalLogData = logs || []; 
 
         const passportHistoryOutput = document.getElementById("passport-history-output");
         const allStopsOutput = document.getElementById("all-stops-history-output");
 
-        // BULLETPROOF PROFILE EXTRACTION
-        // Loop forward to always capture the most recent profile state, regardless of log type
-        let resolvedDisplayName = targetId;
-        let resolvedColor = '#38bdf8';
-        let resolvedCustomUrl = null;
-        let resolvedStyleId = null;
+        let resolvedDisplayName = targetId; let resolvedColor = '#38bdf8'; let resolvedCustomUrl = null; let resolvedStyleId = null;
 
-        for (let i = 0; i < logs.length; i++) {
+        for (let i = 0; i < (logs || []).length; i++) {
             const l = logs[i];
             if (l.custom_name && l.custom_name.trim() !== "" && l.custom_name !== targetId) resolvedDisplayName = l.custom_name;
             if (l.avatar_color && l.avatar_color.trim() !== "") resolvedColor = l.avatar_color;
@@ -1824,14 +1726,9 @@
         }
 
         globalNamedEntry = resolvedDisplayName !== targetId ? resolvedDisplayName : null;
-        activeCustomName = resolvedDisplayName;
-        activeAvatarColor = resolvedColor;
-        activeCustomAvatarUrl = resolvedCustomUrl;
-        activeStyleId = resolvedStyleId;
+        activeCustomName = resolvedDisplayName; activeAvatarColor = resolvedColor; activeCustomAvatarUrl = resolvedCustomUrl; activeStyleId = resolvedStyleId;
 
-        // SMART MODAL HANDLING
-        const welcomeModal = document.getElementById('welcome-modal');
-        const firstFindModal = document.getElementById('first-find-modal');
+        const welcomeModal = document.getElementById('welcome-modal'); const firstFindModal = document.getElementById('first-find-modal');
 
         if (!globalNamedEntry && !isViewOnlyMode) {
             if (welcomeModal) welcomeModal.style.display = 'flex';
@@ -1841,7 +1738,7 @@
             if (firstFindModal) firstFindModal.style.display = 'none';
         }
 
-        if (logs.length === 0 || (!globalNamedEntry && isViewOnlyMode)) {
+        if ((logs || []).length === 0 || (!globalNamedEntry && isViewOnlyMode)) {
             if (passportHistoryOutput) passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
             if (allStopsOutput) allStopsOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
             return;
@@ -1859,18 +1756,12 @@
 
         let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
         
-        const btnPenguin = document.getElementById('tab-my-penguin');
-        const btnColony = document.getElementById('tab-my-colony');
-        const editBtn = document.getElementById('edit-profile-btn');
-        const galleryBtn = document.getElementById('gallery-profile-btn');
+        const btnPenguin = document.getElementById('tab-my-penguin'); const btnColony = document.getElementById('tab-my-colony');
+        const editBtn = document.getElementById('edit-profile-btn'); const galleryBtn = document.getElementById('gallery-profile-btn');
         
-        // Grab DYNAMIC button elements
-        const galTabMy = document.getElementById('gal-tab-my');
-        const galTabColony = document.getElementById('gal-tab-colony');
-        const mainTabMy = document.getElementById('main-tab-my');
-        const mainTabColony = document.getElementById('main-tab-colony');
-        const fsTabMy = document.getElementById('fs-tab-my');
-        const fsTabColony = document.getElementById('fs-tab-colony');
+        const galTabMy = document.getElementById('gal-tab-my'); const galTabColony = document.getElementById('gal-tab-colony');
+        const mainTabMy = document.getElementById('main-tab-my'); const mainTabColony = document.getElementById('main-tab-colony');
+        const fsTabMy = document.getElementById('fs-tab-my'); const fsTabColony = document.getElementById('fs-tab-colony');
         
         if (galleryBtn) galleryBtn.style.display = 'block';
         
@@ -1878,8 +1769,6 @@
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
             if (btnColony) btnColony.innerText = `🧊 My Colony`;
             if (editBtn) editBtn.style.display = 'block';
-            
-            // Standard Map/Gallery Buttons
             if (galTabMy) galTabMy.innerText = `My Penguin`;
             if (galTabColony) galTabColony.innerText = `My Colony`;
             if (mainTabMy) mainTabMy.innerText = `My Penguin`;
@@ -1890,8 +1779,6 @@
             if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> Viewing: ${resolvedDisplayName}`;
             if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (editBtn) editBtn.style.display = 'none';
-            
-            // Dynamic Map/Gallery Buttons mapping to stranger's name
             if (galTabMy) galTabMy.innerText = resolvedDisplayName;
             if (galTabColony) galTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
             if (mainTabMy) mainTabMy.innerText = resolvedDisplayName;
@@ -1900,7 +1787,6 @@
             if (fsTabColony) fsTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
         }
 
-        // Apply strict filtering to stops metrics
         const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note));
         const totalStopsEl = document.getElementById("total-stops-counter");
         if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
@@ -1911,9 +1797,7 @@
             fetchLastStopCity(lastLogLat, lastLogLng); updateDistanceToLastStop();
         }
 
-        // Instant local render for the primary map
         renderFleetOnMap(map, historyLayerGroup, 'my');
-
         compilePassportLogsHistory(logs);
         compileAllStopsHistory(logs);
         
@@ -1922,6 +1806,61 @@
             lookupNearbyMonuments(lastIdxPosition.latitude, lastIdxPosition.longitude); 
         }
     }
+
+    // --- 9. INITIALIZATION BINDING (MUST BE LAST) ---
+    window.addEventListener("DOMContentLoaded", async function() {
+        const penguinIdHeader = document.getElementById('penguin-id-display');
+        if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
+        const penguinNameDisplayEl = document.getElementById("penguin-name-display");
+        if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
+
+        await fetchStyles();
+        initializeLiveMap();
+        updateProfileAvatarDisplay(); 
+        
+        if (penguinId !== "Mystery Penguin") { isPrimaryControl = await verifyPenguinSecurity(penguinId, securityTagParam); }
+        if (viewerId) { isAuthorizedViewer = await verifyPenguinSecurity(viewerId, viewerTagParam); }
+        if (isAuthorizedViewer && viewerId !== penguinId) { isPrimaryControl = false; }
+        if (isPrimaryControl) { isViewOnlyMode = false; verifyCurrentGPS(); } 
+        else if (isAuthorizedViewer) { isViewOnlyMode = true; } 
+        else { isViewOnlyMode = true; }
+
+        if (isViewOnlyMode) {
+            const viewBanner = document.getElementById('view-mode-banner');
+            if (viewBanner && !isAuthorizedViewer) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
+            activateViewOnlyUI();
+            const poiOutput = document.getElementById("poi-proximity-output");
+            if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
+        }
+
+        const backBtnContainer = document.getElementById('back-to-my-penguin-container');
+        const strangerActionRow = document.getElementById('stranger-action-row');
+
+        const { data: viewedData } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', penguinId);
+        let viewedSet = new Set();
+        if (viewedData) { viewedData.forEach(log => { if (log.colony_list) { log.colony_list.split(',').forEach(i => { if(i.trim()) viewedSet.add(i.trim()); }); } }); }
+        globalViewedColonyIds = Array.from(viewedSet);
+
+        if (isAuthorizedViewer && !isPrimaryControl) {
+            if(backBtnContainer) backBtnContainer.style.display = 'block';
+            if(strangerActionRow) {
+                strangerActionRow.style.display = 'flex';
+                const { data: viewerData } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', viewerId);
+                let viewerSet = new Set();
+                if (viewerData) { viewerData.forEach(log => { if (log.colony_list) { log.colony_list.split(',').forEach(i => { if(i.trim()) viewerSet.add(i.trim()); }); } }); }
+                
+                let inColonyHTML = Array.from(viewerSet).includes(penguinId)
+                    ? `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`
+                    : `<button id="add-colony-btn" class="btn-inline-refresh" style="color:#39ff14; border-color:rgba(57,255,20,0.3);" onclick="addToColony()">➕ Add to My Colony</button>`;
+                strangerActionRow.innerHTML = inColonyHTML;
+            }
+        }
+
+        setTimeout(function() {
+            loadPenguinHistory(penguinId);
+            buildLeaderboard();
+        }, 150);
+    });
 </script>
 
 </body>
