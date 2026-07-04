@@ -649,7 +649,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.0.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.0.1</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -2085,7 +2085,7 @@
             
         if (error || !allLogs) return;
 
-        globalAllFleetLogs = allLogs; // Cached for full-screen map mode
+        globalAllFleetLogs = allLogs; 
         
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
         const pebblesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
@@ -2426,3 +2426,241 @@
             carousel.appendChild(card);
         });
     }
+
+    // ===================================================
+    // MAIN DATA ENGINE
+    // ===================================================
+    async function loadPenguinHistory(targetId) {
+        if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
+
+        const { data: rawLogs, error } = await supabaseClient
+            .from('penguin_logs')
+            .select('id, penguin_id, latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id, stones_received, has_unread_stones')
+            .eq('penguin_id', targetId)
+            .order('created_at', { ascending: true });
+
+        if (error) return;
+
+        const logs = rawLogs;
+        discoveredMonumentsSet.clear();
+        globalLogData = logs || []; 
+
+        const passportHistoryOutput = document.getElementById("passport-history-output");
+        const allStopsOutput = document.getElementById("all-stops-history-output");
+
+        const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
+        globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
+
+        // SMART MODAL HANDLING
+        const welcomeModal = document.getElementById('welcome-modal');
+        const firstFindModal = document.getElementById('first-find-modal');
+
+        if (!globalNamedEntry && !isViewOnlyMode) {
+            if (welcomeModal) welcomeModal.style.display = 'flex';
+            if (firstFindModal) firstFindModal.style.display = 'none';
+        } else {
+            if (welcomeModal) welcomeModal.style.display = 'none';
+            if (firstFindModal) firstFindModal.style.display = 'none';
+        }
+
+        if (!logs || logs.length === 0 || (!globalNamedEntry && isViewOnlyMode)) {
+            if (passportHistoryOutput) passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
+            if (allStopsOutput) allStopsOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
+            return;
+        }
+
+        const instPanel = document.getElementById('instruction-panel'); const safetyNotice = document.getElementById('safety-disclaimer-notice');
+        if (instPanel && safetyNotice && instPanel.parentNode) { instPanel.parentNode.insertBefore(instPanel, safetyNotice); instPanel.style.marginBottom = "16px"; }
+
+        let resolvedDisplayName = globalNamedEntry ? globalNamedEntry : targetId;
+        activeCustomName = resolvedDisplayName;
+        
+        // Find avatar parameters backwards to get latest configs
+        const avatarEntry = [...logs].reverse().find(log => log.avatar_color && log.avatar_color.trim() !== "");
+        activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
+        
+        const customUrlEntry = [...logs].reverse().find(log => log.custom_avatar_url);
+        activeCustomAvatarUrl = customUrlEntry ? customUrlEntry.custom_avatar_url : null;
+        
+        const styleEntry = [...logs].reverse().find(log => log.style_id);
+        activeStyleId = styleEntry ? styleEntry.style_id : null;
+        
+        const pIdEl = document.getElementById('penguin-id-display');
+        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
+        const pNameEl = document.getElementById("penguin-name-display");
+        if (pNameEl) pNameEl.innerText = resolvedDisplayName;
+
+        updateProfileAvatarDisplay();
+
+        let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
+        const btnPenguin = document.getElementById('tab-my-penguin');
+        const btnColony = document.getElementById('tab-my-colony');
+        const editBtn = document.getElementById('edit-profile-btn');
+        const galTabMy = document.getElementById('gal-tab-my');
+        const galTabColony = document.getElementById('gal-tab-colony');
+        const mainTabMy = document.getElementById('main-tab-my');
+        const mainTabColony = document.getElementById('main-tab-colony');
+        const fsTabMy = document.getElementById('fs-tab-my');
+        const fsTabColony = document.getElementById('fs-tab-colony');
+        
+        // ALWAYS display the gallery button so users can see Colony/All photos
+        const galleryBtn = document.getElementById('gallery-profile-btn');
+        if (galleryBtn) {
+            galleryBtn.style.display = 'block';
+        }
+        
+        if (isPrimaryControl) {
+            if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
+            if (btnColony) btnColony.innerText = `🧊 My Colony`;
+            if (editBtn) editBtn.style.display = 'block';
+            
+            if (galTabMy) galTabMy.innerText = `My Penguin`;
+            if (galTabColony) galTabColony.innerText = `My Colony`;
+            if (mainTabMy) mainTabMy.innerText = `My Penguin`;
+            if (mainTabColony) mainTabColony.innerText = `My Colony`;
+            if (fsTabMy) fsTabMy.innerText = `My Penguin`;
+            if (fsTabColony) fsTabColony.innerText = `My Colony`;
+        } else {
+            if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> Viewing: ${resolvedDisplayName}`;
+            if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
+            if (editBtn) editBtn.style.display = 'none';
+            
+            if (galTabMy) galTabMy.innerText = resolvedDisplayName;
+            if (galTabColony) galTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
+            if (mainTabMy) mainTabMy.innerText = resolvedDisplayName;
+            if (mainTabColony) mainTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
+            if (fsTabMy) fsTabMy.innerText = resolvedDisplayName;
+            if (fsTabColony) fsTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
+        }
+        
+        // Setup Sightings Tabs
+        currentSightingsMode = isPrimaryControl ? 'all' : 'penguin';
+        renderSightingsTabs();
+
+        // Apply strict filtering to stops metrics
+        const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note));
+        const totalStopsEl = document.getElementById("total-stops-counter");
+        if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
+
+        // CALCULATE TOTAL PEBBLES & UNREAD BADGE
+        let totalPebbles = 0;
+        let hasUnread = false;
+        let newPebbleGivers = new Set();
+
+        logs.forEach(l => {
+            let arr = parsePebbles(l.stones_received);
+            totalPebbles += arr.length;
+            if (l.has_unread_stones) {
+                hasUnread = true;
+                arr.forEach(s => newPebbleGivers.add(s.name));
+            }
+        });
+
+        const totalPebblesEl = document.getElementById("total-pebbles-counter");
+        if (totalPebblesEl) totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
+
+        const unreadBadge = document.getElementById("unread-pebbles-badge");
+        if (isPrimaryControl && hasUnread && unreadBadge) {
+            unreadBadge.style.display = 'block';
+            let giversText = Array.from(newPebbleGivers).join(', ');
+            unreadBadge.innerText = `New 🪨 from ${giversText}!`;
+            // Silently clear unread flags in DB
+            supabaseClient.from('penguin_logs').update({ has_unread_stones: false }).eq('penguin_id', targetId).eq('has_unread_stones', true).then(()=>{});
+        } else if (unreadBadge) {
+            unreadBadge.style.display = 'none';
+        }
+
+        if (validStops.length > 0) {
+            const lastLog = validStops[validStops.length - 1];
+            lastLogLat = lastLog.latitude; lastLogLng = lastLog.longitude;
+            fetchLastStopCity(lastLogLat, lastLogLng); updateDistanceToLastStop();
+        }
+
+        // Instant local render for the primary map
+        renderFleetOnMap(map, historyLayerGroup, 'my');
+
+        compilePassportLogsHistory(logs);
+        compileAllStopsHistory(logs);
+        
+        if (validStops.length > 0 && !isViewOnlyMode) {
+            const lastIdxPosition = validStops[validStops.length - 1]; 
+            lookupNearbyMonuments(lastIdxPosition.latitude, lastIdxPosition.longitude); 
+        }
+    }
+
+    async function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader(); reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image(); img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; 
+                    let width = img.width; let height = img.height;
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
+                };
+            };
+        });
+    }
+
+    async function submitDiscovery() {
+        if (!verifiedLat || !verifiedLng) return;
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Uploading tracking logs..."; }
+
+        const finderNotesEl = document.getElementById('finder-notes'); let notes = finderNotesEl ? finderNotesEl.value.trim() : "";
+        const poiSelector = document.getElementById('poi-selector'); const selectedPoi = poiSelector ? poiSelector.value : "";
+        const photoInput = document.getElementById('penguin-photo'); const photoFile = photoInput ? photoInput.files[0] : null;
+        let uploadedPhotoUrl = null;
+
+        if (photoFile) {
+            try {
+                const compressedBlob = await compressImage(photoFile);
+                const fileName = `${penguinId}_${Date.now()}.jpg`;
+                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                if (storageError) throw storageError;
+                const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
+                uploadedPhotoUrl = publicUrlData.publicUrl;
+            } catch (err) { showToast("Photo submission bypassed safely.", "info"); }
+        }
+
+        let cleanedPoiStringValue = selectedPoi;
+        if (selectedPoi && selectedPoi.includes(' (')) cleanedPoiStringValue = selectedPoi.split(' (')[0];
+        if (cleanedPoiStringValue) notes = `[Tagged at Monument: ${cleanedPoiStringValue}] ${notes}`.trim();
+
+        const submissionData = {
+            penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, 
+            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, avatar_color: activeAvatarColor, secret_tag: securityTagParam 
+        };
+
+        const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
+        if (error) { 
+            showToast("Database entry rejected.", "error"); 
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Log Penguin Stop";
+            }
+            return; 
+        }
+
+        try {
+            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+            const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
+            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
+            if (cleanedPoiStringValue) discordMsg += `🏛️ **Landmark Tagged:** \`${cleanedPoiStringValue}\`\n`;
+            discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
+            const message = { username: "Penguin Scout", content: discordMsg };
+            if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
+            await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+        } catch(e) {}
+
+        // Triggers the new Success Modal instead of a raw browser alert
+        requiresReload = true;
+        showSuccessModal(); 
+    }
+</script>
+
+</body>
+</html>
