@@ -161,19 +161,31 @@
         
         <div class="glass-card">
             <h2>🥚 Hatch New Trackers</h2>
-            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate a secure QR sticker and initialize the database record. The system will mask the factory log so the finder experiences a true first discovery.</p>
+            <p style="font-size: 9.5pt; color: #cbd5e1; margin-top: 0; margin-bottom: 12px;">Generate secure QR stickers and initialize database records. Factory logs are masked until first discovery.</p>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <select id="hatch-mode-select" class="admin-input" style="flex: 1; margin-bottom: 0;">
+                    <option value="single">Single Tracker</option>
+                    <option value="batch">Batch (10 Trackers)</option>
+                </select>
+                <select id="hatch-style-select" class="admin-input" style="flex: 1; margin-bottom: 0;">
+                    <option value="">-- Base Style --</option>
+                </select>
+            </div>
             
             <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;">
                 <input type="text" id="new-penguin-id" class="admin-input" value="Penguin-" style="margin-bottom: 0;">
                 <button class="btn-command" onclick="generateNewPenguin(event)" style="white-space: nowrap;">Generate & Register</button>
             </div>
             
-            <div id="qrcode-container" style="display: none; align-items: center; gap: 24px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
-                <img id="final-sticker-img" style="width: 400px; height: 400px; background: white; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none;" alt="QR Sticker">
+            <div id="qrcode-container" style="display: none; flex-direction: column; align-items: center; gap: 16px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px solid rgba(217, 70, 239, 0.2);">
+                <div style="width: 100%; overflow-x: auto; text-align: left; padding-bottom: 8px;">
+                    <img id="final-sticker-img" style="height: 250px; background: white; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display:none; max-width: none;" alt="QR Sticker">
+                </div>
                 
-                <div style="flex: 1;">
+                <div style="width: 100%;">
                     <strong style="color: #f5d0fe; font-size: 10pt; display: block;">Asymmetrical Sticker Rendering Complete!</strong>
-                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered internally at 1200x1200. Restored full-height tracking, bolded side text, and injected custom label-maker left margin. Right-click and copy image directly for printing.</p>
+                    <p style="font-size: 9.5pt; color: #cbd5e1; margin: 4px 0;">Image rendered internally at high resolution. Right-click and copy image directly for continuous P-touch label printing.</p>
                     <code id="qr-url-display" style="font-size: 8pt; color: #00e5ff; word-break: break-all; margin-top: 8px; display: block; background: rgba(0,229,255,0.1); padding: 6px; border-radius: 4px;"></code>
                 </div>
             </div>
@@ -207,7 +219,7 @@
     </div>
 
     <div class="footer">
-        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.2</span><br>
+        <span style="text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Antarctic Game Engine™ • Version 4.16.3</span><br>
         <span style="font-size: 8.5pt;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 </div>
@@ -266,8 +278,92 @@
     }
 
     // ===================================================
-    // DIAGNOSTIC PENGUIN HATCH ENGINE
+    // DIAGNOSTIC PENGUIN HATCH ENGINE (SINGLE + BATCH)
     // ===================================================
+    function drawStretchedText(ctx, text, x, y, targetWidth, fontStyle, baseline, align="left") {
+        ctx.font = fontStyle;
+        ctx.textBaseline = baseline;
+        ctx.textAlign = align;
+        const metrics = ctx.measureText(text);
+        const scaleX = targetWidth / metrics.width;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scaleX, 1);
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+    }
+
+    function createSingleStickerCanvas(penguinId, secretTag) {
+        return new Promise((resolve) => {
+            const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
+            const baseIdNumber = penguinId.replace("Penguin-", ""); 
+            
+            const tempDiv = document.createElement("div");
+            new QRCode(tempDiv, { 
+                text: secureUrl, 
+                width: 920, 
+                height: 920, 
+                colorDark : "#000000", 
+                colorLight : "#ffffff", 
+                correctLevel : QRCode.CorrectLevel.L 
+            });
+
+            setTimeout(() => {
+                const qrCanvas = tempDiv.querySelector('canvas');
+                if(!qrCanvas) return resolve(null);
+                
+                const tempComposite = document.createElement("canvas");
+                const ctx = tempComposite.getContext('2d');
+                
+                tempComposite.width = 1200; 
+                tempComposite.height = 1200; 
+                
+                ctx.fillStyle = "#ffffff"; 
+                ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
+                
+                ctx.drawImage(qrCanvas, 140, 140, 920, 920);
+                
+                ctx.fillStyle = "#000000"; 
+                
+                const heavyFont = "900 140px 'Arial Black', Impact, sans-serif";
+                const scanFont = "900 115px 'Arial Black', Impact, sans-serif"; 
+                const normalFont = "normal 115px Arial, Helvetica, sans-serif";
+                
+                drawStretchedText(ctx, "PENGUIN", 140, -10, 920, heavyFont, "top", "left");
+                
+                ctx.save(); 
+                ctx.translate(1200, 0); 
+                ctx.rotate(Math.PI / 2); 
+                drawStretchedText(ctx, "TRACKER™", 0, -10, 1200, heavyFont, "top", "left");
+                ctx.restore();
+
+                ctx.save(); 
+                ctx.translate(0, 1060); 
+                ctx.rotate(-Math.PI / 2); 
+                drawStretchedText(ctx, "SCAN TO TRACK", 0, 15, 920, scanFont, "top", "left");
+                ctx.restore();
+                
+                ctx.font = normalFont;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "bottom";
+                ctx.fillText(`ID: ${baseIdNumber}`, 600, 1215);
+                
+                resolve(tempComposite);
+            }, 150);
+        });
+    }
+
+    async function generateStickerImage(penguinId, secretTag, targetImgElementId) {
+        const canvas = await createSingleStickerCanvas(penguinId, secretTag);
+        if (canvas) {
+            const imgEl = document.getElementById(targetImgElementId);
+            if(imgEl) { 
+                imgEl.src = canvas.toDataURL("image/png"); 
+                imgEl.style.display = "block"; 
+            }
+        }
+    }
+
     async function generateNewPenguin(event) {
         const btn = event.target;
         const originalText = btn.innerText;
@@ -276,39 +372,100 @@
         btn.disabled = true;
 
         try {
-            const idInputField = document.getElementById('new-penguin-id');
-            const id = idInputField.value.trim();
+            const mode = document.getElementById('hatch-mode-select').value;
+            const styleIdVal = document.getElementById('hatch-style-select').value;
+            const finalStyleId = styleIdVal === "" ? null : styleIdVal;
             
-            if (id === 'Penguin-' || !id) {
+            const idInputField = document.getElementById('new-penguin-id');
+            const baseInputId = idInputField.value.trim();
+            
+            if (baseInputId === 'Penguin-' || !baseInputId) {
                 alert("Please type a unique number or name after 'Penguin-' (for example: Penguin-007) before clicking Generate!");
-                btn.innerText = originalText;
-                btn.disabled = false;
-                idInputField.focus();
-                return;
+                btn.innerText = originalText; btn.disabled = false; idInputField.focus(); return;
             }
 
-            const secretTag = Math.random().toString(36).substring(2, 10);
-            
-            const { data, error } = await supabaseClient.from('penguin_logs').insert([{ 
-                penguin_id: id, 
-                secret_tag: secretTag, 
-                finder_note: 'Initial Factory Registration',
-                latitude: 39.9783, 
-                longitude: -86.1180 
-            }]);
+            let insertPayload = [];
+            let generatedEntities = [];
 
+            if (mode === 'single') {
+                const secretTag = Math.random().toString(36).substring(2, 10);
+                insertPayload.push({
+                    penguin_id: baseInputId, secret_tag: secretTag,
+                    finder_note: 'Initial Factory Registration',
+                    latitude: 39.9783, longitude: -86.1180,
+                    style_id: finalStyleId
+                });
+                generatedEntities.push({ id: baseInputId, tag: secretTag });
+            } else {
+                // Batch 10 Processing
+                const match = baseInputId.match(/^(.*?)(\d+)$/);
+                if (!match) {
+                    alert("For batch creation, the ID must end in a number (e.g., 'Penguin-001').");
+                    btn.innerText = originalText; btn.disabled = false; return;
+                }
+                const prefix = match[1];
+                const startNumStr = match[2];
+                const startNum = parseInt(startNumStr, 10);
+                const padLen = startNumStr.length;
+
+                for (let i = 0; i < 10; i++) {
+                    const currentNum = startNum + i;
+                    const currentId = prefix + String(currentNum).padStart(padLen, '0');
+                    const secretTag = Math.random().toString(36).substring(2, 10);
+                    
+                    insertPayload.push({
+                        penguin_id: currentId, secret_tag: secretTag,
+                        finder_note: 'Initial Factory Registration',
+                        latitude: 39.9783, longitude: -86.1180,
+                        style_id: finalStyleId
+                    });
+                    generatedEntities.push({ id: currentId, tag: secretTag });
+                }
+            }
+
+            // Database Bulk Insert
+            const { error } = await supabaseClient.from('penguin_logs').insert(insertPayload);
             if (error) {
                 alert("Database Error: " + error.message);
-                btn.innerText = originalText;
-                btn.disabled = false;
-                return;
+                btn.innerText = originalText; btn.disabled = false; return;
             }
 
-            generateStickerImage(id, secretTag, 'final-sticker-img');
-            document.getElementById("qr-url-display").innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(id)}&tag=${secretTag}`;
+            // Image Compilation
+            if (mode === 'single') {
+                await generateStickerImage(generatedEntities[0].id, generatedEntities[0].tag, 'final-sticker-img');
+                document.getElementById("qr-url-display").innerText = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(generatedEntities[0].id)}&tag=${generatedEntities[0].tag}`;
+            } else {
+                const masterCanvas = document.createElement('canvas');
+                masterCanvas.width = 1200 * 10;
+                masterCanvas.height = 1200;
+                const mctx = masterCanvas.getContext('2d');
+                
+                mctx.fillStyle = "#ffffff";
+                mctx.fillRect(0, 0, masterCanvas.width, masterCanvas.height);
+
+                for (let i = 0; i < 10; i++) {
+                    const singleCanvas = await createSingleStickerCanvas(generatedEntities[i].id, generatedEntities[i].tag);
+                    mctx.drawImage(singleCanvas, i * 1200, 0, 1200, 1200);
+                }
+
+                const imgEl = document.getElementById('final-sticker-img');
+                imgEl.src = masterCanvas.toDataURL("image/png");
+                imgEl.style.display = "block";
+                
+                document.getElementById("qr-url-display").innerText = `Batch Sequence Complete: ${generatedEntities[0].id} through ${generatedEntities[9].id}. Check Rookery below for detailed activity logs.`;
+            }
+
             document.getElementById("qrcode-container").style.display = "flex";
             
-            idInputField.value = "Penguin-"; 
+            // Auto-increment the input field if we were in batch mode
+            if (mode === 'batch') {
+                const match = baseInputId.match(/^(.*?)(\d+)$/);
+                const nextNum = parseInt(match[2], 10) + 10;
+                idInputField.value = match[1] + String(nextNum).padStart(match[2].length, '0');
+            } else {
+                idInputField.value = "Penguin-"; 
+            }
+            
             await loadAdminInventoryMatrix(); 
 
         } catch (err) {
@@ -332,9 +489,14 @@
 
     function updateForgeDropdown() {
         const forgeSelect = document.getElementById('forge-style-select');
+        const hatchSelect = document.getElementById('hatch-style-select');
+        
         forgeSelect.innerHTML = '<option value="new">-- Create New Style --</option>';
+        hatchSelect.innerHTML = '<option value="">-- Base Style --</option>';
+        
         globalStyles.forEach(style => {
             forgeSelect.innerHTML += `<option value="${style.id}">${style.style_name}</option>`;
+            hatchSelect.innerHTML += `<option value="${style.id}">${style.style_name}</option>`;
         });
     }
 
@@ -472,7 +634,7 @@
             if (log.custom_name && log.custom_name.trim() !== "") globalFleetClusters[log.penguin_id].activeName = log.custom_name;
             if (log.style_id) globalFleetClusters[log.penguin_id].styleId = log.style_id;
 
-            // FIX: Reject ANY log that does not have coordinates, as well as ghost/factory logs.
+            // Reject missing coordinates and ghost logs from stats
             if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
 
             globalFleetClusters[log.penguin_id].points.push({ lat: log.latitude, lng: log.longitude });
@@ -680,7 +842,6 @@
                     const isGhost = isAdminHideLog(log.finder_note);
                     const dotColor = isGhost ? '#ef4444' : '#00e5ff';
 
-                    // FIX: Prevent map crashes if a log somehow has missing coordinates
                     if (!log.latitude || !log.longitude) return;
 
                     L.circleMarker([log.latitude, log.longitude], {
@@ -795,83 +956,6 @@
         loadAdminInventoryMatrix();
     }
 
-    // ===================================================
-    // HIGH-RES STICKER GENERATION PIPELINE
-    // ===================================================
-    function drawStretchedText(ctx, text, x, y, targetWidth, fontStyle, baseline, align="left") {
-        ctx.font = fontStyle;
-        ctx.textBaseline = baseline;
-        ctx.textAlign = align;
-        const metrics = ctx.measureText(text);
-        const scaleX = targetWidth / metrics.width;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scaleX, 1);
-        ctx.fillText(text, 0, 0);
-        ctx.restore();
-    }
-
-    function generateStickerImage(penguinId, secretTag, targetImgElementId) {
-        const secureUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}&tag=${secretTag || ''}`;
-        const baseIdNumber = penguinId.replace("Penguin-", ""); 
-        
-        const tempDiv = document.createElement("div");
-        new QRCode(tempDiv, { 
-            text: secureUrl, 
-            width: 920, 
-            height: 920, 
-            colorDark : "#000000", 
-            colorLight : "#ffffff", 
-            correctLevel : QRCode.CorrectLevel.L 
-        });
-
-        setTimeout(() => {
-            const qrCanvas = tempDiv.querySelector('canvas');
-            if(!qrCanvas) return;
-            
-            const tempComposite = document.createElement("canvas");
-            const ctx = tempComposite.getContext('2d');
-            
-            tempComposite.width = 1200; 
-            tempComposite.height = 1200; 
-            
-            ctx.fillStyle = "#ffffff"; 
-            ctx.fillRect(0, 0, tempComposite.width, tempComposite.height);
-            
-            ctx.drawImage(qrCanvas, 140, 140, 920, 920);
-            
-            ctx.fillStyle = "#000000"; 
-            
-            const heavyFont = "900 140px 'Arial Black', Impact, sans-serif";
-            const scanFont = "900 115px 'Arial Black', Impact, sans-serif"; 
-            const normalFont = "normal 115px Arial, Helvetica, sans-serif";
-            
-            drawStretchedText(ctx, "PENGUIN", 140, -10, 920, heavyFont, "top", "left");
-            
-            ctx.save(); 
-            ctx.translate(1200, 0); 
-            ctx.rotate(Math.PI / 2); 
-            drawStretchedText(ctx, "TRACKER™", 0, -10, 1200, heavyFont, "top", "left");
-            ctx.restore();
-
-            ctx.save(); 
-            ctx.translate(0, 1060); 
-            ctx.rotate(-Math.PI / 2); 
-            drawStretchedText(ctx, "SCAN TO TRACK", 0, 15, 920, scanFont, "top", "left");
-            ctx.restore();
-            
-            ctx.font = normalFont;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "bottom";
-            ctx.fillText(`ID: ${baseIdNumber}`, 600, 1215);
-            
-            const imgEl = document.getElementById(targetImgElementId);
-            if(imgEl) { 
-                imgEl.src = tempComposite.toDataURL("image/png"); 
-                imgEl.style.display = "block"; 
-            }
-        }, 150);
-    }
 </script>
 </body>
 </html>
