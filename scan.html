@@ -10,6 +10,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- HTML5 QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         *, *::before, *::after { box-sizing: border-box; }
@@ -18,47 +22,44 @@
             margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: #02060d; color: #ffffff;
-            /* Use Dynamic Viewport Height to prevent the bottom from being cut off by mobile nav bars */
-            height: 100dvh; 
-            width: 100vw; 
-            overflow: hidden;
+            height: 100dvh; width: 100vw; overflow: hidden;
             display: flex; flex-direction: column;
         }
 
         .header {
             background: rgba(2, 6, 13, 0.9); backdrop-filter: blur(10px);
             padding: 16px; text-align: center; border-bottom: 1px solid rgba(217, 70, 239, 0.3);
-            z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: relative;
         }
 
         h1 { margin: 0; font-size: 14pt; color: #fae8ff; letter-spacing: 1px; text-transform: uppercase; }
         .subtitle { font-size: 8.5pt; color: #d946ef; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+        .map-toggle-btn {
+            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+            background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #00e5ff; padding: 6px 12px; border-radius: 6px; font-weight: bold;
+            font-size: 9pt; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+        }
+        .map-toggle-btn:active { background: rgba(56, 189, 248, 0.3); }
 
         #reader-container {
             flex: 1; width: 100%; position: relative; background: #000;
             display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
 
-        /* Force the scanner to fill the container like a native camera app */
         #reader { 
-            width: 100% !important; 
-            height: 100% !important; 
-            border: none !important; 
+            width: 100% !important; height: 100% !important; border: none !important; 
             display: flex; align-items: center; justify-content: center;
         }
         
         #reader video { 
-            object-fit: cover !important; 
-            width: 100% !important; 
-            height: 100% !important; 
+            object-fit: cover !important; width: 100% !important; height: 100% !important; 
             position: absolute; top: 0; left: 0; 
         }
 
         #reader__scan_region { background: #000; width: 100% !important; height: 100% !important; }
-        
-        /* Hide unnecessary injected UI from the scanner library */
-        #reader__dashboard_section_csr, 
-        #reader__dashboard_section_swaplink { display: none !important; }
+        #reader__dashboard_section_csr, #reader__dashboard_section_swaplink { display: none !important; }
 
         .overlay-ui {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -93,6 +94,17 @@
         .state-success { border-color: rgba(57, 255, 20, 0.6); box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
         .state-error { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
 
+        /* Fullscreen Map Overlay */
+        #map-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
+            background: #02060d; z-index: 1000; display: none; flex-direction: column;
+        }
+        
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+        .leaflet-popup-content-wrapper { background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; }
+        .leaflet-popup-tip { background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.3); }
     </style>
 </head>
 <body>
@@ -100,12 +112,13 @@
     <div class="header">
         <h1>Field Deployment</h1>
         <div class="subtitle">Auto-Hide Scanner Active</div>
+        <button class="map-toggle-btn" onclick="openHideMap()">🗺️ Map</button>
     </div>
 
     <div id="reader-container">
         <div id="reader"></div>
         
-        <!-- Start Screen Overlay (Required by iOS/Safari to request camera permissions properly) -->
+        <!-- Start Screen Overlay -->
         <div id="start-overlay" class="overlay-ui">
             <span style="font-size: 40pt; margin-bottom: 16px;">📷</span>
             <p style="color: #cbd5e1; margin-bottom: 32px; line-height: 1.5; font-size: 11pt;">
@@ -121,6 +134,15 @@
         </div>
     </div>
 
+    <!-- Hidden Map Overlay -->
+    <div id="map-overlay">
+        <div style="padding: 16px; background: rgba(2, 6, 13, 0.95); border-bottom: 1px solid rgba(56, 189, 248, 0.3); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 10;">
+            <h2 style="margin: 0; color: #00e5ff; font-size: 14pt; letter-spacing: 0.5px;">ACTIVE DEPLOYMENTS</h2>
+            <button onclick="closeHideMap()" style="background: transparent; border: none; color: #fff; font-size: 24pt; line-height: 1; padding: 0; cursor: pointer;">&times;</button>
+        </div>
+        <div id="hide-map" style="flex: 1; width: 100%; background: #030712;"></div>
+    </div>
+
 <script>
     // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
@@ -129,6 +151,9 @@
 
     let html5QrCode;
     let isProcessing = false;
+    let hideMap = null;
+    let hideLayerGroup = null;
+    let globalStyles = [];
 
     function updateStatus(state, icon, text, subtext) {
         const panel = document.getElementById('status-panel');
@@ -144,13 +169,11 @@
 
         html5QrCode = new Html5Qrcode("reader");
         
-        // Removed aspectRatio constraint so it fills the dynamic mobile viewport
         const config = { 
             fps: 10, 
             qrbox: { width: 250, height: 250 }
         };
 
-        // Prefer the back camera for mobile scanning
         html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
         .catch(err => {
             updateStatus('error', '⚠️', 'Camera Access Denied', 'Please check browser permissions.');
@@ -158,25 +181,24 @@
     }
 
     async function onScanSuccess(decodedText, decodedResult) {
-        // Prevent double-scanning the same code while processing
         if (isProcessing) return;
 
         try {
-            // Attempt to parse the scanned text as a URL to extract ID and Tag
             const url = new URL(decodedText);
             const pId = url.searchParams.get("id");
             const tag = url.searchParams.get("tag");
 
             if (pId && pId.startsWith("Penguin-")) {
                 isProcessing = true;
-                html5QrCode.pause();
-                
-                if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback on detection
+                if (html5QrCode && html5QrCode.getState() === 2) { // 2 = SCANNING
+                    html5QrCode.pause();
+                }
+                if (navigator.vibrate) navigator.vibrate(50);
                 
                 await processHideLocation(pId, tag);
             }
         } catch (e) {
-            // Scanned a non-URL or invalid QR code. Ignore it silently.
+            // Ignored invalid QR
         }
     }
 
@@ -194,10 +216,9 @@
 
             updateStatus('working', '☁️', `Uploading Deployment...`, `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
 
-            // Execute the secure DB insertion
             const { error } = await supabaseClient.from('penguin_logs').insert([{
                 penguin_id: pId,
-                secret_tag: tag, // Passing the tag verifies authorization if DB policies are strict
+                secret_tag: tag, 
                 finder_note: '[ADMIN HIDE LOCATION]',
                 latitude: lat,
                 longitude: lng
@@ -206,13 +227,14 @@
             if (error) {
                 triggerError(`Database rejection: ${error.message}`);
             } else {
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Success double-buzz
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
                 updateStatus('success', '✅', 'Hide Successfully Logged!', `${pId} deployed to grid.`);
                 
-                // Auto-resume scanner after 2.5 seconds
                 setTimeout(() => {
                     isProcessing = false;
-                    html5QrCode.resume();
+                    if (html5QrCode && html5QrCode.getState() === 3) { // 3 = PAUSED
+                        html5QrCode.resume();
+                    }
                     updateStatus('idle', '🎯', 'Scanning for Targets...', 'Align QR code within frame');
                 }, 2500);
             }
@@ -223,15 +245,100 @@
     }
 
     function triggerError(msg) {
-        if (navigator.vibrate) navigator.vibrate(500); // Long buzz for error
+        if (navigator.vibrate) navigator.vibrate(500);
         updateStatus('error', '❌', 'Deployment Failed', msg);
         
-        // Auto-resume scanner after error
         setTimeout(() => {
             isProcessing = false;
-            html5QrCode.resume();
+            if (html5QrCode && html5QrCode.getState() === 3) {
+                html5QrCode.resume();
+            }
             updateStatus('idle', '🎯', 'Scanning for Targets...', 'Align QR code within frame');
         }, 4000);
+    }
+
+    // --- MAPPING ENGINE ---
+    async function openHideMap() {
+        if (html5QrCode && html5QrCode.getState() === 2) {
+            html5QrCode.pause(true); // Pause video feed to save battery while map is open
+        }
+        
+        document.getElementById('map-overlay').style.display = 'flex';
+
+        if (!hideMap) {
+            hideMap = L.map('hide-map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(hideMap);
+            hideLayerGroup = L.layerGroup().addTo(hideMap);
+        }
+
+        setTimeout(() => {
+            hideMap.invalidateSize();
+            loadHideMapData();
+        }, 200);
+    }
+
+    function closeHideMap() {
+        document.getElementById('map-overlay').style.display = 'none';
+        if (html5QrCode && html5QrCode.getState() === 3 && !isProcessing) {
+            html5QrCode.resume();
+        }
+    }
+
+    async function loadHideMapData() {
+        // Ensure styles are loaded for mapping physical descriptions
+        if (globalStyles.length === 0) {
+            const { data } = await supabaseClient.from('penguin_styles').select('*');
+            if (data) globalStyles = data;
+        }
+
+        const { data: hides, error } = await supabaseClient
+            .from('penguin_logs')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, style_id')
+            .eq('finder_note', '[ADMIN HIDE LOCATION]')
+            .order('created_at', { ascending: false });
+
+        if (error || !hides) return;
+
+        hideLayerGroup.clearLayers();
+        const bounds = L.latLngBounds();
+        let validPoints = false;
+
+        const hideIcon = L.divIcon({ 
+            className: 'custom-div-icon', 
+            html: `<div style='background-color:#ef4444; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #ef4444;'></div>`, 
+            iconSize: [14, 14], 
+            iconAnchor: [7, 7] 
+        });
+
+        hides.forEach(log => {
+            if (!log.latitude || !log.longitude) return;
+            validPoints = true;
+
+            let styleName = "Base Model";
+            if (log.style_id) {
+                const s = globalStyles.find(x => x.id === log.style_id);
+                if (s) styleName = s.style_name;
+            }
+
+            const displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
+            const formattedDate = new Date(log.created_at).toLocaleDateString() + ' ' + new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            L.marker([log.latitude, log.longitude], { icon: hideIcon }).addTo(hideLayerGroup)
+             .bindPopup(`
+                <b style="color:#00e5ff; font-size: 11pt;">🐧 ${displayName}</b><br>
+                <span style="color:#cbd5e1; font-size: 9pt;">ID:</span> <span style="font-family:monospace;">${log.penguin_id}</span><br>
+                <span style="color:#cbd5e1; font-size: 9pt;">Style:</span> ${styleName}<br>
+                <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size:8.5pt; color:#94a3b8;">Deployed: ${formattedDate}</div>
+             `);
+
+            bounds.extend([log.latitude, log.longitude]);
+        });
+
+        if (validPoints && bounds.isValid()) {
+            hideMap.fitBounds(bounds, { padding: [40, 40] });
+        }
     }
 </script>
 
