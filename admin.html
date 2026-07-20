@@ -621,9 +621,35 @@
     }
 
     async function loadAdminInventoryMatrix() {
-        const { data: rawLogs, error } = await supabaseClient.from('penguin_logs').select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag, style_id').order('created_at', { ascending: true });
-        if (error || !rawLogs) return;
+        let allLogs = [];
+        let fetchMore = true;
+        let startRow = 0;
+        const rowLimit = 999; 
 
+        // Loop to fetch all logs in chunks of 1000 to bypass API limits
+        while (fetchMore) {
+            const { data, error } = await supabaseClient.from('penguin_logs')
+                .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note, secret_tag, style_id')
+                .order('created_at', { ascending: true })
+                .range(startRow, startRow + rowLimit);
+
+            if (error || !data) {
+                fetchMore = false;
+                break;
+            }
+
+            allLogs.push(...data);
+            startRow += (rowLimit + 1);
+
+            // If we received fewer than 1000 rows, we have hit the end of the database
+            if (data.length <= rowLimit) {
+                fetchMore = false;
+            }
+        }
+
+        if (allLogs.length === 0) return;
+
+        const rawLogs = allLogs;
         globalCachedLogsArray = rawLogs; 
         globalFleetClusters = {};
 
