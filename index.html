@@ -649,7 +649,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.1.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.2.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -693,14 +693,14 @@
     let globalViewedColonyIds = [];
     let currentFsMode = 'my';
     let currentMainMode = 'my';
-    let currentSightingsMode = 'all'; 
+    let currentSightingsMode = 'all'; // Toggles Recent Adventures
     
     // Gallery State
-    let globalGalleryImages = []; 
+    let globalGalleryImages = []; // Now stores full log objects
     let currentGalleryMode = 'my';
     let currentGalleryIndex = -1;
     let activeGalleryPage = 1;
-    let pebblesExpanded = false; 
+    let pebblesExpanded = false; // State for fullscreen pebble list
     const GALLERY_ITEMS_PER_PAGE = 6;
 
     // Fullscreen Map State
@@ -829,6 +829,7 @@
             isViewOnlyMode = true; 
         }
         
+        // Assign the correct active user ID for giving stones
         activeUserId = isPrimaryControl ? penguinId : (isAuthorizedViewer ? viewerId : null);
 
         if (isViewOnlyMode) {
@@ -842,6 +843,7 @@
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
+        // Initial Colony Fetch for Global Cache
         let fetchId = isPrimaryControl ? penguinId : (viewerId ? viewerId : null);
         if (fetchId) {
             const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', fetchId);
@@ -913,7 +915,7 @@
         return `Pebbles from: ${names}\nLike this stop by giving a pebble`;
     }
 
-    async function togglePebble(logId, targetId, event) {
+    function togglePebble(logId, targetId, event) {
         if (event) event.stopPropagation();
         
         if (!activeUserId || activeUserId === "Mystery Penguin") {
@@ -926,50 +928,72 @@
             return;
         }
 
-        const { data, error } = await supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single();
-        if (error) { showToast("Network error.", "error"); return; }
-        
-        let pebblesArr = parsePebbles(data.stones_received);
-        let isAdding = true;
-
-        const existingIndex = pebblesArr.findIndex(s => s.id === activeUserId);
-
-        if (existingIndex !== -1) {
-            pebblesArr.splice(existingIndex, 1);
-            isAdding = false;
-        } else {
-            let giverName = activeCustomName && activeCustomName.trim() !== "" ? activeCustomName : activeUserId;
-            pebblesArr.push({ id: activeUserId, name: giverName });
-            isAdding = true;
-        }
-        
-        let updatePayload = { stones_received: JSON.stringify(pebblesArr) };
-        if (isAdding && targetId !== activeUserId) updatePayload.has_unread_stones = true;
-
-        const { error: updateErr } = await supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId);
-        
-        if (!updateErr) {
-            let logEntry = globalLogData.find(l => l.id === logId);
-            if (logEntry) logEntry.stones_received = updatePayload.stones_received;
+        // Fetch to ensure state sync, but we use an optimistic UI approach so it feels instant
+        supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single().then(({data, error}) => {
+            if (error) { showToast("Network error.", "error"); return; }
             
-            let fleetEntry = globalAllFleetLogs.find(l => l.id === logId);
-            if (fleetEntry) fleetEntry.stones_received = updatePayload.stones_received;
+            let pebblesArr = parsePebbles(data.stones_received);
+            let isAdding = true;
 
-            let galleryEntry = globalGalleryImages.find(l => l.id === logId);
-            if (galleryEntry) galleryEntry.stones_received = updatePayload.stones_received;
+            const existingIndex = pebblesArr.findIndex(s => s.id === activeUserId);
 
-            compileAllStopsHistory(globalLogData);
-            renderGlobalSightings();
-            buildLeaderboard();
-            
-            if (document.getElementById('image-modal').style.display === 'flex') {
-                renderFullscreenPebbles();
+            if (existingIndex !== -1) {
+                pebblesArr.splice(existingIndex, 1);
+                isAdding = false;
+            } else {
+                let giverName = activeCustomName && activeCustomName.trim() !== "" ? activeCustomName : activeUserId;
+                pebblesArr.push({ id: activeUserId, name: giverName });
+                isAdding = true;
             }
+            
+            let updatePayload = { stones_received: JSON.stringify(pebblesArr) };
+            if (isAdding && targetId !== activeUserId) updatePayload.has_unread_stones = true;
 
-            if (isAdding) showToast("Pebble given!", "success");
-        } else {
-            showToast("Failed to update pebble.", "error");
-        }
+            // OPTIMISTIC DOM UPDATE: Instantly change all matching buttons without resetting pagination
+            document.querySelectorAll(`.stone-btn-${logId}`).forEach(btn => {
+                btn.innerHTML = `${getPebbleSvg(isAdding)} ${pebblesArr.length}`;
+                btn.title = getPebbleTooltip(updatePayload.stones_received);
+                if (isAdding) btn.classList.add('pebbled');
+                else btn.classList.remove('pebbled');
+            });
+            
+            // Push update quietly to database
+            supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId).then(({error: updateErr}) => {
+                if (!updateErr) {
+                    // Quietly update local arrays to prevent regression on re-render
+                    let logEntry = globalLogData.find(l => String(l.id) === String(logId));
+                    if (logEntry) logEntry.stones_received = updatePayload.stones_received;
+                    
+                    let fleetEntry = globalAllFleetLogs.find(l => String(l.id) === String(logId));
+                    if (fleetEntry) fleetEntry.stones_received = updatePayload.stones_received;
+
+                    let galleryEntry = globalGalleryImages.find(l => String(l.id) === String(logId));
+                    if (galleryEntry) galleryEntry.stones_received = updatePayload.stones_received;
+
+                    let historyEntry = computedAllStopsArray.find(s => String(s.logId) === String(logId));
+                    if (historyEntry) historyEntry.pebblesStr = updatePayload.stones_received;
+
+                    // Update Dashboard Counter natively
+                    const totalPebblesEl = document.getElementById("total-pebbles-counter");
+                    if (totalPebblesEl) {
+                        let totalPebbles = 0;
+                        globalLogData.forEach(l => {
+                            totalPebbles += parsePebbles(l.stones_received).length;
+                        });
+                        totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
+                    }
+                    
+                    if (document.getElementById('image-modal').style.display === 'flex') {
+                        renderFullscreenPebbles();
+                    }
+
+                    if (isAdding) showToast("Pebble given!", "success");
+                    else showToast("Pebble removed.", "info");
+                } else {
+                    showToast("Failed to save pebble to database.", "error");
+                }
+            });
+        });
     }
 
     // ===================================================
@@ -1045,7 +1069,8 @@
         if (globalAllFleetLogs.length > 0) {
             globalAllFleetLogs.forEach(log => {
                 if (colonyStats[log.penguin_id]) {
-                    if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                    // Strict protection against default ID overwriting actual custom names
+                    if(log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) colonyStats[log.penguin_id].name = log.custom_name;
                     if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
                     if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
                     if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
@@ -1213,7 +1238,7 @@
         if (!overlay) return;
         
         let pebblesArr = parsePebbles(log.stones_received);
-        pebblesArr.reverse(); 
+        pebblesArr.reverse(); // Show newest givers first
         
         let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
         let pebblesCount = pebblesArr.length;
@@ -1529,7 +1554,7 @@
                 let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
                 const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
                 
-                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : pId;
+                let displayName = globalFleetProfiles[pId] && globalFleetProfiles[pId].name ? globalFleetProfiles[pId].name : pId;
                 const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
                 
                 const m = L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup)
@@ -2097,6 +2122,20 @@
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
         const pebblesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
+        // FIRST PASS: Build global dictionary so names are perfect everywhere
+        // We include strict checks to ensure default IDs don't overwrite hatched custom names
+        allLogs.forEach(log => {
+            if (!globalFleetProfiles[log.penguin_id]) globalFleetProfiles[log.penguin_id] = {};
+            
+            if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                globalFleetProfiles[log.penguin_id].name = log.custom_name;
+            }
+            if (log.avatar_color) globalFleetProfiles[log.penguin_id].color = log.avatar_color;
+            if (log.custom_avatar_url) globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
+            if (log.style_id) globalFleetProfiles[log.penguin_id].styleId = log.style_id;
+        });
+
+        // SECOND PASS: Build Leaderboard stats
         allLogs.forEach(log => {
             if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
             if (log.penguin_id) {
@@ -2110,7 +2149,10 @@
                     pebblesCountMap[log.penguin_id] = (pebblesCountMap[log.penguin_id] || 0) + parsePebbles(log.stones_received).length;
                 }
 
-                if (log.custom_name && log.custom_name.trim() !== "") namesMap[log.penguin_id] = log.custom_name;
+                if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                    namesMap[log.penguin_id] = log.custom_name;
+                }
+                
                 if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
                 if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
                 if (log.style_id) styleMap[log.penguin_id] = log.style_id;
@@ -2395,7 +2437,9 @@
         globalGalleryImages = recentPhotos;
 
         recentPhotos.forEach((log, index) => {
-            let displayName = globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
+            // Strict derivation of display name based on global profiles
+            let displayName = (globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name) ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
+            
             let note = log.finder_note || "No note.";
             if (note.includes('[Tagged at Monument:')) note = note.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
 
