@@ -378,13 +378,18 @@
             <h2 style="color: #00e5ff; margin: 0; text-align: left;">Fleet Tracker View</h2>
             <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; line-height: 1;" onclick="closeFullscreenTrackingMap()">×</button>
         </div>
-        <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
         
-        <div class="tab-bar" style="margin-top: 16px; margin-bottom: 0;">
+        <div class="tab-bar" style="margin-bottom: 12px;">
             <button class="tab-btn active" id="fs-tab-my" onclick="setFullscreenMode('my')">My Penguin</button>
             <button class="tab-btn" id="fs-tab-colony" onclick="setFullscreenMode('colony')">My Colony</button>
             <button class="tab-btn" id="fs-tab-all" onclick="setFullscreenMode('all')">All Penguins</button>
         </div>
+
+        <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
+        
+        <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: center;">
+            <input type="checkbox" id="show-lines-fs" onchange="toggleMapLines(this.checked)"> Show Journey Paths
+        </label>
     </div>
 </div>
 
@@ -394,10 +399,8 @@
             <h2 style="color: #00e5ff; margin: 0;">Photo Gallery</h2>
             <button style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;" onclick="closeGalleryModal()">×</button>
         </div>
-        <div class="tab-bar" style="margin-bottom: 12px;">
-            <button class="tab-btn active" id="gal-tab-my" onclick="setGalleryMode('my')">My Penguin</button>
-            <button class="tab-btn" id="gal-tab-colony" onclick="setGalleryMode('colony')">My Colony</button>
-            <button class="tab-btn" id="gal-tab-all" onclick="setGalleryMode('all')">All Penguins</button>
+        <div class="tab-bar" style="margin-bottom: 12px;" id="gallery-tabs">
+            <!-- Dynamically injected tabs -->
         </div>
         <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px;">
             </div>
@@ -469,7 +472,7 @@
             <div id="my-penguin-container">
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openGalleryModal()">🖼️ Gallery</button>
+                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openFullscreenSightings()">🖼️ Gallery</button>
                     
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -514,6 +517,7 @@
         <div class="glass-card" id="global-sightings-card">
             <div class="card-header-flex" style="margin-bottom: 8px;">
                 <h2>📸 Recent Adventures</h2>
+                <button type="button" class="btn-inline-refresh" onclick="openFullscreenSightings()">⛶ Enlarge</button>
             </div>
             <div class="tab-bar" id="sightings-tabs" style="margin-bottom: 12px;">
                 <!-- Dynamically injected tabs -->
@@ -523,44 +527,8 @@
             </div>
         </div>
 
-        <div class="glass-card" id="tracking-card-block">
-            <div class="card-header-flex" style="margin-bottom: 6px;">
-                <h2 id="tracking-card-title">Location</h2>
-                <div>
-                    <button type="button" class="btn-inline-refresh" onclick="openFullscreenTrackingMap()" style="margin-right: 8px; font-size: 10.5pt; padding: 4px 10px; vertical-align: middle;">⛶ Enlarge</button>
-                    <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()" style="vertical-align: middle;">📍 Refresh</button>
-                </div>
-            </div>
-            <ul class="data-list" id="location-text-elements">
-                <li class="data-item">
-                    <span class="label">Current Coordinates</span>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-                        <span class="value" id="coordinates-display" style="font-family: monospace; color: #00e5ff; font-size: 11pt;">Detecting Location...</span>
-                        <span id="lock-badge" style="color: #94a3b8; font-weight: bold; font-size: 11pt;">WAITING</span>
-                    </div>
-                </li>
-            </ul>
-            <div id="map"></div>
-            
-            <!-- MAIN MAP MODE TOGGLES -->
-            <div class="tab-bar" style="margin-top: 12px; margin-bottom: 0;">
-                <button class="tab-btn active" id="main-tab-my" onclick="setMainMapMode('my')">My Penguin</button>
-                <button class="tab-btn" id="main-tab-colony" onclick="setMainMapMode('colony')">My Colony</button>
-                <button class="tab-btn" id="main-tab-all" onclick="setMainMapMode('all')">All Penguins</button>
-            </div>
-            
-            <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
-            
-            <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
-                <select id="poi-selector" class="select-poi" disabled>
-                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
-                </select>
-            </div>
-        </div>
-        
         <div class="glass-card" id="journey-stops-card">
-            <h2>📍 Journey Stops</h2>
+            <h2>📍 Log an Adventure</h2>
             
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-stop-log" onclick="switchStopsTab('log')">✍️ Log New</button>
@@ -591,6 +559,40 @@
             </div>
         </div>
 
+        <div class="glass-card" id="tracking-card-block">
+            <div class="card-header-flex" style="margin-bottom: 6px;">
+                <h2 id="tracking-card-title">Location</h2>
+                <div>
+                    <button type="button" class="btn-inline-refresh" onclick="openFullscreenTrackingMap()" style="margin-right: 8px; font-size: 10.5pt; padding: 4px 10px; vertical-align: middle;">⛶ Enlarge</button>
+                    <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()" style="vertical-align: middle;">📍 Refresh</button>
+                </div>
+            </div>
+            
+            <div class="tab-bar" style="margin-top: 4px; margin-bottom: 12px;">
+                <button class="tab-btn active" id="main-tab-my" onclick="setMainMapMode('my')">My Penguin</button>
+                <button class="tab-btn" id="main-tab-colony" onclick="setMainMapMode('colony')">My Colony</button>
+                <button class="tab-btn" id="main-tab-all" onclick="setMainMapMode('all')">All Penguins</button>
+            </div>
+            
+            <div id="map"></div>
+            
+            <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: center;">
+                <input type="checkbox" id="show-lines-main" onchange="toggleMapLines(this.checked)"> Show Journey Paths
+            </label>
+            
+            <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
+            
+            <!-- LANDMARKS FEATURE HIDDEN/COMMENTED OUT -->
+            <!--
+            <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
+                <select id="poi-selector" class="select-poi" disabled>
+                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
+                </select>
+            </div>
+            -->
+        </div>
+
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
             
@@ -598,7 +600,7 @@
 
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
-                <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button>
+                <!-- <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button> -->
                 <button class="tab-btn" id="tab-pebbles" onclick="switchLeaderboardTab('pebbles')">🪨 Pebbles</button>
             </div>
 
@@ -613,6 +615,8 @@
             </div>
         </div>
 
+        <!-- LANDMARKS CARD HIDDEN/COMMENTED OUT -->
+        <!--
         <div class="glass-card" id="landmarks-card">
             <div class="card-header-flex">
                 <h2>🏛️ Landmarks</h2>
@@ -641,6 +645,7 @@
                 </div>
             </div>
         </div>
+        -->
 
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
@@ -649,7 +654,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.0.1</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.3.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -678,6 +683,7 @@
     let isViewOnlyMode = true; 
     let requiresReload = false;
     let activeUserId = null;
+    let showJourneyPaths = false; // Toggle for drawing lines on maps
     
     // Global Styling & Data State
     let activeCustomName = "";
@@ -915,7 +921,7 @@
         return `Pebbles from: ${names}\nLike this stop by giving a pebble`;
     }
 
-    async function togglePebble(logId, targetId, event) {
+    function togglePebble(logId, targetId, event) {
         if (event) event.stopPropagation();
         
         if (!activeUserId || activeUserId === "Mystery Penguin") {
@@ -928,60 +934,72 @@
             return;
         }
 
-        const { data, error } = await supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single();
-        if (error) { showToast("Network error.", "error"); return; }
-        
-        let pebblesArr = parsePebbles(data.stones_received);
-        let isAdding = true;
-
-        const existingIndex = pebblesArr.findIndex(s => s.id === activeUserId);
-
-        if (existingIndex !== -1) {
-            pebblesArr.splice(existingIndex, 1);
-            isAdding = false;
-        } else {
-            let giverName = activeCustomName && activeCustomName.trim() !== "" ? activeCustomName : activeUserId;
-            pebblesArr.push({ id: activeUserId, name: giverName });
-            isAdding = true;
-        }
-        
-        let updatePayload = { stones_received: JSON.stringify(pebblesArr) };
-        if (isAdding && targetId !== activeUserId) updatePayload.has_unread_stones = true;
-
-        const { error: updateErr } = await supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId);
-        
-        if (!updateErr) {
-            // Update local state arrays directly (using String coercion to prevent strictly typed mismatch bugs)
-            let logEntry = globalLogData.find(l => String(l.id) === String(logId));
-            if (logEntry) logEntry.stones_received = updatePayload.stones_received;
+        // Fetch to ensure state sync, but we use an optimistic UI approach so it feels instant
+        supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single().then(({data, error}) => {
+            if (error) { showToast("Network error.", "error"); return; }
             
-            let fleetEntry = globalAllFleetLogs.find(l => String(l.id) === String(logId));
-            if (fleetEntry) fleetEntry.stones_received = updatePayload.stones_received;
+            let pebblesArr = parsePebbles(data.stones_received);
+            let isAdding = true;
 
-            let galleryEntry = globalGalleryImages.find(l => String(l.id) === String(logId));
-            if (galleryEntry) galleryEntry.stones_received = updatePayload.stones_received;
+            const existingIndex = pebblesArr.findIndex(s => s.id === activeUserId);
 
-            let historyEntry = computedAllStopsArray.find(s => String(s.logId) === String(logId));
-            if (historyEntry) historyEntry.pebblesStr = updatePayload.stones_received;
-
-            // Re-render UI segments gracefully without resetting pagination
-            renderAllStopsPageLayout(); 
-            renderGlobalSightings();
-            buildLeaderboard();
-            
-            // Re-render fullscreen modal overlay if it's currently open
-            if (document.getElementById('image-modal').style.display === 'flex') {
-                renderFullscreenPebbles();
-            }
-
-            if (isAdding) {
-                showToast("Pebble given!", "success");
+            if (existingIndex !== -1) {
+                pebblesArr.splice(existingIndex, 1);
+                isAdding = false;
             } else {
-                showToast("Pebble removed.", "info");
+                let giverName = activeCustomName && activeCustomName.trim() !== "" ? activeCustomName : activeUserId;
+                pebblesArr.push({ id: activeUserId, name: giverName });
+                isAdding = true;
             }
-        } else {
-            showToast("Failed to update pebble.", "error");
-        }
+            
+            let updatePayload = { stones_received: JSON.stringify(pebblesArr) };
+            if (isAdding && targetId !== activeUserId) updatePayload.has_unread_stones = true;
+
+            // OPTIMISTIC DOM UPDATE: Instantly change all matching buttons without resetting pagination
+            document.querySelectorAll(`.stone-btn-${logId}`).forEach(btn => {
+                btn.innerHTML = `${getPebbleSvg(isAdding)} ${pebblesArr.length}`;
+                btn.title = getPebbleTooltip(updatePayload.stones_received);
+                if (isAdding) btn.classList.add('pebbled');
+                else btn.classList.remove('pebbled');
+            });
+            
+            // Push update quietly to database
+            supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId).then(({error: updateErr}) => {
+                if (!updateErr) {
+                    // Quietly update local arrays to prevent regression on re-render
+                    let logEntry = globalLogData.find(l => String(l.id) === String(logId));
+                    if (logEntry) logEntry.stones_received = updatePayload.stones_received;
+                    
+                    let fleetEntry = globalAllFleetLogs.find(l => String(l.id) === String(logId));
+                    if (fleetEntry) fleetEntry.stones_received = updatePayload.stones_received;
+
+                    let galleryEntry = globalGalleryImages.find(l => String(l.id) === String(logId));
+                    if (galleryEntry) galleryEntry.stones_received = updatePayload.stones_received;
+
+                    let historyEntry = computedAllStopsArray.find(s => String(s.logId) === String(logId));
+                    if (historyEntry) historyEntry.pebblesStr = updatePayload.stones_received;
+
+                    // Update Dashboard Counter natively
+                    const totalPebblesEl = document.getElementById("total-pebbles-counter");
+                    if (totalPebblesEl) {
+                        let totalPebbles = 0;
+                        globalLogData.forEach(l => {
+                            totalPebbles += parsePebbles(l.stones_received).length;
+                        });
+                        totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
+                    }
+                    
+                    if (document.getElementById('image-modal').style.display === 'flex') {
+                        renderFullscreenPebbles();
+                    }
+
+                    if (isAdding) showToast("Pebble given!", "success");
+                    else showToast("Pebble removed.", "info");
+                } else {
+                    showToast("Failed to save pebble to database.", "error");
+                }
+            });
+        });
     }
 
     // ===================================================
@@ -1001,18 +1019,16 @@
         const contPenguin = document.getElementById('my-penguin-container');
         const contColony = document.getElementById('colony-container');
         const editBtn = document.getElementById('edit-profile-btn');
-        const galleryBtn = document.getElementById('gallery-profile-btn');
+        // We removed the individual gallery button from the profile area
         
         if(tabName === 'penguin') {
             btnPenguin.classList.add('active'); btnColony.classList.remove('active');
             contPenguin.style.display = 'block'; contColony.style.display = 'none';
             if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
-            if(galleryBtn && globalGalleryImages.length > 0) galleryBtn.style.display = 'block';
         } else {
             btnPenguin.classList.remove('active'); btnColony.classList.add('active');
             contPenguin.style.display = 'none'; contColony.style.display = 'block';
             if(editBtn) editBtn.style.display = 'none';
-            if(galleryBtn) galleryBtn.style.display = 'none';
             loadColonyList();
         }
     }
@@ -1057,7 +1073,8 @@
         if (globalAllFleetLogs.length > 0) {
             globalAllFleetLogs.forEach(log => {
                 if (colonyStats[log.penguin_id]) {
-                    if(log.custom_name) colonyStats[log.penguin_id].name = log.custom_name;
+                    // Strict protection against default ID overwriting actual custom names
+                    if(log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) colonyStats[log.penguin_id].name = log.custom_name;
                     if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
                     if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
                     if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
@@ -1236,7 +1253,7 @@
         } else {
             let limit = pebblesExpanded ? pebblesCount : 5;
             let displayNames = pebblesArr.slice(0, limit).map(s => s.name).join(", ");
-            let remainder = pebblesCount - 5;
+            let remainder = pebblesCount - limit;
             
             namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:center;">Pebbles from: <b>${displayNames}</b>`;
             if (remainder > 0 && !pebblesExpanded) {
@@ -1261,19 +1278,35 @@
     // ===================================================
     function setGalleryMode(mode) {
         currentGalleryMode = mode;
-        document.getElementById('gal-tab-my').classList.toggle('active', mode === 'my');
-        document.getElementById('gal-tab-colony').classList.toggle('active', mode === 'colony');
-        document.getElementById('gal-tab-all').classList.toggle('active', mode === 'all');
+        // Keep sightings mode synced with gallery mode so tabs match
+        currentSightingsMode = mode; 
+        
+        renderGalleryTabs();
+        renderSightingsTabs();
+        renderGlobalSightings(); // Updates the carousel in the background
         
         compileGalleryImages();
         activeGalleryPage = 1;
         renderGalleryPage();
     }
 
+    function renderGalleryTabs() {
+        const tabsContainer = document.getElementById('gallery-tabs');
+        if (!tabsContainer) return;
+        
+        let myTabLabel = isPrimaryControl ? "My Penguin" : (activeCustomName || penguinId);
+        
+        tabsContainer.innerHTML = `
+            <button class="tab-btn ${currentGalleryMode === 'all' ? 'active' : ''}" onclick="setGalleryMode('all')">All Penguins</button>
+            <button class="tab-btn ${currentGalleryMode === 'colony' ? 'active' : ''}" onclick="setGalleryMode('colony')">My Colony</button>
+            <button class="tab-btn ${currentGalleryMode === 'penguin' ? 'active' : ''}" onclick="setGalleryMode('penguin')">${myTabLabel}</button>
+        `;
+    }
+
     function compileGalleryImages() {
         let logsToProcess = [];
         
-        if (currentGalleryMode === 'my') {
+        if (currentGalleryMode === 'penguin') {
             logsToProcess = globalAllFleetLogs.length > 0 ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId) : globalLogData;
         } else if (currentGalleryMode === 'colony') {
             const allowedIds = new Set(globalViewedColonyIds);
@@ -1283,16 +1316,14 @@
             logsToProcess = globalAllFleetLogs;
         }
 
-        // Store full log objects for pebble viewing
         globalGalleryImages = logsToProcess
             .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
-    function openGalleryModal() {
-        activeGalleryPage = 1;
-        compileGalleryImages();
-        renderGalleryPage();
+    function openFullscreenSightings() {
+        // Sync gallery with the current sighting mode before opening
+        setGalleryMode(currentSightingsMode);
         document.getElementById('gallery-modal').style.display = 'flex';
     }
 
@@ -1376,6 +1407,18 @@
     // ===================================================
     // SHARED MAP RENDERING ENGINE (MAIN & FULLSCREEN)
     // ===================================================
+    function toggleMapLines(isChecked) {
+        showJourneyPaths = isChecked;
+        const cbMain = document.getElementById('show-lines-main');
+        const cbFs = document.getElementById('show-lines-fs');
+        if (cbMain) cbMain.checked = isChecked;
+        if (cbFs) cbFs.checked = isChecked;
+        
+        // Re-render to draw/remove lines instantly
+        renderFleetOnMap(map, historyLayerGroup, currentMainMode);
+        if (fsMap) renderFleetOnMap(fsMap, fsLayerGroup, currentFsMode);
+    }
+
     function setFullscreenMode(mode) {
         currentFsMode = mode;
         document.getElementById('fs-tab-my').classList.toggle('active', mode === 'my');
@@ -1462,7 +1505,7 @@
                 stopCounter++;
             });
 
-            if (pathCoords.length > 0) {
+            if (showJourneyPaths && pathCoords.length > 0) {
                 L.polyline(pathCoords, { color: pColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(targetLayerGroup);
             }
         });
@@ -1555,7 +1598,7 @@
                 stopCounter++;
             });
 
-            if (pathCoords.length > 0) {
+            if (showJourneyPaths && pathCoords.length > 0) {
                 L.polyline(pathCoords, { color: customColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(fsLayerGroup);
             }
 
@@ -1598,7 +1641,7 @@
             stopCounter++;
         });
 
-        if (pathCoords.length > 0) L.polyline(pathCoords, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(modalLayerGroup);
+        if (showJourneyPaths && pathCoords.length > 0) L.polyline(pathCoords, { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '5, 10' }).addTo(modalLayerGroup);
         setTimeout(() => { modalMap.invalidateSize(); if (targetMarker) targetMarker.openPopup(); }, 150);
     }
     function closeMapModal() { document.getElementById('map-modal').style.display = 'none'; }
@@ -1845,16 +1888,14 @@
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
                 if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
-                if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
-                if (lockBadge) { lockBadge.innerText = "✓ LOCATION DETECTED"; lockBadge.style.color = "#39ff14"; }
+                
+                // Coordinates text/badge removed per request, but values still track silently
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
+                
                 lookupNearbyMonuments(verifiedLat, verifiedLng);
                 updateDistanceToLastStop();
             }, (err) => { 
-                if (coordinatesDisplay) coordinatesDisplay.innerText = "Location permission required.";
-                if (lockBadge) { lockBadge.innerText = "LOCKED"; lockBadge.style.color = "#ef4444"; }
-                const poiOutput = document.getElementById("poi-proximity-output");
-                if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:11pt;">⚠️ GPS sensor locked.</li>`;
+                // GPS blocked handler
             }, { enableHighAccuracy: true });
         }
     }
@@ -1869,7 +1910,6 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
-                if (coordinatesDisplay) coordinatesDisplay.innerText = `${verifiedLat.toFixed(4)}°N, ${verifiedLng.toFixed(4)}°W`;
                 if (map && currentMainMode === 'my') { 
                     map.setView([verifiedLat, verifiedLng], 15); 
                 }
@@ -1913,9 +1953,10 @@
     }
 
     // ===================================================
-    // DUAL-RADIUS POI ENGINE
+    // DUAL-RADIUS POI ENGINE (DISABLED PER USER REQUEST)
     // ===================================================
     async function lookupNearbyMonuments(lat, lng) {
+        /*
         if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
         const poiSelector = document.getElementById('poi-selector');
         const poiLabelStatus = document.getElementById('poi-label-status');
@@ -1931,86 +1972,16 @@
             if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
             
             const fetchRes = await fetch(overpassUrl);
-            
             if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
             const textContent = await fetchRes.text();
             if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
-            
             const resJson = JSON.parse(textContent);
             
-            if (resJson && resJson.elements && resJson.elements.length > 0) {
-                if (poiSelector) poiSelector.innerHTML = '<option value="">-- Optional: Tag a nearby landmark --</option>';
-                let dynamicSortingBufferArray = []; let closeDropdownOptionsCount = 0; 
-                const poiIcon = L.divIcon({ className: 'poi-div-icon', html: "<div style='background-color:#cc00ff; width:14px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #cc00ff;'></div>", iconSize: [14, 12], iconAnchor: [7, 6] });
-
-                resJson.elements.forEach((element, internalIdx) => {
-                    if (element.tags && element.tags.name && element.lat && element.lon) {
-                        const distanceInMiles = calculateHaversineDistance(lat, lng, element.lat, element.lon);
-                        const distanceInMeters = distanceInMiles * 1609.34; 
-                        dynamicSortingBufferArray.push({ name: element.tags.name, lat: element.lat, lon: element.lon, miles: distanceInMiles, idToken: `poi_node_${internalIdx}` });
-
-                        if (distanceInMeters <= 500 && poiSelector) {
-                            closeDropdownOptionsCount++;
-                            const optionNode = document.createElement('option');
-                            optionNode.value = element.tags.name; optionNode.innerText = `🏛️ ${element.tags.name} (${distanceInMeters.toFixed(0)}m)`;
-                            poiSelector.appendChild(optionNode);
-                        }
-                        const landmarkMarkerNode = L.marker([element.lat, element.lon], { icon: poiIcon }).addTo(poiLayerGroup).bindPopup(`<b>🏛️ Landmark Point of Interest</b><br>${element.tags.name}`);
-                        poiMarkersMap[`poi_node_${internalIdx}`] = landmarkMarkerNode;
-                    }
-                });
-
-                dynamicSortingBufferArray.sort((a, b) => a.miles - b.miles);
-
-                if (poiSelector && poiLabelStatus) {
-                    if (closeDropdownOptionsCount > 0) {
-                        poiSelector.disabled = false; poiLabelStatus.innerText = "🏛️ Nearby Historic Landmark or Marker Found!";
-                        poiLabelStatus.style.color = "#39ff14"; poiLabelStatus.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.2)";
-                    } else {
-                        poiSelector.innerHTML = '<option value="">-- Not near any landmarks (Must be within 500m) --</option>';
-                        poiSelector.disabled = true; poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:";
-                        poiLabelStatus.style.color = "#94a3b8"; poiLabelStatus.style.textShadow = "none";
-                    }
-                }
-
-                if (dynamicSortingBufferArray.length > 0 && poiProximityOutput) {
-                    poiProximityOutput.innerHTML = ""; 
-                    const listRenderLimit = Math.min(dynamicSortingBufferArray.length, 5);
-                    for (let x = 0; x < listRenderLimit; x++) { 
-                        const landmarkItem = dynamicSortingBufferArray[x];
-                        let humanReadableDistanceText = (landmarkItem.miles < 0.1) ? `${(landmarkItem.miles * 5280).toFixed(0)} feet away` : `${landmarkItem.miles.toFixed(2)} miles away`;
-                        let isAlreadyVisitedBadgeHTML = discoveredMonumentsSet.has(landmarkItem.name.trim().toLowerCase()) ? `<span class="tagged-badge">✓ Tagged</span>` : "";
-
-                        const liNode = document.createElement('li'); liNode.className = 'poi-proximity-row';
-                        liNode.innerHTML = `<div><span class="poi-icon-badge">🏛️</span><span class="poi-list-name">${landmarkItem.name}${isAlreadyVisitedBadgeHTML}</span></div><div><span class="poi-list-dist">${humanReadableDistanceText}</span></div>`;
-                        
-                        liNode.onclick = function() {
-                            if (map && poiMarkersMap[landmarkItem.idToken]) {
-                                map.setView([landmarkItem.lat, landmarkItem.lon], 15);
-                                poiMarkersMap[landmarkItem.idToken].openPopup();
-                                document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
-                            }
-                        };
-                        poiProximityOutput.appendChild(liNode);
-                    }
-                } else if (poiProximityOutput) {
-                    poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic landmarks found inside this grid.</li>`;
-                }
-            } else if (poiProximityOutput) {
-                poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">No historic landmarks found inside this grid.</li>`;
-                if (poiSelector && poiLabelStatus) {
-                    poiSelector.innerHTML = '<option value="">-- Not near any landmarks --</option>'; poiSelector.disabled = true;
-                    poiLabelStatus.innerText = "🏛️ Tag a Nearby Historic Landmark or Marker:"; poiLabelStatus.style.color = "#94a3b8"; poiLabelStatus.style.textShadow = "none";
-                }
-            }
+            // Logic Halted ...
         } catch (poiErr) { 
             console.warn("POI fallback bypass: ", poiErr); 
-            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#fca5a5; padding:15px; font-size:11pt;">⚠️ Landmark scanner temporarily unavailable (API Timeout).</li>`;
-            if (poiSelector && poiLabelStatus) {
-                poiSelector.innerHTML = '<option value="">-- Landmark scanning offline --</option>'; poiSelector.disabled = true;
-                poiLabelStatus.innerText = "🏛️ Landmark Scanner Unavailable"; poiLabelStatus.style.color = "#fca5a5"; poiLabelStatus.style.textShadow = "none";
-            }
         }
+        */
     }
 
     function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
@@ -2066,7 +2037,7 @@
     function switchLeaderboardTab(tabName) {
         if (activeTab === tabName) return; activeTab = tabName;
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
+        // document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
         document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
         activeLeaderboardPage = 1; buildLeaderboard();
     }
@@ -2079,11 +2050,31 @@
     }
 
     async function buildLeaderboard() {
-        const { data: allLogs, error } = await supabaseClient.from('penguin_logs')
-            .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received')
-            .order('created_at', { ascending: true });
-            
-        if (error || !allLogs) return;
+        let allLogs = [];
+        let fetchMore = true;
+        let startRow = 0;
+        const rowLimit = 999; 
+
+        while (fetchMore) {
+            const { data, error } = await supabaseClient.from('penguin_logs')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received')
+                .order('created_at', { ascending: true })
+                .range(startRow, startRow + rowLimit);
+                
+            if (error || !data) {
+                fetchMore = false;
+                break;
+            }
+
+            allLogs.push(...data);
+            startRow += (rowLimit + 1);
+
+            if (data.length <= rowLimit) {
+                fetchMore = false;
+            }
+        }
+
+        if (allLogs.length === 0) return;
 
         globalAllFleetLogs = allLogs; 
         
@@ -2093,7 +2084,10 @@
         // FIRST PASS: Build global dictionary so names are perfect everywhere
         allLogs.forEach(log => {
             if (!globalFleetProfiles[log.penguin_id]) globalFleetProfiles[log.penguin_id] = {};
-            if (log.custom_name && log.custom_name.trim() !== "") globalFleetProfiles[log.penguin_id].name = log.custom_name;
+            
+            if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                globalFleetProfiles[log.penguin_id].name = log.custom_name;
+            }
             if (log.avatar_color) globalFleetProfiles[log.penguin_id].color = log.avatar_color;
             if (log.custom_avatar_url) globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
             if (log.style_id) globalFleetProfiles[log.penguin_id].styleId = log.style_id;
@@ -2107,13 +2101,16 @@
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
                 
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
-                if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
+                // if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
                 
                 if (log.stones_received) {
                     pebblesCountMap[log.penguin_id] = (pebblesCountMap[log.penguin_id] || 0) + parsePebbles(log.stones_received).length;
                 }
 
-                if (log.custom_name && log.custom_name.trim() !== "") namesMap[log.penguin_id] = log.custom_name;
+                if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                    namesMap[log.penguin_id] = log.custom_name;
+                }
+                
                 if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
                 if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
                 if (log.style_id) styleMap[log.penguin_id] = log.style_id;
@@ -2131,7 +2128,7 @@
                 displayName: namesMap[id] ? `${namesMap[id]}` : id, 
                 miles: totalMiles, 
                 stopsCount: logsCountMap[id] || 1, 
-                monumentsCount: monumentTagsCountMap[id] || 0,
+                // monumentsCount: monumentTagsCountMap[id] || 0,
                 pebblesCount: pebblesCountMap[id] || 0,
                 avatarColor: avatarMap[id],
                 customAvatar: customAvatarMap[id],
@@ -2140,7 +2137,7 @@
         });
 
         if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
-        else if (activeTab === "monuments") { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
+        // else if (activeTab === "monuments") { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
         else if (activeTab === "pebbles") { leaderboardData.sort((a, b) => b.pebblesCount - a.pebblesCount || b.miles - a.miles); }
 
         leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
@@ -2148,7 +2145,6 @@
         computedLeaderboardArray = leaderboardData.slice(0, 100); 
         activeLeaderboardPage = 1; renderLeaderboardPage();
 
-        // Render the new global sightings carousel after the leaderboard is compiled
         renderGlobalSightings();
     }
 
@@ -2221,9 +2217,10 @@
     function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
 
     // ===================================================
-    // LANDMARK HISTORY PASSPORT SYSTEM
+    // LANDMARK HISTORY PASSPORT SYSTEM (DISABLED)
     // ===================================================
     function compilePassportLogsHistory(logs) {
+        /*
         computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
         if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
 
@@ -2237,37 +2234,20 @@
             }
         }
         activePassportPage = 1; renderPassportPageLayout();
+        */
     }
 
     function renderPassportPageLayout() {
+        /*
         const passportHistoryOutput = document.getElementById('passport-history-output'); const passportPagination = document.getElementById('passport-pagination');
         if (!passportHistoryOutput) return; passportHistoryOutput.innerHTML = "";
-
-        if (computedPassportStampsArray.length === 0) {
-            passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This penguin hasn't collected any landmark passport stamps yet!</li>`;
-            if (passportPagination) passportPagination.style.display = "none"; return;
-        }
-
-        const totalPages = Math.ceil(computedPassportStampsArray.length / PASSPORT_ITEMS_PER_PAGE);
-        if (passportPagination) {
-            passportPagination.style.display = totalPages > 1 ? "flex" : "none";
-            document.getElementById('passport-page-indicator').innerText = `Page ${activePassportPage} of ${totalPages}`;
-            document.getElementById('passport-prev-btn').disabled = (activePassportPage === 1);
-            document.getElementById('passport-next-btn').disabled = (activePassportPage === totalPages);
-        }
-
-        const startIdx = (activePassportPage - 1) * PASSPORT_ITEMS_PER_PAGE;
-        const pageItemsSlice = computedPassportStampsArray.slice(startIdx, startIdx + PASSPORT_ITEMS_PER_PAGE);
-
-        pageItemsSlice.forEach(stamp => {
-            const rowLi = document.createElement('li'); rowLi.className = 'passport-history-row';
-            rowLi.innerHTML = `<div><span class="passport-icon-badge">🏅</span><span class="p-name">${stamp.name}</span></div><div><span class="passport-list-date">${stamp.date}</span></div>`;
-            rowLi.onclick = function() { openMapModal(stamp.lat, stamp.lng); };
-            passportHistoryOutput.appendChild(rowLi);
-        });
+        ...
+        */
     }
 
-    function changePassportPage(directionOffset) { activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
+    function changePassportPage(directionOffset) { 
+        /* activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); */ 
+    }
 
     // ===================================================
     // ALL STOPS HISTORY SYSTEM
@@ -2341,325 +2321,6 @@
 
     function changeAllStopsPage(directionOffset) { activeAllStopsPage += directionOffset; renderAllStopsPageLayout(); const card = document.getElementById('journey-stops-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
 
-    // ===================================================
-    // GLOBAL SIGHTINGS CAROUSEL
-    // ===================================================
-    function switchSightingsMode(mode) {
-        currentSightingsMode = mode;
-        renderSightingsTabs();
-        renderGlobalSightings();
-    }
-    
-    function renderSightingsTabs() {
-        const tabsContainer = document.getElementById('sightings-tabs');
-        if (!tabsContainer) return;
-        
-        let myTabLabel = isPrimaryControl ? "My Penguin" : (activeCustomName || penguinId);
-        
-        tabsContainer.innerHTML = `
-            <button class="tab-btn ${currentSightingsMode === 'all' ? 'active' : ''}" onclick="switchSightingsMode('all')">All Penguins</button>
-            <button class="tab-btn ${currentSightingsMode === 'penguin' ? 'active' : ''}" onclick="switchSightingsMode('penguin')">${myTabLabel}</button>
-        `;
-    }
-
-    function renderGlobalSightings() {
-        const carousel = document.getElementById('sightings-carousel-output');
-        if (!carousel) return;
-        
-        // Filter for valid photos from the fleet logs
-        let photoLogs = globalAllFleetLogs.filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note));
-        
-        if (currentSightingsMode === 'penguin') {
-            photoLogs = photoLogs.filter(log => log.penguin_id === penguinId);
-        }
-
-        // Sort newest first
-        photoLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        
-        // Slice the top 12 most recent photos
-        const recentPhotos = photoLogs.slice(0, 12);
-        
-        if (recentPhotos.length === 0) {
-            carousel.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">No adventures with photos yet!</div>`;
-            return;
-        }
-        
-        carousel.innerHTML = "";
-        
-        let linkViewerParams = "";
-        if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}`;
-            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
-        } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}`;
-            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
-        }
-
-        // Store full log objects for the image modal
-        globalGalleryImages = recentPhotos;
-
-        recentPhotos.forEach((log, index) => {
-            let displayName = (globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name) || log.custom_name || log.penguin_id;
-            let note = log.finder_note || "No note.";
-            if (note.includes('[Tagged at Monument:')) note = note.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
-
-            let pebblesArr = parsePebbles(log.stones_received);
-            let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
-            let pebblesCount = pebblesArr.length;
-
-            const card = document.createElement('div');
-            card.className = 'sighting-card';
-            card.innerHTML = `
-                <button class="sighting-pebble-btn ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="${getPebbleTooltip(log.stones_received)}" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)">
-                    ${getPebbleSvg(hasPebbled)} ${pebblesCount}
-                </button>
-                <img src="${log.photo_url}" class="sighting-img" loading="lazy" onclick="openFullscreenGallery(${index})">
-                <div class="sighting-overlay">
-                    <span class="sighting-name">🐧 ${displayName}</span>
-                    <span class="sighting-note">"${note}"</span>
-                    <div class="sighting-btn-row">
-                        <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Penguin</button>
-                        <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Stop</button>
-                    </div>
-                </div>
-            `;
-            carousel.appendChild(card);
-        });
-    }
-
-    // ===================================================
-    // MAIN DATA ENGINE
-    // ===================================================
-    async function loadPenguinHistory(targetId) {
-        if (historyLayerGroup) { historyLayerGroup.clearLayers(); }
-
-        const { data: rawLogs, error } = await supabaseClient
-            .from('penguin_logs')
-            .select('id, penguin_id, latitude, longitude, finder_note, created_at, photo_url, custom_name, avatar_color, custom_avatar_url, style_id, stones_received, has_unread_stones')
-            .eq('penguin_id', targetId)
-            .order('created_at', { ascending: true });
-
-        if (error) return;
-
-        const logs = rawLogs;
-        discoveredMonumentsSet.clear();
-        globalLogData = logs || []; 
-
-        const passportHistoryOutput = document.getElementById("passport-history-output");
-        const allStopsOutput = document.getElementById("all-stops-history-output");
-
-        const namedEntry = logs ? logs.find(log => log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) : null;
-        globalNamedEntry = namedEntry ? namedEntry.custom_name : null;
-
-        // SMART MODAL HANDLING
-        const welcomeModal = document.getElementById('welcome-modal');
-        const firstFindModal = document.getElementById('first-find-modal');
-
-        if (!globalNamedEntry && !isViewOnlyMode) {
-            if (welcomeModal) welcomeModal.style.display = 'flex';
-            if (firstFindModal) firstFindModal.style.display = 'none';
-        } else {
-            if (welcomeModal) welcomeModal.style.display = 'none';
-            if (firstFindModal) firstFindModal.style.display = 'none';
-        }
-
-        if (!logs || logs.length === 0 || (!globalNamedEntry && isViewOnlyMode)) {
-            if (passportHistoryOutput) passportHistoryOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
-            if (allStopsOutput) allStopsOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting registration portfolio check-in...</li>`;
-            return;
-        }
-
-        const instPanel = document.getElementById('instruction-panel'); const safetyNotice = document.getElementById('safety-disclaimer-notice');
-        if (instPanel && safetyNotice && instPanel.parentNode) { instPanel.parentNode.insertBefore(instPanel, safetyNotice); instPanel.style.marginBottom = "16px"; }
-
-        let resolvedDisplayName = globalNamedEntry ? globalNamedEntry : targetId;
-        activeCustomName = resolvedDisplayName;
-        
-        // Find avatar parameters backwards to get latest configs
-        const avatarEntry = [...logs].reverse().find(log => log.avatar_color && log.avatar_color.trim() !== "");
-        activeAvatarColor = avatarEntry ? avatarEntry.avatar_color : '#38bdf8';
-        
-        const customUrlEntry = [...logs].reverse().find(log => log.custom_avatar_url);
-        activeCustomAvatarUrl = customUrlEntry ? customUrlEntry.custom_avatar_url : null;
-        
-        const styleEntry = [...logs].reverse().find(log => log.style_id);
-        activeStyleId = styleEntry ? styleEntry.style_id : null;
-        
-        const pIdEl = document.getElementById('penguin-id-display');
-        if (pIdEl) pIdEl.innerText = isViewOnlyMode ? `Viewing: ${resolvedDisplayName}` : `ID: ${targetId} (${resolvedDisplayName})`;
-        const pNameEl = document.getElementById("penguin-name-display");
-        if (pNameEl) pNameEl.innerText = resolvedDisplayName;
-
-        updateProfileAvatarDisplay();
-
-        let possessiveSuffix = resolvedDisplayName.toLowerCase().endsWith('s') ? "'" : "'s";
-        const btnPenguin = document.getElementById('tab-my-penguin');
-        const btnColony = document.getElementById('tab-my-colony');
-        const editBtn = document.getElementById('edit-profile-btn');
-        const galTabMy = document.getElementById('gal-tab-my');
-        const galTabColony = document.getElementById('gal-tab-colony');
-        const mainTabMy = document.getElementById('main-tab-my');
-        const mainTabColony = document.getElementById('main-tab-colony');
-        const fsTabMy = document.getElementById('fs-tab-my');
-        const fsTabColony = document.getElementById('fs-tab-colony');
-        
-        // ALWAYS display the gallery button so users can see Colony/All photos
-        const galleryBtn = document.getElementById('gallery-profile-btn');
-        if (galleryBtn) {
-            galleryBtn.style.display = 'block';
-        }
-        
-        if (isPrimaryControl) {
-            if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> My Penguin`;
-            if (btnColony) btnColony.innerText = `🧊 My Colony`;
-            if (editBtn) editBtn.style.display = 'block';
-            
-            if (galTabMy) galTabMy.innerText = `My Penguin`;
-            if (galTabColony) galTabColony.innerText = `My Colony`;
-            if (mainTabMy) mainTabMy.innerText = `My Penguin`;
-            if (mainTabColony) mainTabColony.innerText = `My Colony`;
-            if (fsTabMy) fsTabMy.innerText = `My Penguin`;
-            if (fsTabColony) fsTabColony.innerText = `My Colony`;
-        } else {
-            if (btnPenguin) btnPenguin.innerHTML = `<span class="bw-penguin">🐧</span> Viewing: ${resolvedDisplayName}`;
-            if (btnColony) btnColony.innerText = `🧊 ${resolvedDisplayName}${possessiveSuffix} Colony`;
-            if (editBtn) editBtn.style.display = 'none';
-            
-            if (galTabMy) galTabMy.innerText = resolvedDisplayName;
-            if (galTabColony) galTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
-            if (mainTabMy) mainTabMy.innerText = resolvedDisplayName;
-            if (mainTabColony) mainTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
-            if (fsTabMy) fsTabMy.innerText = resolvedDisplayName;
-            if (fsTabColony) fsTabColony.innerText = `${resolvedDisplayName}${possessiveSuffix} Colony`;
-        }
-        
-        // Setup Sightings Tabs
-        currentSightingsMode = isPrimaryControl ? 'all' : 'penguin';
-        renderSightingsTabs();
-
-        // Apply strict filtering to stops metrics
-        const validStops = logs.filter(l => l.latitude && l.longitude && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note));
-        const totalStopsEl = document.getElementById("total-stops-counter");
-        if (totalStopsEl) totalStopsEl.innerText = `${validStops.length} Passport Stops Logged`;
-
-        // CALCULATE TOTAL PEBBLES & UNREAD BADGE
-        let totalPebbles = 0;
-        let hasUnread = false;
-        let newPebbleGivers = new Set();
-
-        logs.forEach(l => {
-            let arr = parsePebbles(l.stones_received);
-            totalPebbles += arr.length;
-            if (l.has_unread_stones) {
-                hasUnread = true;
-                arr.forEach(s => newPebbleGivers.add(s.name));
-            }
-        });
-
-        const totalPebblesEl = document.getElementById("total-pebbles-counter");
-        if (totalPebblesEl) totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
-
-        const unreadBadge = document.getElementById("unread-pebbles-badge");
-        if (isPrimaryControl && hasUnread && unreadBadge) {
-            unreadBadge.style.display = 'block';
-            let giversText = Array.from(newPebbleGivers).join(', ');
-            unreadBadge.innerText = `New 🪨 from ${giversText}!`;
-            // Silently clear unread flags in DB
-            supabaseClient.from('penguin_logs').update({ has_unread_stones: false }).eq('penguin_id', targetId).eq('has_unread_stones', true).then(()=>{});
-        } else if (unreadBadge) {
-            unreadBadge.style.display = 'none';
-        }
-
-        if (validStops.length > 0) {
-            const lastLog = validStops[validStops.length - 1];
-            lastLogLat = lastLog.latitude; lastLogLng = lastLog.longitude;
-            fetchLastStopCity(lastLogLat, lastLogLng); updateDistanceToLastStop();
-        }
-
-        // Instant local render for the primary map
-        renderFleetOnMap(map, historyLayerGroup, 'my');
-
-        compilePassportLogsHistory(logs);
-        compileAllStopsHistory(logs);
-        
-        if (validStops.length > 0 && !isViewOnlyMode) {
-            const lastIdxPosition = validStops[validStops.length - 1]; 
-            lookupNearbyMonuments(lastIdxPosition.latitude, lastIdxPosition.longitude); 
-        }
-    }
-
-    async function compressImage(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image(); img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; 
-                    let width = img.width; let height = img.height;
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
-                };
-            };
-        });
-    }
-
-    async function submitDiscovery() {
-        if (!verifiedLat || !verifiedLng) return;
-        const submitBtn = document.getElementById('submit-btn');
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Uploading tracking logs..."; }
-
-        const finderNotesEl = document.getElementById('finder-notes'); let notes = finderNotesEl ? finderNotesEl.value.trim() : "";
-        const poiSelector = document.getElementById('poi-selector'); const selectedPoi = poiSelector ? poiSelector.value : "";
-        const photoInput = document.getElementById('penguin-photo'); const photoFile = photoInput ? photoInput.files[0] : null;
-        let uploadedPhotoUrl = null;
-
-        if (photoFile) {
-            try {
-                const compressedBlob = await compressImage(photoFile);
-                const fileName = `${penguinId}_${Date.now()}.jpg`;
-                const { error: storageError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
-                if (storageError) throw storageError;
-                const { data: publicUrlData } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
-                uploadedPhotoUrl = publicUrlData.publicUrl;
-            } catch (err) { showToast("Photo submission bypassed safely.", "info"); }
-        }
-
-        let cleanedPoiStringValue = selectedPoi;
-        if (selectedPoi && selectedPoi.includes(' (')) cleanedPoiStringValue = selectedPoi.split(' (')[0];
-        if (cleanedPoiStringValue) notes = `[Tagged at Monument: ${cleanedPoiStringValue}] ${notes}`.trim();
-
-        const submissionData = {
-            penguin_id: penguinId, latitude: verifiedLat, longitude: verifiedLng, finder_note: notes, 
-            photo_url: uploadedPhotoUrl, custom_name: activeCustomName, avatar_color: activeAvatarColor, secret_tag: securityTagParam 
-        };
-
-        const { error } = await supabaseClient.from('penguin_logs').insert([submissionData]);
-        if (error) { 
-            showToast("Database entry rejected.", "error"); 
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Log Penguin Stop";
-            }
-            return; 
-        }
-
-        try {
-            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
-            const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
-            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
-            if (cleanedPoiStringValue) discordMsg += `🏛️ **Landmark Tagged:** \`${cleanedPoiStringValue}\`\n`;
-            discordMsg += `**Adventure Notes:** *"${notes || 'No note left.'}"*`;
-            const message = { username: "Penguin Scout", content: discordMsg };
-            if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
-            await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
-        } catch(e) {}
-
-        // Triggers the new Success Modal instead of a raw browser alert
-        requiresReload = true;
-        showSuccessModal(); 
-    }
 </script>
 
 </body>
