@@ -116,7 +116,7 @@
             box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); 
         }
 
-        /* UPPER-RIGHT PEBBLE BUTTON FOR CAROUSEL */
+        /* UPPER-RIGHT PEBBLE BUTTON FOR CAROUSEL & GRID CARDS */
         .sighting-pebble-btn {
             position: absolute; top: 8px; right: 8px; z-index: 10;
             background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
@@ -178,7 +178,7 @@
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
-        /* CAROUSEL STYLES */
+        /* CAROUSEL & GRID STYLES */
         .sightings-carousel {
             display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px;
             scroll-snap-type: x mandatory; 
@@ -193,10 +193,16 @@
             position: relative; scroll-snap-align: start;
             border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
         }
+        
+        .gallery-card {
+            width: 100%; height: 240px; border-radius: 12px; overflow: hidden;
+            position: relative; border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
+        }
+
         .sighting-img {
             width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s ease;
         }
-        .sighting-card:hover .sighting-img { transform: scale(1.05); }
+        .sighting-card:hover .sighting-img, .gallery-card:hover .sighting-img { transform: scale(1.05); }
         .sighting-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 12px 12px;
             background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
@@ -236,13 +242,6 @@
             display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);
         }
         .avatar-option:hover { transform: scale(1.05); }
-        
-        .gallery-img-wrapper {
-            aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; cursor: pointer;
-            border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(0,0,0,0.3);
-        }
-        .gallery-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s ease; }
-        .gallery-img-wrapper:hover img { transform: scale(1.05); }
 
         /* IN-APP TOAST NOTIFICATIONS */
         #toast-container {
@@ -368,7 +367,7 @@
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
         <div id="modal-map" style="width: 100%; height: 60vh; min-height: 400px; max-height: 600px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"></div>
-        <button class="btn-glow" style="margin-margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
+        <button class="btn-glow" style="margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
     </div>
 </div>
 
@@ -394,7 +393,7 @@
 </div>
 
 <div class="modal-overlay" id="gallery-modal">
-    <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-card" style="max-width: 95%; width: 900px; padding: 16px; max-height: 90vh; display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="color: #00e5ff; margin: 0;">Photo Gallery</h2>
             <button style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;" onclick="closeGalleryModal()">×</button>
@@ -402,8 +401,11 @@
         <div class="tab-bar" style="margin-bottom: 12px;" id="gallery-tabs">
             <!-- Dynamically injected tabs -->
         </div>
-        <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px;">
-            </div>
+        
+        <!-- Gallery Grid uses dynamic card wrappers instead of simple images -->
+        <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; overflow-y: auto; flex: 1; padding-right: 5px;">
+        </div>
+            
         <div class="pagination-container" id="gallery-pagination" style="display: none; margin-top: 12px; padding-top: 12px;">
             <button class="page-arrow" id="gallery-prev-btn" onclick="changeGalleryPage(-1)">←</button>
             <span class="page-indicator" id="gallery-page-indicator">Page 1 of 1</span>
@@ -417,11 +419,11 @@
         
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain;">
         
-        <div id="image-pebble-overlay" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); padding: 16px 20px; border-radius: 12px; display: none; flex-direction: column; align-items: center; z-index: 15; width: 90vw; max-width: 500px; border: 1px solid rgba(56,189,248,0.3);" onclick="event.stopPropagation()">
+        <div id="image-pebble-overlay" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 20px; border-radius: 12px; display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 15; max-width: 90vw; border: 1px solid rgba(255,255,255,0.1);" onclick="event.stopPropagation()">
             <!-- Rendered Dynamically via JS -->
         </div>
 
-        <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 20;" onclick="closeImageModal()">×</button>
+        <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 20;" onclick="closeImageModal(); event.stopPropagation();">×</button>
         
         <button id="img-nav-left" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 28px; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: none; z-index: 20; align-items: center; justify-content: center;" onclick="prevGalleryImage(event)">❮</button>
         
@@ -473,6 +475,8 @@
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     
+                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openFullscreenSightings()">🖼️ Gallery</button>
+
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openEditModal()">✏️ Edit</button>
                     
                     <button id="share-profile-btn" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openShareModal()">🔗 Share</button>
@@ -540,16 +544,6 @@
                     <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Leave a log of your journey with your penguin. Include a picture to remember the stop."></textarea>
                 </div>
                 
-                <!-- LANDMARKS FEATURE HIDDEN/COMMENTED OUT -->
-                <!--
-                <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-                    <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
-                    <select id="poi-selector" class="select-poi" disabled>
-                        <option value="">-- Not near any landmarks (Must be within 500m) --</option>
-                    </select>
-                </div>
-                -->
-                
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
@@ -597,7 +591,6 @@
 
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
-                <!-- <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button> -->
                 <button class="tab-btn" id="tab-pebbles" onclick="switchLeaderboardTab('pebbles')">🪨 Pebbles</button>
             </div>
 
@@ -612,38 +605,6 @@
             </div>
         </div>
 
-        <!-- LANDMARKS CARD HIDDEN/COMMENTED OUT -->
-        <!--
-        <div class="glass-card" id="landmarks-card">
-            <div class="card-header-flex">
-                <h2>🏛️ Landmarks</h2>
-                <button type="button" class="btn-inline-refresh" id="manual-refresh-poi-btn" onclick="triggerManualProximityRefresh()">🔄 Refresh List</button>
-            </div>
-            
-            <div class="tab-bar">
-                <button class="tab-btn active" id="tab-landmark-nearby" onclick="switchLandmarkTab('nearby')">📍 Nearby</button>
-                <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
-            </div>
-
-            <div id="landmark-nearby-container">
-                <ul class="poi-proximity-list" id="poi-proximity-output">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
-                </ul>
-            </div>
-
-            <div id="landmark-history-container" style="display: none;">
-                <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
-                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
-                </ul>
-                <div class="pagination-container" id="passport-pagination" style="display: none;">
-                    <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
-                    <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
-                    <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
-                </div>
-            </div>
-        </div>
-        -->
-
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -651,7 +612,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.3.1</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.4.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -729,12 +690,6 @@
     let activeStopsTab = "log"; 
 
     let computedAllStopsArray = [];
-    
-    // Landmarks Feature Variables (Preserved)
-    let activeLandmarkTab = "nearby"; 
-    let discoveredMonumentsSet = new Set();
-    let activePassportPage = 1;
-    let computedPassportStampsArray = [];
 
     // Location Trackers
     let verifiedLat = null; let verifiedLng = null;
@@ -744,8 +699,6 @@
     if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
 
     let map = null; let marker = null; let historyLayerGroup = null;
-    let poiLayerGroup = null; // Preserved for landmarks
-    let poiMarkersMap = {}; // Preserved for landmarks
     let modalMap = null; let modalLayerGroup = null;
 
     const customCameraBtn = document.getElementById("custom-camera-btn");
@@ -948,7 +901,6 @@
         }
 
         compileAllStopsHistory(globalLogData);
-        // compilePassportLogsHistory(globalLogData); // Disabled per request
         
         // --- SMART INSTRUCTION PANEL LOGIC ---
         const instructionPanel = document.getElementById('instruction-panel');
@@ -969,6 +921,9 @@
             document.getElementById('edit-profile-btn').style.display = 'block';
         }
         
+        const galleryBtn = document.getElementById('gallery-profile-btn');
+        if (galleryBtn) galleryBtn.style.display = 'block';
+
         if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId) && !isViewOnlyMode) {
             document.getElementById('first-find-modal').style.display = 'flex';
         } else if (globalLogData.length === 0 && !isViewOnlyMode) {
@@ -999,8 +954,45 @@
         renderGlobalSightings();
     }
 
+    function generateSightingCardHTML(log, absoluteIdx) {
+        let pebblesArr = parsePebbles(log.stones_received);
+        let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
+        let pebblesCount = pebblesArr.length;
+        
+        let displayName = (globalFleetProfiles[log.penguin_id] && globalFleetProfiles[log.penguin_id].name) ? globalFleetProfiles[log.penguin_id].name : log.penguin_id;
+        let cleanNote = log.finder_note || "";
+        if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+        if (!cleanNote) cleanNote = "Adventure stop logged.";
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
+        return `
+            <img class="sighting-img" src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" loading="lazy">
+            
+            <button class="sighting-pebble-btn ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="${getPebbleTooltip(log.stones_received)}" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)">
+                ${getPebbleSvg(hasPebbled)} ${pebblesCount}
+            </button>
+
+            <div class="sighting-overlay">
+                <span class="sighting-name"><span class="bw-penguin">🐧</span> ${displayName}</span>
+                <span class="sighting-note">"${cleanNote}"</span>
+                <div class="sighting-btn-row">
+                    <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+                    <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Map</button>
+                </div>
+            </div>
+        `;
+    }
+
     function renderGlobalSightings() {
-        renderSightingsTabs(); // Ensure tabs are populated initially
+        renderSightingsTabs(); 
         const carousel = document.getElementById('sightings-carousel-output');
         if (!carousel) return;
         
@@ -1033,41 +1025,9 @@
         compileGalleryImages();
 
         validPhotos.forEach(log => {
-            let pebblesArr = parsePebbles(log.stones_received);
-            let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
-            let pebblesCount = pebblesArr.length;
-            
-            let displayName = log.custom_name && log.custom_name !== log.penguin_id ? log.custom_name : log.penguin_id;
-            let cleanNote = log.finder_note || "";
-            if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
-            if (!cleanNote) cleanNote = "Adventure stop logged.";
-
-            let linkViewerParams = "";
-            if (isPrimaryControl) {
-                linkViewerParams = `&viewer=${penguinId}`;
-                if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
-            } else if (isAuthorizedViewer) {
-                linkViewerParams = `&viewer=${viewerId}`;
-                if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
-            }
-
             const card = document.createElement('div');
             card.className = 'sighting-card';
-            card.innerHTML = `
-                <img class="sighting-img" src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" loading="lazy">
-                
-                <button class="sighting-pebble-btn ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="${getPebbleTooltip(log.stones_received)}" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)">
-                    ${getPebbleSvg(hasPebbled)} ${pebblesCount}
-                </button>
-
-                <div class="sighting-overlay">
-                    <span class="sighting-name"><span class="bw-penguin">🐧</span> ${displayName}</span>
-                    <span class="sighting-note">"${cleanNote}"</span>
-                    <div class="sighting-btn-row">
-                        <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
-                    </div>
-                </div>
-            `;
+            card.innerHTML = generateSightingCardHTML(log, -1);
             carousel.appendChild(card);
         });
     }
@@ -1334,13 +1294,13 @@
         const startIdx = (activeGalleryPage - 1) * GALLERY_ITEMS_PER_PAGE;
         const pageItemsSlice = globalGalleryImages.slice(startIdx, startIdx + GALLERY_ITEMS_PER_PAGE);
 
+        // Render full cards inside the gallery grid
         pageItemsSlice.forEach((log, relativeIdx) => {
             const absoluteIdx = startIdx + relativeIdx;
-            const div = document.createElement('div');
-            div.className = 'gallery-img-wrapper';
-            div.innerHTML = `<img src="${log.photo_url}">`;
-            div.onclick = () => openFullscreenGallery(absoluteIdx);
-            grid.appendChild(div);
+            const card = document.createElement('div');
+            card.className = 'gallery-card';
+            card.innerHTML = generateSightingCardHTML(log, absoluteIdx);
+            grid.appendChild(card);
         });
     }
 
@@ -1349,10 +1309,32 @@
         renderGalleryPage();
     }
 
+    function openImageModal(url) {
+        const index = globalGalleryImages.findIndex(l => l.photo_url === url);
+        if (index !== -1) {
+            openFullscreenGallery(index);
+        } else {
+            document.getElementById('fullscreen-image').src = url;
+            document.getElementById('img-nav-left').style.display = 'none';
+            document.getElementById('img-nav-right').style.display = 'none';
+            document.getElementById('image-pebble-overlay').style.display = 'none';
+            document.getElementById('image-modal').style.display = 'flex';
+        }
+    }
+
     function openFullscreenGallery(index) {
         currentGalleryIndex = index;
         updateFullscreenImage();
         document.getElementById('image-modal').style.display = 'flex';
+    }
+
+    function closeImageModal() {
+        const m = document.getElementById('image-modal');
+        if(m) { 
+            m.style.display = 'none'; 
+            document.getElementById('fullscreen-image').src = ""; 
+            document.getElementById('image-pebble-overlay').style.display = 'none';
+        }
     }
 
     function updateFullscreenImage() {
@@ -1404,7 +1386,7 @@
             let displayNames = pebblesArr.slice(0, limit).map(s => s.name).join(", ");
             let remainder = pebblesCount - limit;
             
-            namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:left; display:block; margin-top:4px;">Pebbles: <b>${displayNames}</b>`;
+            namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:center;">Pebbles from: <b>${displayNames}</b>`;
             if (remainder > 0 && !pebblesExpanded) {
                 namesHtml += ` <span style="color:#38bdf8; cursor:pointer;" onclick="pebblesExpanded=true; renderFullscreenPebbles(event)">+${remainder} more</span>`;
             } else if (pebblesExpanded && pebblesCount > 5) {
@@ -1413,35 +1395,11 @@
             namesHtml += `</span>`;
         }
 
-        let displayName = log.custom_name && log.custom_name !== log.penguin_id ? log.custom_name : log.penguin_id;
-        let cleanNote = log.finder_note || "";
-        if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
-        if (!cleanNote) cleanNote = "Adventure stop logged.";
-
-        let linkViewerParams = "";
-        if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}`;
-            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
-        } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}`;
-            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
-        }
-
         overlay.innerHTML = `
-            <div style="display:flex; flex-direction:column; gap:4px; width:100%; text-align:left; margin-bottom: 8px;">
-                <span style="color: #fff; font-weight: bold; font-size: 12pt; text-shadow: 0 0 5px rgba(0,0,0,0.8);"><span class="bw-penguin">🐧</span> ${displayName}</span>
-                <span style="color: #cbd5e1; font-size: 10pt; line-height: 1.4;">"${cleanNote}"</span>
-            </div>
-            
-            <div style="display:flex; align-items:flex-start; gap:12px; width:100%; justify-content:space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-                <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                    <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="padding: 6px 16px;">
-                        ${getPebbleSvg(hasPebbled)} ${pebblesCount}
-                    </button>
-                    ${namesHtml}
-                </div>
-                <button class="btn-glow" style="padding: 8px 16px; font-size: 9pt; width: auto; margin:0; flex-shrink:0;" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
-            </div>
+            <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="margin-bottom: 4px; padding: 6px 16px;">
+                ${getPebbleSvg(hasPebbled)} ${pebblesCount}
+            </button>
+            ${namesHtml}
         `;
         overlay.style.display = 'flex';
     }
@@ -1984,7 +1942,6 @@
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
                 
                 updateDistanceToLastStop();
-                // lookupNearbyMonuments(verifiedLat, verifiedLng); // Disabled per request
             }, (err) => { 
                 // GPS blocked handler
             }, { enableHighAccuracy: true });
@@ -2003,49 +1960,11 @@
                     map.setView([verifiedLat, verifiedLng], 15); 
                 }
                 updateDistanceToLastStop();
-
-                /*
-                lookupNearbyMonuments(verifiedLat, verifiedLng).then(() => {
-                    if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
-                });
-                */
             }, () => {
                 if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
             }, { enableHighAccuracy: true });
         }
     }
-
-    // ===================================================
-    // DUAL-RADIUS POI ENGINE (DISABLED PER USER REQUEST)
-    // ===================================================
-    /*
-    async function lookupNearbyMonuments(lat, lng) {
-        if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
-        const poiSelector = document.getElementById('poi-selector');
-        const poiLabelStatus = document.getElementById('poi-label-status');
-        const poiProximityOutput = document.getElementById("poi-proximity-output");
-        
-        const offset = 0.090; 
-        const minLat = lat - offset; const maxLat = lat + offset;
-        const minLng = lng - offset; const maxLng = lng + offset;
-
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
-
-        try {
-            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
-            
-            const fetchRes = await fetch(overpassUrl);
-            if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
-            const textContent = await fetchRes.text();
-            if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
-            const resJson = JSON.parse(textContent);
-            
-            // Logic Halted ...
-        } catch (poiErr) { 
-            console.warn("POI fallback bypass: ", poiErr); 
-        }
-    }
-    */
 
     function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
         const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -2126,7 +2045,6 @@
     function switchLeaderboardTab(tabName) {
         if (activeTab === tabName) return; activeTab = tabName;
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        // document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
         document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
         activeLeaderboardPage = 1; buildLeaderboard();
     }
@@ -2297,46 +2215,6 @@
     }
 
     function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
-
-    // ===================================================
-    // LANDMARK HISTORY PASSPORT SYSTEM (DISABLED)
-    // ===================================================
-    /*
-    function compilePassportLogsHistory(logs) {
-        computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
-        if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
-
-        for (let i = logs.length - 1; i >= 0; i--) {
-            const entry = logs[i];
-            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note) && !isAdminHideLog(entry.finder_note) && entry.latitude && entry.longitude) {
-                const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
-                const monumentName = matchString ? matchString[1] : "Unknown Landmark";
-                discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
-                computedPassportStampsArray.push({ logId: entry.id, targetId: entry.penguin_id, name: monumentName, date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude });
-            }
-        }
-        activePassportPage = 1; renderPassportPageLayout();
-    }
-
-    function renderPassportPageLayout() {
-        const passportHistoryOutput = document.getElementById('passport-history-output'); const passportPagination = document.getElementById('passport-pagination');
-        if (!passportHistoryOutput) return; passportHistoryOutput.innerHTML = "";
-    }
-
-    function changePassportPage(directionOffset) { 
-        activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); 
-    }
-    
-    function switchLandmarkTab(tabName) {
-        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
-        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
-        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
-        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
-        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
-        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
-        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
-    }
-    */
 
     // ===================================================
     // ALL STOPS HISTORY SYSTEM
