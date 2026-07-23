@@ -1032,7 +1032,7 @@
         });
     }
 
-    async function submitDiscovery() {
+async function submitDiscovery() {
         const btn = document.getElementById('submit-btn');
         btn.disabled = true; btn.innerText = "Encrypting & Sending...";
 
@@ -1048,10 +1048,11 @@
                 btn.innerText = "Uploading Media...";
                 const fileName = `${penguinId}_${Date.now()}.jpg`;
                 
-                const { error: uploadError } = await supabaseClient.storage.from('adventure_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                // FIXED: Reverted back to the correct 'penguin_photos' bucket
+                const { error: uploadError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
                 if (uploadError) throw uploadError;
                 
-                const { data } = supabaseClient.storage.from('adventure_photos').getPublicUrl(fileName);
+                const { data } = supabaseClient.storage.from('penguin_photos').getPublicUrl(fileName);
                 uploadedPhotoUrl = data.publicUrl;
             } catch (e) {
                 showToast("Photo upload failed: " + e.message, "error");
@@ -1059,6 +1060,31 @@
                 return;
             }
         }
+
+        btn.innerText = "Logging Coordinates...";
+        
+        const logEntry = {
+            penguin_id: penguinId,
+            custom_name: activeCustomName,
+            avatar_color: activeAvatarColor,
+            custom_avatar_url: activeCustomAvatarUrl,
+            finder_note: notesInput,
+            photo_url: uploadedPhotoUrl,
+            latitude: verifiedLat,
+            longitude: verifiedLng,
+            secret_tag: securityTagParam
+        };
+
+        const { error } = await supabaseClient.from('penguin_logs').insert([logEntry]);
+        if (error) {
+            showToast("Database error: " + error.message, "error");
+            btn.disabled = false; btn.innerText = "Log Penguin Stop";
+            return;
+        }
+        
+        requiresReload = true;
+        showSuccessModal();
+    }
 
         btn.innerText = "Logging Coordinates...";
         
