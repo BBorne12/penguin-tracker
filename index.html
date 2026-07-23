@@ -655,7 +655,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.4.1</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.4.2</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -1078,6 +1078,11 @@
     }
 
     async function submitDiscovery() {
+        if (!verifiedLat || !verifiedLng) {
+            showToast("Waiting for GPS lock. Please ensure location services are enabled.", "error");
+            return;
+        }
+
         const btn = document.getElementById('submit-btn');
         btn.disabled = true; btn.innerText = "Encrypting & Sending...";
 
@@ -1126,6 +1131,16 @@
             return;
         }
         
+        try {
+            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+            const readableTitle = activeCustomName ? `${penguinId} (${activeCustomName})` : penguinId;
+            let discordMsg = `📸 🐧 **A Penguin Has Been Found!**\n**Identity:** ${readableTitle}\n**Coordinates Link:** https://www.google.com/maps?q=${verifiedLat},${verifiedLng}\n`;
+            discordMsg += `**Adventure Notes:** *"${notesInput || 'No note left.'}"*`;
+            const message = { username: "Penguin Scout", content: discordMsg };
+            if(uploadedPhotoUrl) { message.content += `\n**Captured Frame:** ${uploadedPhotoUrl}`; }
+            await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+        } catch(e) {}
+
         requiresReload = true;
         showSuccessModal();
     }
@@ -1987,7 +2002,6 @@
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
                 
                 updateDistanceToLastStop();
-                // lookupNearbyMonuments(verifiedLat, verifiedLng); // Disabled per request
             }, (err) => { 
                 // GPS blocked handler
             }, { enableHighAccuracy: true });
@@ -2017,38 +2031,6 @@
             }, { enableHighAccuracy: true });
         }
     }
-
-    // ===================================================
-    // DUAL-RADIUS POI ENGINE (DISABLED PER USER REQUEST)
-    // ===================================================
-    /*
-    async function lookupNearbyMonuments(lat, lng) {
-        if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
-        const poiSelector = document.getElementById('poi-selector');
-        const poiLabelStatus = document.getElementById('poi-label-status');
-        const poiProximityOutput = document.getElementById("poi-proximity-output");
-        
-        const offset = 0.090; 
-        const minLat = lat - offset; const maxLat = lat + offset;
-        const minLng = lng - offset; const maxLng = lng + offset;
-
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
-
-        try {
-            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
-            
-            const fetchRes = await fetch(overpassUrl);
-            if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
-            const textContent = await fetchRes.text();
-            if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
-            const resJson = JSON.parse(textContent);
-            
-            // Logic Halted ...
-        } catch (poiErr) { 
-            console.warn("POI fallback bypass: ", poiErr); 
-        }
-    }
-    */
 
     function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
         const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -2129,7 +2111,6 @@
     function switchLeaderboardTab(tabName) {
         if (activeTab === tabName) return; activeTab = tabName;
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
-        // document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
         document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
         activeLeaderboardPage = 1; buildLeaderboard();
     }
@@ -2300,46 +2281,6 @@
     }
 
     function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
-
-    // ===================================================
-    // LANDMARK HISTORY PASSPORT SYSTEM (DISABLED)
-    // ===================================================
-    /*
-    function compilePassportLogsHistory(logs) {
-        computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
-        if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
-
-        for (let i = logs.length - 1; i >= 0; i--) {
-            const entry = logs[i];
-            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note) && !isAdminHideLog(entry.finder_note) && entry.latitude && entry.longitude) {
-                const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
-                const monumentName = matchString ? matchString[1] : "Unknown Landmark";
-                discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
-                computedPassportStampsArray.push({ logId: entry.id, targetId: entry.penguin_id, name: monumentName, date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude });
-            }
-        }
-        activePassportPage = 1; renderPassportPageLayout();
-    }
-
-    function renderPassportPageLayout() {
-        const passportHistoryOutput = document.getElementById('passport-history-output'); const passportPagination = document.getElementById('passport-pagination');
-        if (!passportHistoryOutput) return; passportHistoryOutput.innerHTML = "";
-    }
-
-    function changePassportPage(directionOffset) { 
-        activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); 
-    }
-    
-    function switchLandmarkTab(tabName) {
-        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
-        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
-        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
-        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
-        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
-        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
-        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
-    }
-    */
 
     // ===================================================
     // ALL STOPS HISTORY SYSTEM
