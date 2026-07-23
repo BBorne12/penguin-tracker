@@ -368,7 +368,7 @@
     <div class="modal-card" style="max-width: 95%; width: 600px; padding: 16px;">
         <h2 style="color: #00e5ff; margin-bottom: 12px; text-align: left;">Stop Details</h2>
         <div id="modal-map" style="width: 100%; height: 60vh; min-height: 400px; max-height: 600px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3);"></div>
-        <button class="btn-glow" style="margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
+        <button class="btn-glow" style="margin-margin-top: 16px;" onclick="closeMapModal()">Close Map</button>
     </div>
 </div>
 
@@ -387,8 +387,8 @@
 
         <div id="fullscreen-tracking-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
         
-        <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: center;">
-            <input type="checkbox" id="show-lines-fs" onchange="toggleMapLines(this.checked)"> Show Journey Paths
+        <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: flex-end;">
+            <input type="checkbox" id="show-lines-fs" onchange="toggleMapLines(this.checked)"> Show Adventure Paths
         </label>
     </div>
 </div>
@@ -417,8 +417,8 @@
         
         <img id="fullscreen-image" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain;">
         
-        <div id="image-pebble-overlay" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 20px; border-radius: 12px; display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 15; max-width: 90vw; border: 1px solid rgba(255,255,255,0.1);" onclick="event.stopPropagation()">
-            <!-- Rendered Dynamically -->
+        <div id="image-pebble-overlay" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); padding: 16px 20px; border-radius: 12px; display: none; flex-direction: column; align-items: center; z-index: 15; width: 90vw; max-width: 500px; border: 1px solid rgba(56,189,248,0.3);" onclick="event.stopPropagation()">
+            <!-- Rendered Dynamically via JS -->
         </div>
 
         <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 20;" onclick="closeImageModal()">×</button>
@@ -492,7 +492,7 @@
                     <li class="data-item" style="display: flex; justify-content: space-between; align-items: center;">
                         <div><span class="label">Total Stops So Far</span></div>
                         <div style="text-align: right;">
-                            <span class="value ice-glow" id="total-stops-counter" style="display:block;">0 Passport Stops Logged</span>
+                            <span class="value ice-glow" id="total-stops-counter" style="display:block;">0 Adventure Stops Logged</span>
                             <span class="stat-subtext" id="total-pebbles-counter" style="color: #f97316; font-weight: bold; margin-top: 2px;">0 Pebbles Collected</span>
                         </div>
                     </li>
@@ -585,8 +585,8 @@
             
             <div id="map"></div>
             
-            <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: center;">
-                <input type="checkbox" id="show-lines-main" onchange="toggleMapLines(this.checked)"> Show Journey Paths
+            <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: flex-end;">
+                <input type="checkbox" id="show-lines-main" onchange="toggleMapLines(this.checked)"> Show Adventure Paths
             </label>
         </div>
 
@@ -939,7 +939,7 @@
             totalDistance += pathPoints[i].distanceTo(pathPoints[i+1]);
         }
         
-        document.getElementById("total-stops-counter").innerText = `${validStops} Passport Stops Logged`;
+        document.getElementById("total-stops-counter").innerText = `${validStops} Adventure Stops Logged`;
         
         if (lastLat && lastLng) {
             lastLogLat = lastLat;
@@ -1404,7 +1404,7 @@
             let displayNames = pebblesArr.slice(0, limit).map(s => s.name).join(", ");
             let remainder = pebblesCount - limit;
             
-            namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:center;">Pebbles from: <b>${displayNames}</b>`;
+            namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:left; display:block; margin-top:4px;">Pebbles: <b>${displayNames}</b>`;
             if (remainder > 0 && !pebblesExpanded) {
                 namesHtml += ` <span style="color:#38bdf8; cursor:pointer;" onclick="pebblesExpanded=true; renderFullscreenPebbles(event)">+${remainder} more</span>`;
             } else if (pebblesExpanded && pebblesCount > 5) {
@@ -1413,11 +1413,35 @@
             namesHtml += `</span>`;
         }
 
+        let displayName = log.custom_name && log.custom_name !== log.penguin_id ? log.custom_name : log.penguin_id;
+        let cleanNote = log.finder_note || "";
+        if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+        if (!cleanNote) cleanNote = "Adventure stop logged.";
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
         overlay.innerHTML = `
-            <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="margin-bottom: 4px; padding: 6px 16px;">
-                ${getPebbleSvg(hasPebbled)} ${pebblesCount}
-            </button>
-            ${namesHtml}
+            <div style="display:flex; flex-direction:column; gap:4px; width:100%; text-align:left; margin-bottom: 8px;">
+                <span style="color: #fff; font-weight: bold; font-size: 12pt; text-shadow: 0 0 5px rgba(0,0,0,0.8);"><span class="bw-penguin">🐧</span> ${displayName}</span>
+                <span style="color: #cbd5e1; font-size: 10pt; line-height: 1.4;">"${cleanNote}"</span>
+            </div>
+            
+            <div style="display:flex; align-items:flex-start; gap:12px; width:100%; justify-content:space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="padding: 6px 16px;">
+                        ${getPebbleSvg(hasPebbled)} ${pebblesCount}
+                    </button>
+                    ${namesHtml}
+                </div>
+                <button class="btn-glow" style="padding: 8px 16px; font-size: 9pt; width: auto; margin:0; flex-shrink:0;" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+            </div>
         `;
         overlay.style.display = 'flex';
     }
