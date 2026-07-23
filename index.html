@@ -544,6 +544,16 @@
                     <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Leave a log of your journey with your penguin. Include a picture to remember the stop."></textarea>
                 </div>
                 
+                <!-- LANDMARKS FEATURE HIDDEN/COMMENTED OUT -->
+                <!--
+                <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
+                    <select id="poi-selector" class="select-poi" disabled>
+                        <option value="">-- Not near any landmarks (Must be within 500m) --</option>
+                    </select>
+                </div>
+                -->
+                
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
@@ -591,6 +601,7 @@
 
             <div class="tab-bar">
                 <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
+                <!-- <button class="tab-btn" id="tab-monuments" onclick="switchLeaderboardTab('monuments')">🏛️ Landmarks</button> -->
                 <button class="tab-btn" id="tab-pebbles" onclick="switchLeaderboardTab('pebbles')">🪨 Pebbles</button>
             </div>
 
@@ -605,6 +616,38 @@
             </div>
         </div>
 
+        <!-- LANDMARKS CARD HIDDEN/COMMENTED OUT -->
+        <!--
+        <div class="glass-card" id="landmarks-card">
+            <div class="card-header-flex">
+                <h2>🏛️ Landmarks</h2>
+                <button type="button" class="btn-inline-refresh" id="manual-refresh-poi-btn" onclick="triggerManualProximityRefresh()">🔄 Refresh List</button>
+            </div>
+            
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-landmark-nearby" onclick="switchLandmarkTab('nearby')">📍 Nearby</button>
+                <button class="tab-btn" id="tab-landmark-history" onclick="switchLandmarkTab('history')">📜 History</button>
+            </div>
+
+            <div id="landmark-nearby-container">
+                <ul class="poi-proximity-list" id="poi-proximity-output">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Awaiting location verification to scan map grid...</li>
+                </ul>
+            </div>
+
+            <div id="landmark-history-container" style="display: none;">
+                <ul class="passport-history-list" id="passport-history-output" style="margin-top: 8px;">
+                    <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Loading passport stamps...</li>
+                </ul>
+                <div class="pagination-container" id="passport-pagination" style="display: none;">
+                    <button class="page-arrow" id="passport-prev-btn" onclick="changePassportPage(-1)">←</button>
+                    <span class="page-indicator" id="passport-page-indicator">Page 1 of 1</span>
+                    <button class="page-arrow" id="passport-next-btn" onclick="changePassportPage(1)">→</button>
+                </div>
+            </div>
+        </div>
+        -->
+
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -612,7 +655,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.4.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.4.1</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -973,8 +1016,10 @@
             if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
         }
 
+        let onClickAttr = absoluteIdx >= 0 ? `onclick="openFullscreenGallery(${absoluteIdx})"` : `onclick="openImageModal('${log.photo_url}')"`;
+
         return `
-            <img class="sighting-img" src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" loading="lazy">
+            <img class="sighting-img" src="${log.photo_url}" ${onClickAttr} loading="lazy">
             
             <button class="sighting-pebble-btn ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="${getPebbleTooltip(log.stones_received)}" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)">
                 ${getPebbleSvg(hasPebbled)} ${pebblesCount}
@@ -1032,7 +1077,7 @@
         });
     }
 
-async function submitDiscovery() {
+    async function submitDiscovery() {
         const btn = document.getElementById('submit-btn');
         btn.disabled = true; btn.innerText = "Encrypting & Sending...";
 
@@ -1048,7 +1093,6 @@ async function submitDiscovery() {
                 btn.innerText = "Uploading Media...";
                 const fileName = `${penguinId}_${Date.now()}.jpg`;
                 
-                // FIXED: Reverted back to the correct 'penguin_photos' bucket
                 const { error: uploadError } = await supabaseClient.storage.from('penguin_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
                 if (uploadError) throw uploadError;
                 
@@ -1060,31 +1104,6 @@ async function submitDiscovery() {
                 return;
             }
         }
-
-        btn.innerText = "Logging Coordinates...";
-        
-        const logEntry = {
-            penguin_id: penguinId,
-            custom_name: activeCustomName,
-            avatar_color: activeAvatarColor,
-            custom_avatar_url: activeCustomAvatarUrl,
-            finder_note: notesInput,
-            photo_url: uploadedPhotoUrl,
-            latitude: verifiedLat,
-            longitude: verifiedLng,
-            secret_tag: securityTagParam
-        };
-
-        const { error } = await supabaseClient.from('penguin_logs').insert([logEntry]);
-        if (error) {
-            showToast("Database error: " + error.message, "error");
-            btn.disabled = false; btn.innerText = "Log Penguin Stop";
-            return;
-        }
-        
-        requiresReload = true;
-        showSuccessModal();
-    }
 
         btn.innerText = "Logging Coordinates...";
         
@@ -1968,6 +1987,7 @@ async function submitDiscovery() {
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
                 
                 updateDistanceToLastStop();
+                // lookupNearbyMonuments(verifiedLat, verifiedLng); // Disabled per request
             }, (err) => { 
                 // GPS blocked handler
             }, { enableHighAccuracy: true });
@@ -1986,11 +2006,49 @@ async function submitDiscovery() {
                     map.setView([verifiedLat, verifiedLng], 15); 
                 }
                 updateDistanceToLastStop();
+
+                /*
+                lookupNearbyMonuments(verifiedLat, verifiedLng).then(() => {
+                    if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
+                });
+                */
             }, () => {
                 if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
             }, { enableHighAccuracy: true });
         }
     }
+
+    // ===================================================
+    // DUAL-RADIUS POI ENGINE (DISABLED PER USER REQUEST)
+    // ===================================================
+    /*
+    async function lookupNearbyMonuments(lat, lng) {
+        if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
+        const poiSelector = document.getElementById('poi-selector');
+        const poiLabelStatus = document.getElementById('poi-label-status');
+        const poiProximityOutput = document.getElementById("poi-proximity-output");
+        
+        const offset = 0.090; 
+        const minLat = lat - offset; const maxLat = lat + offset;
+        const minLng = lng - offset; const maxLng = lng + offset;
+
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
+
+        try {
+            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
+            
+            const fetchRes = await fetch(overpassUrl);
+            if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
+            const textContent = await fetchRes.text();
+            if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
+            const resJson = JSON.parse(textContent);
+            
+            // Logic Halted ...
+        } catch (poiErr) { 
+            console.warn("POI fallback bypass: ", poiErr); 
+        }
+    }
+    */
 
     function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
         const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -2071,6 +2129,7 @@ async function submitDiscovery() {
     function switchLeaderboardTab(tabName) {
         if (activeTab === tabName) return; activeTab = tabName;
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        // document.getElementById('tab-monuments').classList.toggle('active', tabName === 'monuments');
         document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
         activeLeaderboardPage = 1; buildLeaderboard();
     }
@@ -2241,6 +2300,46 @@ async function submitDiscovery() {
     }
 
     function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
+
+    // ===================================================
+    // LANDMARK HISTORY PASSPORT SYSTEM (DISABLED)
+    // ===================================================
+    /*
+    function compilePassportLogsHistory(logs) {
+        computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
+        if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
+
+        for (let i = logs.length - 1; i >= 0; i--) {
+            const entry = logs[i];
+            if (entry.finder_note && entry.finder_note.includes('[Tagged at Monument:') && !isFactoryLog(entry.finder_note) && !isAdminHideLog(entry.finder_note) && entry.latitude && entry.longitude) {
+                const matchString = entry.finder_note.match(/\[Tagged at Monument:\s*([^\]]+)\]/);
+                const monumentName = matchString ? matchString[1] : "Unknown Landmark";
+                discoveredMonumentsSet.add(monumentName.trim().toLowerCase());
+                computedPassportStampsArray.push({ logId: entry.id, targetId: entry.penguin_id, name: monumentName, date: new Date(entry.created_at).toLocaleDateString(), lat: entry.latitude, lng: entry.longitude });
+            }
+        }
+        activePassportPage = 1; renderPassportPageLayout();
+    }
+
+    function renderPassportPageLayout() {
+        const passportHistoryOutput = document.getElementById('passport-history-output'); const passportPagination = document.getElementById('passport-pagination');
+        if (!passportHistoryOutput) return; passportHistoryOutput.innerHTML = "";
+    }
+
+    function changePassportPage(directionOffset) { 
+        activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); 
+    }
+    
+    function switchLandmarkTab(tabName) {
+        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
+        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
+        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
+        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
+        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
+        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
+    }
+    */
 
     // ===================================================
     // ALL STOPS HISTORY SYSTEM
