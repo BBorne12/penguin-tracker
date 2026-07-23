@@ -174,7 +174,7 @@
 
         #map {
             width: 100% !important; height: 300px !important; background: #030712 !important;
-            border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 12px 0 0 0 !important; z-index: 5;
+            border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 0 0 0 0 !important; z-index: 5;
         }
         .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
@@ -472,7 +472,6 @@
             <div id="my-penguin-container">
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
-                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openFullscreenSightings()">🖼️ Gallery</button>
                     
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -540,6 +539,17 @@
                     <label class="label" for="finder-notes">Leave an adventure note (Optional):</label>
                     <textarea id="finder-notes" class="note-textarea" rows="3" placeholder="Leave a log of your journey with your penguin. Include a picture to remember the stop."></textarea>
                 </div>
+                
+                <!-- LANDMARKS FEATURE HIDDEN/COMMENTED OUT -->
+                <!--
+                <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
+                    <select id="poi-selector" class="select-poi" disabled>
+                        <option value="">-- Not near any landmarks (Must be within 500m) --</option>
+                    </select>
+                </div>
+                -->
+                
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
@@ -564,7 +574,6 @@
                 <h2 id="tracking-card-title">Location</h2>
                 <div>
                     <button type="button" class="btn-inline-refresh" onclick="openFullscreenTrackingMap()" style="margin-right: 8px; font-size: 10.5pt; padding: 4px 10px; vertical-align: middle;">⛶ Enlarge</button>
-                    <button type="button" class="btn-inline-refresh" id="map-location-refresh-btn" onclick="triggerManualProximityRefresh()" style="vertical-align: middle;">📍 Refresh</button>
                 </div>
             </div>
             
@@ -579,18 +588,6 @@
             <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:10pt; color:#94a3b8; cursor:pointer; justify-content: center;">
                 <input type="checkbox" id="show-lines-main" onchange="toggleMapLines(this.checked)"> Show Journey Paths
             </label>
-            
-            <div class="coords" id="coord-display" style="display:none;">Latitude: -- | Longitude: --</div>
-            
-            <!-- LANDMARKS FEATURE HIDDEN/COMMENTED OUT -->
-            <!--
-            <div class="input-group" id="poi-input-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <label class="label" id="poi-label-status" style="color: #94a3b8;">🏛️ Tag a Nearby Historic Landmark or Marker:</label>
-                <select id="poi-selector" class="select-poi" disabled>
-                    <option value="">-- Not near any landmarks (Must be within 500m) --</option>
-                </select>
-            </div>
-            -->
         </div>
 
         <div class="glass-card">
@@ -654,7 +651,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.3.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.3.1</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -683,7 +680,7 @@
     let isViewOnlyMode = true; 
     let requiresReload = false;
     let activeUserId = null;
-    let showJourneyPaths = false; // Toggle for drawing lines on maps
+    let showJourneyPaths = false; 
     
     // Global Styling & Data State
     let activeCustomName = "";
@@ -694,19 +691,21 @@
     let globalFleetProfiles = {};
     
     // Fleet Data Caches
+    let globalLogData = [];
     let globalAllFleetLogs = [];
     let globalMyColonyIds = [];
     let globalViewedColonyIds = [];
     let currentFsMode = 'my';
     let currentMainMode = 'my';
-    let currentSightingsMode = 'all'; // Toggles Recent Adventures
+    let currentSightingsMode = 'all'; 
+    let globalNamedEntry = null;
     
     // Gallery State
-    let globalGalleryImages = []; // Now stores full log objects
+    let globalGalleryImages = []; 
     let currentGalleryMode = 'my';
     let currentGalleryIndex = -1;
     let activeGalleryPage = 1;
-    let pebblesExpanded = false; // State for fullscreen pebble list
+    let pebblesExpanded = false; 
     const GALLERY_ITEMS_PER_PAGE = 6;
 
     // Fullscreen Map State
@@ -723,16 +722,19 @@
 
     const AVATAR_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#f87171', '#2dd4bf', '#94a3b8', '#60a5fa', '#e879f9', '#fb923c', '#34d399'];
 
-    let activePassportPage = 1; let activeAllStopsPage = 1; 
-    const PASSPORT_ITEMS_PER_PAGE = 10;
+    let activeAllStopsPage = 1; 
     const STOPS_ITEMS_PER_PAGE = 5;
     
     let activeLeaderboardPage = 1; let computedLeaderboardArray = []; const LEADERBOARD_ITEMS_PER_PAGE = 5;
-    let activeStopsTab = "log"; let activeLandmarkTab = "nearby";
+    let activeStopsTab = "log"; 
 
-    let computedPassportStampsArray = []; let computedAllStopsArray = [];
-    let discoveredMonumentsSet = new Set(); 
-    let globalLogData = []; let globalNamedEntry = null;
+    let computedAllStopsArray = [];
+    
+    // Landmarks Feature Variables (Preserved)
+    let activeLandmarkTab = "nearby"; 
+    let discoveredMonumentsSet = new Set();
+    let activePassportPage = 1;
+    let computedPassportStampsArray = [];
 
     // Location Trackers
     let verifiedLat = null; let verifiedLng = null;
@@ -741,12 +743,11 @@
     const penguinIdHeader = document.getElementById('penguin-id-display');
     if (penguinIdHeader) penguinIdHeader.innerText = `ID: ${penguinId}`;
 
-    let map = null; let marker = null; let historyLayerGroup = null; let poiLayerGroup = null; 
-    let poiMarkersMap = {}; 
+    let map = null; let marker = null; let historyLayerGroup = null;
+    let poiLayerGroup = null; // Preserved for landmarks
+    let poiMarkersMap = {}; // Preserved for landmarks
     let modalMap = null; let modalLayerGroup = null;
 
-    const coordinatesDisplay = document.getElementById("coordinates-display");
-    const lockBadge = document.getElementById("lock-badge");
     const customCameraBtn = document.getElementById("custom-camera-btn");
     const penguinNameDisplayEl = document.getElementById("penguin-name-display");
     if (penguinNameDisplayEl) penguinNameDisplayEl.innerText = penguinId;
@@ -835,15 +836,12 @@
             isViewOnlyMode = true; 
         }
         
-        // Assign the correct active user ID for giving stones
         activeUserId = isPrimaryControl ? penguinId : (isAuthorizedViewer ? viewerId : null);
 
         if (isViewOnlyMode) {
             const viewBanner = document.getElementById('view-mode-banner');
             if (viewBanner && !isAuthorizedViewer) { viewBanner.style.display = "block"; viewBanner.innerHTML = "🔒 SECURE MODE: Valid Secret Tag Required. Viewing Mode Only."; }
             activateViewOnlyUI();
-            const poiOutput = document.getElementById("poi-proximity-output");
-            if (poiOutput) poiOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Select a penguin from the leaderboard above to view its historic landmarks grid proximity.</li>`;
         }
 
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
@@ -887,12 +885,273 @@
             }
         }
 
+        // Engine kickoff
         setTimeout(function() {
             loadPenguinHistory(penguinId);
             buildLeaderboard();
         }, 150);
     });
+
+    // ===================================================
+    // MAIN ENGINE: HISTORY, SIGHTINGS, SUBMIT
+    // ===================================================
+    async function loadPenguinHistory(targetId) {
+        if (targetId === "Mystery Penguin") return;
+
+        const { data: logs, error } = await supabaseClient.from('penguin_logs')
+            .select('*')
+            .eq('penguin_id', targetId)
+            .order('created_at', { ascending: true });
+
+        if (error) { showToast("Failed to load history.", "error"); return; }
+        
+        globalLogData = logs || [];
+        
+        let validStops = 0;
+        let totalDistance = 0;
+        let lastLat = null;
+        let lastLng = null;
+        
+        let pathPoints = [];
+        
+        globalLogData.forEach(log => {
+            if (log.custom_name && log.custom_name !== targetId) {
+                globalNamedEntry = log.custom_name;
+                activeCustomName = log.custom_name;
+            }
+            if (log.avatar_color) activeAvatarColor = log.avatar_color;
+            if (log.custom_avatar_url) activeCustomAvatarUrl = log.custom_avatar_url;
+            if (log.style_id) activeStyleId = log.style_id;
+            
+            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                validStops++;
+                pathPoints.push(L.latLng(log.latitude, log.longitude));
+                lastLat = log.latitude;
+                lastLng = log.longitude;
+            }
+        });
+        
+        const nameDisplay = document.getElementById("penguin-name-display");
+        if (nameDisplay) nameDisplay.innerText = globalNamedEntry || targetId;
+        updateProfileAvatarDisplay();
+        
+        for(let i=0; i<pathPoints.length-1; i++){
+            totalDistance += pathPoints[i].distanceTo(pathPoints[i+1]);
+        }
+        
+        document.getElementById("total-stops-counter").innerText = `${validStops} Passport Stops Logged`;
+        
+        if (lastLat && lastLng) {
+            lastLogLat = lastLat;
+            lastLogLng = lastLng;
+            fetchLastStopCity(lastLat, lastLng);
+        }
+
+        compileAllStopsHistory(globalLogData);
+        // compilePassportLogsHistory(globalLogData); // Disabled per request
+        
+        // --- SMART INSTRUCTION PANEL LOGIC ---
+        const instructionPanel = document.getElementById('instruction-panel');
+        const gamePanel = document.getElementById('game-panel');
+        const safetyNotice = document.getElementById('safety-disclaimer-notice');
+        
+        if (instructionPanel && gamePanel) {
+            if (validStops > 0 && safetyNotice) {
+                // Existing penguin: Move out of the way to the bottom
+                gamePanel.insertBefore(instructionPanel, safetyNotice);
+            } else {
+                // Brand new penguin: Keep at top
+                gamePanel.insertBefore(instructionPanel, gamePanel.children[1]); 
+            }
+        }
+
+        if (isPrimaryControl) {
+            document.getElementById('edit-profile-btn').style.display = 'block';
+        }
+        
+        if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId) && !isViewOnlyMode) {
+            document.getElementById('first-find-modal').style.display = 'flex';
+        } else if (globalLogData.length === 0 && !isViewOnlyMode) {
+            document.getElementById('welcome-modal').style.display = 'flex';
+        }
+        
+        renderFleetOnMap(map, historyLayerGroup, currentMainMode);
+    }
+
+    function renderSightingsTabs() {
+        const tabsContainer = document.getElementById('sightings-tabs');
+        if (!tabsContainer) return;
+        
+        let myTabLabel = isPrimaryControl ? "My Penguin" : (activeCustomName || penguinId);
+        
+        tabsContainer.innerHTML = `
+            <button class="tab-btn ${currentSightingsMode === 'all' ? 'active' : ''}" onclick="switchSightingsMode('all')">All Penguins</button>
+            <button class="tab-btn ${currentSightingsMode === 'colony' ? 'active' : ''}" onclick="switchSightingsMode('colony')">My Colony</button>
+            <button class="tab-btn ${currentSightingsMode === 'penguin' ? 'active' : ''}" onclick="switchSightingsMode('penguin')">${myTabLabel}</button>
+        `;
+    }
+
+    function switchSightingsMode(mode) {
+        currentSightingsMode = mode;
+        currentGalleryMode = mode; 
+        renderSightingsTabs();
+        renderGalleryTabs();
+        renderGlobalSightings();
+    }
+
+    function renderGlobalSightings() {
+        renderSightingsTabs(); // Ensure tabs are populated initially
+        const carousel = document.getElementById('sightings-carousel-output');
+        if (!carousel) return;
+        
+        let logsToProcess = [];
+        
+        if (currentSightingsMode === 'penguin') {
+            logsToProcess = globalAllFleetLogs.length > 0 
+                ? globalAllFleetLogs.filter(log => log.penguin_id === penguinId) 
+                : globalLogData;
+        } else if (currentSightingsMode === 'colony') {
+            const allowedIds = new Set(globalViewedColonyIds);
+            allowedIds.add(penguinId);
+            logsToProcess = globalAllFleetLogs.filter(log => allowedIds.has(log.penguin_id));
+        } else {
+            logsToProcess = globalAllFleetLogs;
+        }
+
+        const validPhotos = logsToProcess
+            .filter(l => l.photo_url && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 15); 
+
+        carousel.innerHTML = "";
+
+        if (validPhotos.length === 0) {
+            carousel.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">No recent adventure photos found for this filter.</div>';
+            return;
+        }
+
+        compileGalleryImages();
+
+        validPhotos.forEach(log => {
+            let pebblesArr = parsePebbles(log.stones_received);
+            let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
+            let pebblesCount = pebblesArr.length;
+            
+            let displayName = log.custom_name && log.custom_name !== log.penguin_id ? log.custom_name : log.penguin_id;
+            let cleanNote = log.finder_note || "";
+            if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+            if (!cleanNote) cleanNote = "Adventure stop logged.";
+
+            let linkViewerParams = "";
+            if (isPrimaryControl) {
+                linkViewerParams = `&viewer=${penguinId}`;
+                if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+            } else if (isAuthorizedViewer) {
+                linkViewerParams = `&viewer=${viewerId}`;
+                if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'sighting-card';
+            card.innerHTML = `
+                <img class="sighting-img" src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" loading="lazy">
+                
+                <button class="sighting-pebble-btn ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="${getPebbleTooltip(log.stones_received)}" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)">
+                    ${getPebbleSvg(hasPebbled)} ${pebblesCount}
+                </button>
+
+                <div class="sighting-overlay">
+                    <span class="sighting-name"><span class="bw-penguin">🐧</span> ${displayName}</span>
+                    <span class="sighting-note">"${cleanNote}"</span>
+                    <div class="sighting-btn-row">
+                        <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+                    </div>
+                </div>
+            `;
+            carousel.appendChild(card);
+        });
+    }
+
+    async function submitDiscovery() {
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true; btn.innerText = "Encrypting & Sending...";
+
+        const fileInput = document.getElementById('penguin-photo');
+        const notesInput = document.getElementById('finder-notes').value.trim();
+        let uploadedPhotoUrl = null;
+
+        if (fileInput.files.length > 0) {
+            try {
+                btn.innerText = "Compressing Photo...";
+                const file = fileInput.files[0];
+                const compressedBlob = await compressImage(file, 1200, 0.7);
+                btn.innerText = "Uploading Media...";
+                const fileName = `${penguinId}_${Date.now()}.jpg`;
+                
+                const { error: uploadError } = await supabaseClient.storage.from('adventure_photos').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                if (uploadError) throw uploadError;
+                
+                const { data } = supabaseClient.storage.from('adventure_photos').getPublicUrl(fileName);
+                uploadedPhotoUrl = data.publicUrl;
+            } catch (e) {
+                showToast("Photo upload failed: " + e.message, "error");
+                btn.disabled = false; btn.innerText = "Log Penguin Stop";
+                return;
+            }
+        }
+
+        btn.innerText = "Logging Coordinates...";
+        
+        const logEntry = {
+            penguin_id: penguinId,
+            custom_name: activeCustomName,
+            avatar_color: activeAvatarColor,
+            custom_avatar_url: activeCustomAvatarUrl,
+            finder_note: notesInput,
+            photo_url: uploadedPhotoUrl,
+            latitude: verifiedLat,
+            longitude: verifiedLng,
+            secret_tag: securityTagParam
+        };
+
+        const { error } = await supabaseClient.from('penguin_logs').insert([logEntry]);
+        if (error) {
+            showToast("Database error: " + error.message, "error");
+            btn.disabled = false; btn.innerText = "Log Penguin Stop";
+            return;
+        }
+        
+        requiresReload = true;
+        showSuccessModal();
+    }
     
+    async function compressImage(file, maxWidth = 800, quality = 0.8) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                    }, 'image/jpeg', quality);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
     // ===================================================
     // PEBBLES SOCIAL ENGINE
     // ===================================================
@@ -934,13 +1193,11 @@
             return;
         }
 
-        // Fetch to ensure state sync, but we use an optimistic UI approach so it feels instant
         supabaseClient.from('penguin_logs').select('stones_received').eq('id', logId).single().then(({data, error}) => {
             if (error) { showToast("Network error.", "error"); return; }
             
             let pebblesArr = parsePebbles(data.stones_received);
             let isAdding = true;
-
             const existingIndex = pebblesArr.findIndex(s => s.id === activeUserId);
 
             if (existingIndex !== -1) {
@@ -955,7 +1212,6 @@
             let updatePayload = { stones_received: JSON.stringify(pebblesArr) };
             if (isAdding && targetId !== activeUserId) updatePayload.has_unread_stones = true;
 
-            // OPTIMISTIC DOM UPDATE: Instantly change all matching buttons without resetting pagination
             document.querySelectorAll(`.stone-btn-${logId}`).forEach(btn => {
                 btn.innerHTML = `${getPebbleSvg(isAdding)} ${pebblesArr.length}`;
                 btn.title = getPebbleTooltip(updatePayload.stones_received);
@@ -963,10 +1219,8 @@
                 else btn.classList.remove('pebbled');
             });
             
-            // Push update quietly to database
             supabaseClient.from('penguin_logs').update(updatePayload).eq('id', logId).then(({error: updateErr}) => {
                 if (!updateErr) {
-                    // Quietly update local arrays to prevent regression on re-render
                     let logEntry = globalLogData.find(l => String(l.id) === String(logId));
                     if (logEntry) logEntry.stones_received = updatePayload.stones_received;
                     
@@ -979,13 +1233,10 @@
                     let historyEntry = computedAllStopsArray.find(s => String(s.logId) === String(logId));
                     if (historyEntry) historyEntry.pebblesStr = updatePayload.stones_received;
 
-                    // Update Dashboard Counter natively
                     const totalPebblesEl = document.getElementById("total-pebbles-counter");
                     if (totalPebblesEl) {
                         let totalPebbles = 0;
-                        globalLogData.forEach(l => {
-                            totalPebbles += parsePebbles(l.stones_received).length;
-                        });
+                        globalLogData.forEach(l => { totalPebbles += parsePebbles(l.stones_received).length; });
                         totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
                     }
                     
@@ -996,281 +1247,10 @@
                     if (isAdding) showToast("Pebble given!", "success");
                     else showToast("Pebble removed.", "info");
                 } else {
-                    showToast("Failed to save pebble to database.", "error");
+                    showToast("Failed to save pebble.", "error");
                 }
             });
         });
-    }
-
-    // ===================================================
-    // COLONY FEATURES & ROUTING LOGIC
-    // ===================================================
-    function goBackToMyPenguin() {
-        if (isAuthorizedViewer && viewerId) {
-            let url = `?id=${viewerId}`;
-            if (viewerTagParam) url += `&tag=${viewerTagParam}`;
-            window.location.href = url;
-        }
-    }
-
-    function switchProfileTab(tabName) {
-        const btnPenguin = document.getElementById('tab-my-penguin');
-        const btnColony = document.getElementById('tab-my-colony');
-        const contPenguin = document.getElementById('my-penguin-container');
-        const contColony = document.getElementById('colony-container');
-        const editBtn = document.getElementById('edit-profile-btn');
-        // We removed the individual gallery button from the profile area
-        
-        if(tabName === 'penguin') {
-            btnPenguin.classList.add('active'); btnColony.classList.remove('active');
-            contPenguin.style.display = 'block'; contColony.style.display = 'none';
-            if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
-        } else {
-            btnPenguin.classList.remove('active'); btnColony.classList.add('active');
-            contPenguin.style.display = 'none'; contColony.style.display = 'block';
-            if(editBtn) editBtn.style.display = 'none';
-            loadColonyList();
-        }
-    }
-
-    async function addToColony() {
-        if (!isAuthorizedViewer || !viewerId) return;
-        const btn = document.getElementById('add-colony-btn');
-        if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
-
-        let colonySet = new Set(globalMyColonyIds);
-        
-        if (!colonySet.has(penguinId)) {
-            colonySet.add(penguinId);
-            let masterListArray = Array.from(colonySet);
-            
-            const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
-            
-            if (updateError) {
-                showToast("Database update rejected: " + updateError.message, "error");
-                if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
-                return;
-            }
-            globalMyColonyIds = masterListArray;
-        }
-        
-        if(btn) {
-            btn.outerHTML = `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`;
-        }
-    }
-
-    async function loadColonyList() {
-        const listEl = document.getElementById('colony-list-output');
-        
-        if (globalViewedColonyIds.length === 0) {
-            listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
-            return;
-        }
-
-        const colonyStats = {};
-        globalViewedColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
-        
-        if (globalAllFleetLogs.length > 0) {
-            globalAllFleetLogs.forEach(log => {
-                if (colonyStats[log.penguin_id]) {
-                    // Strict protection against default ID overwriting actual custom names
-                    if(log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) colonyStats[log.penguin_id].name = log.custom_name;
-                    if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
-                    if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
-                    if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
-
-                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
-                        colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
-                    }
-                }
-            });
-        }
-        
-        listEl.innerHTML = "";
-
-        let linkViewerParams = "";
-        if (isPrimaryControl) {
-            linkViewerParams = `&viewer=${penguinId}`;
-            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
-        } else if (isAuthorizedViewer) {
-            linkViewerParams = `&viewer=${viewerId}`;
-            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
-        }
-
-        globalViewedColonyIds.forEach(id => {
-            let miles = 0;
-            let pts = colonyStats[id].points;
-            for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
-            
-            let removeButtonHTML = isPrimaryControl 
-                ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
-                : "";
-
-            const li = document.createElement('li');
-            li.className = 'leaderboard-row'; 
-            li.innerHTML = `
-                <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="width:34px; height:34px; flex-shrink:0;">${getAvatarThumbnail(colonyStats[id].avatarColor, colonyStats[id].customAvatar, colonyStats[id].styleId)}</div>
-                    <span class="p-name" style="font-size:11pt;"><span class="bw-penguin">🐧</span> ${colonyStats[id].name}</span>
-                </div>
-                <div style="display:flex; align-items:center; gap: 12px;">
-                    <div style="text-align:right;">
-                        <span class="p-dist" style="font-size:10pt;">${miles.toFixed(1)} mi</span>
-                        <span class="stat-subtext">${pts.length} stops</span>
-                    </div>
-                    ${removeButtonHTML}
-                </div>
-            `;
-            li.onclick = () => { window.location.href = `?id=${id}${linkViewerParams}`; }
-            listEl.appendChild(li);
-        });
-    }
-
-    function removeFromColony(targetId, event) {
-        event.stopPropagation();
-        let ownerId = isPrimaryControl ? penguinId : viewerId;
-        if (!ownerId) { 
-            showToast("You can only remove penguins from your own colony.", "error"); 
-            return; 
-        }
-        
-        showConfirm(`Remove ${targetId} from your colony?`, async () => {
-            let colonySet = new Set(globalMyColonyIds);
-            colonySet.delete(targetId);
-            let masterListArray = Array.from(colonySet);
-            
-            await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
-            globalMyColonyIds = masterListArray;
-            globalViewedColonyIds = masterListArray;
-            loadColonyList();
-            showToast(`${targetId} removed from colony.`, "success");
-        });
-    }
-
-    // ===================================================
-    // SHARE MODAL & SUCCESS MODAL
-    // ===================================================
-    function showSuccessModal() {
-        const viewOnlyUrl = `https://bborne12.github.io/penguin-tracker/?id=${encodeURIComponent(penguinId)}`;
-        document.getElementById('success-view-url').value = viewOnlyUrl;
-        document.getElementById('success-modal').style.display = 'flex';
-    }
-
-    function closeSuccessModal() {
-        document.getElementById('success-modal').style.display = 'none';
-        if (requiresReload) location.reload();
-    }
-
-    function handleSuccessShareClick() {
-        document.getElementById('success-modal').style.display = 'none';
-        openShareModal();
-    }
-
-    function openShareModal() {
-        const shareUrl = "https://bborne12.github.io/penguin-tracker/?id=" + encodeURIComponent(penguinId);
-        document.getElementById('share-url-input').value = shareUrl;
-        document.getElementById('share-modal').style.display = 'flex';
-    }
-    
-    function closeShareModal() {
-        document.getElementById('share-modal').style.display = 'none';
-        if (requiresReload) location.reload();
-    }
-    
-    function copyShareUrl() {
-        const input = document.getElementById('share-url-input');
-        input.select();
-        document.execCommand('copy');
-        showToast('Link copied to clipboard!', 'success');
-    }
-    
-    function shareNative() {
-        const url = document.getElementById('share-url-input').value;
-        const shareText = `Track ${activeCustomName || penguinId}'s adventure!`;
-        if (navigator.share) {
-            navigator.share({ title: 'Penguin Tracker™', text: shareText, url: url });
-        } else {
-            showToast('Native sharing not supported on this browser.', 'error');
-        }
-    }
-    
-    function shareFacebook() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
-    function shareTwitter() { window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(document.getElementById('share-url-input').value)}&text=Track%20my%20penguin!`, '_blank'); }
-    function shareWhatsApp() { window.open(`https://api.whatsapp.com/send?text=Track%20my%20penguin!%20${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
-
-    // ===================================================
-    // WELCOME MODAL & IMAGE VIEWER
-    // ===================================================
-    function closeWelcomeModal() { 
-        const w = document.getElementById('welcome-modal'); 
-        if (w) w.style.display = 'none'; 
-        
-        if (!globalNamedEntry && !isViewOnlyMode) {
-            const f = document.getElementById('first-find-modal');
-            if (f) f.style.display = 'flex';
-        }
-    }
-    
-    function openImageModal(url) {
-        const index = globalGalleryImages.findIndex(l => l.photo_url === url);
-        if (index !== -1) {
-            openFullscreenGallery(index);
-        } else {
-            document.getElementById('fullscreen-image').src = url;
-            document.getElementById('img-nav-left').style.display = 'none';
-            document.getElementById('img-nav-right').style.display = 'none';
-            document.getElementById('image-pebble-overlay').style.display = 'none';
-            document.getElementById('image-modal').style.display = 'flex';
-        }
-    }
-    
-    function closeImageModal() {
-        const m = document.getElementById('image-modal');
-        if(m) { 
-            m.style.display = 'none'; 
-            document.getElementById('fullscreen-image').src = ""; 
-            document.getElementById('image-pebble-overlay').style.display = 'none';
-        }
-    }
-
-    function renderFullscreenPebbles(event) {
-        if (event) event.stopPropagation();
-        if (currentGalleryIndex < 0 || currentGalleryIndex >= globalGalleryImages.length) return;
-        
-        const log = globalGalleryImages[currentGalleryIndex];
-        const overlay = document.getElementById('image-pebble-overlay');
-        if (!overlay) return;
-        
-        let pebblesArr = parsePebbles(log.stones_received);
-        pebblesArr.reverse(); // Show newest givers first
-        
-        let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
-        let pebblesCount = pebblesArr.length;
-
-        let namesHtml = "";
-        if (pebblesCount === 0) {
-            namesHtml = `<span style="color:#94a3b8; font-size:10pt;">Be the first to give a pebble!</span>`;
-        } else {
-            let limit = pebblesExpanded ? pebblesCount : 5;
-            let displayNames = pebblesArr.slice(0, limit).map(s => s.name).join(", ");
-            let remainder = pebblesCount - limit;
-            
-            namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:center;">Pebbles from: <b>${displayNames}</b>`;
-            if (remainder > 0 && !pebblesExpanded) {
-                namesHtml += ` <span style="color:#38bdf8; cursor:pointer;" onclick="pebblesExpanded=true; renderFullscreenPebbles(event)">+${remainder} more</span>`;
-            } else if (pebblesExpanded && pebblesCount > 5) {
-                namesHtml += ` <span style="color:#38bdf8; cursor:pointer;" onclick="pebblesExpanded=false; renderFullscreenPebbles(event)"> (show less)</span>`;
-            }
-            namesHtml += `</span>`;
-        }
-
-        overlay.innerHTML = `
-            <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="margin-bottom: 4px; padding: 6px 16px;">
-                ${getPebbleSvg(hasPebbled)} ${pebblesCount}
-            </button>
-            ${namesHtml}
-        `;
-        overlay.style.display = 'flex';
     }
 
     // ===================================================
@@ -1278,12 +1258,11 @@
     // ===================================================
     function setGalleryMode(mode) {
         currentGalleryMode = mode;
-        // Keep sightings mode synced with gallery mode so tabs match
         currentSightingsMode = mode; 
         
         renderGalleryTabs();
         renderSightingsTabs();
-        renderGlobalSightings(); // Updates the carousel in the background
+        renderGlobalSightings(); 
         
         compileGalleryImages();
         activeGalleryPage = 1;
@@ -1322,7 +1301,6 @@
     }
 
     function openFullscreenSightings() {
-        // Sync gallery with the current sighting mode before opening
         setGalleryMode(currentSightingsMode);
         document.getElementById('gallery-modal').style.display = 'flex';
     }
@@ -1404,6 +1382,46 @@
         }
     }
 
+    function renderFullscreenPebbles(event) {
+        if (event) event.stopPropagation();
+        if (currentGalleryIndex < 0 || currentGalleryIndex >= globalGalleryImages.length) return;
+        
+        const log = globalGalleryImages[currentGalleryIndex];
+        const overlay = document.getElementById('image-pebble-overlay');
+        if (!overlay) return;
+        
+        let pebblesArr = parsePebbles(log.stones_received);
+        pebblesArr.reverse(); 
+        
+        let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
+        let pebblesCount = pebblesArr.length;
+
+        let namesHtml = "";
+        if (pebblesCount === 0) {
+            namesHtml = `<span style="color:#94a3b8; font-size:10pt;">Be the first to give a pebble!</span>`;
+        } else {
+            let limit = pebblesExpanded ? pebblesCount : 5;
+            let displayNames = pebblesArr.slice(0, limit).map(s => s.name).join(", ");
+            let remainder = pebblesCount - limit;
+            
+            namesHtml = `<span style="color:#cbd5e1; font-size:10pt; text-align:center;">Pebbles from: <b>${displayNames}</b>`;
+            if (remainder > 0 && !pebblesExpanded) {
+                namesHtml += ` <span style="color:#38bdf8; cursor:pointer;" onclick="pebblesExpanded=true; renderFullscreenPebbles(event)">+${remainder} more</span>`;
+            } else if (pebblesExpanded && pebblesCount > 5) {
+                namesHtml += ` <span style="color:#38bdf8; cursor:pointer;" onclick="pebblesExpanded=false; renderFullscreenPebbles(event)"> (show less)</span>`;
+            }
+            namesHtml += `</span>`;
+        }
+
+        overlay.innerHTML = `
+            <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="margin-bottom: 4px; padding: 6px 16px;">
+                ${getPebbleSvg(hasPebbled)} ${pebblesCount}
+            </button>
+            ${namesHtml}
+        `;
+        overlay.style.display = 'flex';
+    }
+
     // ===================================================
     // SHARED MAP RENDERING ENGINE (MAIN & FULLSCREEN)
     // ===================================================
@@ -1414,7 +1432,6 @@
         if (cbMain) cbMain.checked = isChecked;
         if (cbFs) cbFs.checked = isChecked;
         
-        // Re-render to draw/remove lines instantly
         renderFleetOnMap(map, historyLayerGroup, currentMainMode);
         if (fsMap) renderFleetOnMap(fsMap, fsLayerGroup, currentFsMode);
     }
@@ -1533,81 +1550,6 @@
     function closeFullscreenTrackingMap() {
         document.getElementById('fullscreen-map-overlay').style.display = 'none';
     }
-    
-    function openFullscreenForSighting(pId, lat, lng) {
-        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
-        
-        if (!fsMap) {
-            fsMap = L.map('fullscreen-tracking-map').setView([lat, lng], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fsMap);
-            fsLayerGroup = L.layerGroup().addTo(fsMap);
-        }
-        
-        document.getElementById('fs-tab-my').classList.remove('active');
-        document.getElementById('fs-tab-colony').classList.remove('active');
-        document.getElementById('fs-tab-all').classList.remove('active');
-        
-        setTimeout(() => {
-            fsMap.invalidateSize();
-            if (!fsLayerGroup || !fsMap) return;
-            fsLayerGroup.clearLayers();
-            
-            const logsToProcess = globalAllFleetLogs.filter(log => log.penguin_id === pId);
-            const tracks = [];
-            
-            logsToProcess.forEach(log => {
-                if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
-                tracks.push(log);
-            });
-
-            if (tracks.length === 0) return;
-
-            let customColor = '#00e5ff';
-            const logEntryWithColor = logsToProcess.find(l => l.avatar_color && l.avatar_color.trim() !== "");
-            if (logEntryWithColor) customColor = logEntryWithColor.avatar_color;
-            
-            const historicalIcon = L.divIcon({ 
-                className: 'custom-div-icon', 
-                html: `<div style='background-color:${customColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 8px ${customColor};'></div>`, 
-                iconSize: [12, 12], 
-                iconAnchor: [6, 6] 
-            });
-
-            const pathCoords = [];
-            let stopCounter = 1;
-            let targetMarker = null;
-
-            tracks.forEach(log => {
-                const latLng = [log.latitude, log.longitude];
-                pathCoords.push(latLng);
-
-                const dateObj = new Date(log.created_at).toLocaleDateString();
-                let imgTag = log.photo_url ? `<br><img src="${log.photo_url}" onclick="openImageModal('${log.photo_url}')" style="width:100%; max-width:150px; border-radius:6px; margin-top:8px; cursor:pointer; border: 1px solid rgba(255,255,255,0.2);">` : "";
-                const noteSnippet = log.finder_note ? `<br><i>"${log.finder_note}"</i>` : "";
-                
-                let displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : pId;
-                const stopLabel = `<span class="bw-penguin">🐧</span> ${displayName}`;
-                
-                const m = L.marker(latLng, { icon: historicalIcon }).addTo(fsLayerGroup)
-                 .bindPopup(`<b>${stopLabel} (Stop #${stopCounter})</b><br>Spotted: ${dateObj}${noteSnippet}${imgTag}`);
-                
-                if (Math.abs(log.latitude - lat) < 0.0001 && Math.abs(log.longitude - lng) < 0.0001) {
-                    targetMarker = m;
-                }
-                
-                stopCounter++;
-            });
-
-            if (showJourneyPaths && pathCoords.length > 0) {
-                L.polyline(pathCoords, { color: customColor, weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(fsLayerGroup);
-            }
-
-            fsMap.setView([lat, lng], 14);
-            if (targetMarker) {
-                targetMarker.openPopup();
-            }
-        }, 100);
-    }
 
     function openMapModal(lat, lng) {
         document.getElementById('map-modal').style.display = 'flex';
@@ -1647,7 +1589,7 @@
     function closeMapModal() { document.getElementById('map-modal').style.display = 'none'; }
 
     // ===================================================
-    // TABS
+    // TABS & ROUTING LOGIC
     // ===================================================
     function switchStopsTab(tabName) {
         if (activeStopsTab === tabName) return; activeStopsTab = tabName;
@@ -1656,15 +1598,145 @@
         document.getElementById('stop-log-container').style.display = (tabName === 'log') ? 'block' : 'none';
         document.getElementById('stop-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
     }
+    
+    function switchProfileTab(tabName) {
+        const btnPenguin = document.getElementById('tab-my-penguin');
+        const btnColony = document.getElementById('tab-my-colony');
+        const contPenguin = document.getElementById('my-penguin-container');
+        const contColony = document.getElementById('colony-container');
+        const editBtn = document.getElementById('edit-profile-btn');
+        
+        if(tabName === 'penguin') {
+            btnPenguin.classList.add('active'); btnColony.classList.remove('active');
+            contPenguin.style.display = 'block'; contColony.style.display = 'none';
+            if(editBtn && isPrimaryControl) editBtn.style.display = 'block';
+        } else {
+            btnPenguin.classList.remove('active'); btnColony.classList.add('active');
+            contPenguin.style.display = 'none'; contColony.style.display = 'block';
+            if(editBtn) editBtn.style.display = 'none';
+            loadColonyList();
+        }
+    }
 
-    function switchLandmarkTab(tabName) {
-        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
-        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
-        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
-        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
-        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
-        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
-        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
+    async function addToColony() {
+        if (!isAuthorizedViewer || !viewerId) return;
+        const btn = document.getElementById('add-colony-btn');
+        if(btn) { btn.innerText = "Adding..."; btn.disabled = true; }
+
+        let colonySet = new Set(globalMyColonyIds);
+        
+        if (!colonySet.has(penguinId)) {
+            colonySet.add(penguinId);
+            let masterListArray = Array.from(colonySet);
+            
+            const { error: updateError } = await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', viewerId);
+            
+            if (updateError) {
+                showToast("Database update rejected: " + updateError.message, "error");
+                if(btn) { btn.innerText = "➕ Add to My Colony"; btn.disabled = false; }
+                return;
+            }
+            globalMyColonyIds = masterListArray;
+        }
+        
+        if(btn) {
+            btn.outerHTML = `<span style="color:#a3e635; font-size:10pt; font-weight:bold; padding: 6px 12px; background: rgba(163, 230, 53, 0.1); border-radius: 6px;">✓ In Your Colony</span>`;
+        }
+    }
+
+    async function loadColonyList() {
+        const listEl = document.getElementById('colony-list-output');
+        
+        if (globalViewedColonyIds.length === 0) {
+            listEl.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">This colony is currently empty! Explore the leaderboard and add friends here.</li>`;
+            return;
+        }
+
+        const colonyStats = {};
+        globalViewedColonyIds.forEach(id => colonyStats[id] = { name: id, avatarColor: '#38bdf8', customAvatar: null, styleId: null, points: [] });
+        
+        if (globalAllFleetLogs.length > 0) {
+            globalAllFleetLogs.forEach(log => {
+                if (colonyStats[log.penguin_id]) {
+                    if(log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) colonyStats[log.penguin_id].name = log.custom_name;
+                    if(log.avatar_color) colonyStats[log.penguin_id].avatarColor = log.avatar_color;
+                    if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
+                    if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
+
+                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                        colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
+                    }
+                }
+            });
+        }
+        
+        listEl.innerHTML = "";
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
+        globalViewedColonyIds.forEach(id => {
+            let miles = 0;
+            let pts = colonyStats[id].points;
+            for(let i=0; i<pts.length-1; i++){ miles += pts[i].distanceTo(pts[i+1]) * 0.000621371; }
+            
+            let removeButtonHTML = isPrimaryControl 
+                ? `<button class="btn-inline-refresh" style="color:#ef4444; border-color:rgba(239,68,68,0.3); padding:4px 8px;" onclick="removeFromColony('${id}', event)">X</button>`
+                : "";
+
+            const li = document.createElement('li');
+            li.className = 'leaderboard-row'; 
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="width:34px; height:34px; flex-shrink:0;">${getAvatarThumbnail(colonyStats[id].avatarColor, colonyStats[id].customAvatar, colonyStats[id].styleId)}</div>
+                    <span class="p-name" style="font-size:11pt;"><span class="bw-penguin">🐧</span> ${colonyStats[id].name}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="text-align:right;">
+                        <span class="p-dist" style="font-size:10pt;">${miles.toFixed(1)} mi</span>
+                        <span class="stat-subtext">${pts.length} stops</span>
+                    </div>
+                    ${removeButtonHTML}
+                </div>
+            `;
+            li.onclick = () => { window.location.href = `?id=${id}${linkViewerParams}`; }
+            listEl.appendChild(li);
+        });
+    }
+
+    function removeFromColony(targetId, event) {
+        event.stopPropagation();
+        let ownerId = isPrimaryControl ? penguinId : viewerId;
+        if (!ownerId) { 
+            showToast("You can only remove penguins from your own colony.", "error"); 
+            return; 
+        }
+        
+        showConfirm(`Remove ${targetId} from your colony?`, async () => {
+            let colonySet = new Set(globalMyColonyIds);
+            colonySet.delete(targetId);
+            let masterListArray = Array.from(colonySet);
+            
+            await supabaseClient.from('penguin_logs').update({ colony_list: masterListArray.join(',') }).eq('penguin_id', ownerId);
+            globalMyColonyIds = masterListArray;
+            globalViewedColonyIds = masterListArray;
+            loadColonyList();
+            showToast(`${targetId} removed from colony.`, "success");
+        });
+    }
+    
+    function goBackToMyPenguin() {
+        if (isAuthorizedViewer && viewerId) {
+            let url = `?id=${viewerId}`;
+            if (viewerTagParam) url += `&tag=${viewerTagParam}`;
+            window.location.href = url;
+        }
     }
 
     // ===================================================
@@ -1708,7 +1780,6 @@
         const grid = document.getElementById('avatar-grid');
         if (!grid) return; grid.innerHTML = '';
         
-        // 1. Base Colors
         AVATAR_COLORS.forEach(color => {
             const div = document.createElement('div');
             div.className = 'avatar-option';
@@ -1718,7 +1789,6 @@
             grid.appendChild(div);
         });
         
-        // 2. Factory Style (If Assigned)
         if (activeStyleId) {
             const styleObj = globalStyles.find(s => s.id === activeStyleId);
             if (styleObj && styleObj.image_url) {
@@ -1731,7 +1801,6 @@
             }
         }
         
-        // 3. Custom Photo Button
         const customDiv = document.createElement('div');
         customDiv.className = 'avatar-option';
         customDiv.style.border = (modalAvatarType === 'custom') ? '3px solid #39ff14' : '2px solid rgba(255,255,255,0.2)';
@@ -1868,15 +1937,15 @@
             map = L.map('map').setView([39.8283, -98.5795], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
             historyLayerGroup = L.layerGroup().addTo(map);
-            poiLayerGroup = L.layerGroup().addTo(map);
-            if (!isViewOnlyMode) marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
+            poiLayerGroup = L.layerGroup().addTo(map); // Kept alive for landmarks fallback
         } catch (e) {}
     }
 
     function activateViewOnlyUI() {
         const safeHide = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
-        safeHide('safety-disclaimer-notice'); safeHide('map-location-refresh-btn'); safeHide('location-text-elements');
-        safeHide('edit-profile-btn'); safeHide('poi-input-group'); safeHide('tab-stop-log');
+        safeHide('safety-disclaimer-notice'); 
+        safeHide('edit-profile-btn'); 
+        safeHide('tab-stop-log');
         switchStopsTab('history');
         const t = document.getElementById('tracking-card-title'); if(t) t.innerText = "Location History";
         if (marker) { marker.remove(); marker = null; }
@@ -1887,13 +1956,11 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
-                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 
-                // Coordinates text/badge removed per request, but values still track silently
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
                 
-                lookupNearbyMonuments(verifiedLat, verifiedLng);
                 updateDistanceToLastStop();
+                // lookupNearbyMonuments(verifiedLat, verifiedLng); // Disabled per request
             }, (err) => { 
                 // GPS blocked handler
             }, { enableHighAccuracy: true });
@@ -1903,9 +1970,7 @@
     function triggerManualProximityRefresh() {
         if (isViewOnlyMode) return;
         const refreshBtnList = document.getElementById('manual-refresh-poi-btn');
-        const refreshBtnMap = document.getElementById('map-location-refresh-btn');
         if (refreshBtnList) { refreshBtnList.innerText = "Scanning..."; refreshBtnList.disabled = true; }
-        if (refreshBtnMap) { refreshBtnMap.innerText = "Scanning..."; refreshBtnMap.disabled = true; }
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -1913,19 +1978,50 @@
                 if (map && currentMainMode === 'my') { 
                     map.setView([verifiedLat, verifiedLng], 15); 
                 }
-                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 updateDistanceToLastStop();
 
+                /*
                 lookupNearbyMonuments(verifiedLat, verifiedLng).then(() => {
                     if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
-                    if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh"; refreshBtnMap.disabled = false; }
                 });
+                */
             }, () => {
                 if (refreshBtnList) { refreshBtnList.innerText = "🔄 Refresh List"; refreshBtnList.disabled = false; }
-                if (refreshBtnMap) { refreshBtnMap.innerText = "📍 Refresh"; refreshBtnMap.disabled = false; }
             }, { enableHighAccuracy: true });
         }
     }
+
+    // ===================================================
+    // DUAL-RADIUS POI ENGINE (DISABLED PER USER REQUEST)
+    // ===================================================
+    /*
+    async function lookupNearbyMonuments(lat, lng) {
+        if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
+        const poiSelector = document.getElementById('poi-selector');
+        const poiLabelStatus = document.getElementById('poi-label-status');
+        const poiProximityOutput = document.getElementById("poi-proximity-output");
+        
+        const offset = 0.090; 
+        const minLat = lat - offset; const maxLat = lat + offset;
+        const minLng = lng - offset; const maxLng = lng + offset;
+
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
+
+        try {
+            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
+            
+            const fetchRes = await fetch(overpassUrl);
+            if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
+            const textContent = await fetchRes.text();
+            if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
+            const resJson = JSON.parse(textContent);
+            
+            // Logic Halted ...
+        } catch (poiErr) { 
+            console.warn("POI fallback bypass: ", poiErr); 
+        }
+    }
+    */
 
     function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
         const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -1952,39 +2048,8 @@
         if (distEl) distEl.innerText = `${distanceMiles.toFixed(1)} miles away`;
     }
 
-    // ===================================================
-    // DUAL-RADIUS POI ENGINE (DISABLED PER USER REQUEST)
-    // ===================================================
-    async function lookupNearbyMonuments(lat, lng) {
-        /*
-        if (!poiLayerGroup) return; poiLayerGroup.clearLayers(); poiMarkersMap = {}; 
-        const poiSelector = document.getElementById('poi-selector');
-        const poiLabelStatus = document.getElementById('poi-label-status');
-        const poiProximityOutput = document.getElementById("poi-proximity-output");
-        
-        const offset = 0.090; 
-        const minLat = lat - offset; const maxLat = lat + offset;
-        const minLng = lng - offset; const maxLng = lng + offset;
-
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(node["historic"="monument"](${minLat},${minLng},${maxLat},${maxLng});node["historic"="memorial"](${minLat},${minLng},${maxLat},${maxLng});node["tourism"="artwork"](${minLat},${minLng},${maxLat},${maxLng}););out body;`;
-
-        try {
-            if (poiProximityOutput) poiProximityOutput.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">🔄 Scanning grid...</li>`;
-            
-            const fetchRes = await fetch(overpassUrl);
-            if (!fetchRes.ok) throw new Error("Overpass API returned " + fetchRes.status);
-            const textContent = await fetchRes.text();
-            if (textContent.trim().startsWith('<')) throw new Error("Overpass API returned XML/HTML instead of JSON");
-            const resJson = JSON.parse(textContent);
-            
-            // Logic Halted ...
-        } catch (poiErr) { 
-            console.warn("POI fallback bypass: ", poiErr); 
-        }
-        */
-    }
-
     function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
+    
     function handleFileSelectionChange() {
         const fileInput = document.getElementById('penguin-photo'); const customCameraBtn = document.getElementById('custom-camera-btn');
         if (fileInput && fileInput.files[0] && customCameraBtn) { customCameraBtn.innerHTML = "📸"; customCameraBtn.classList.add("photo-attached"); } 
@@ -2081,7 +2146,6 @@
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
         const pebblesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
 
-        // FIRST PASS: Build global dictionary so names are perfect everywhere
         allLogs.forEach(log => {
             if (!globalFleetProfiles[log.penguin_id]) globalFleetProfiles[log.penguin_id] = {};
             
@@ -2093,7 +2157,6 @@
             if (log.style_id) globalFleetProfiles[log.penguin_id].styleId = log.style_id;
         });
 
-        // SECOND PASS: Build Leaderboard stats
         allLogs.forEach(log => {
             if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
             if (log.penguin_id) {
@@ -2101,7 +2164,6 @@
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
                 
                 logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
-                // if (log.finder_note && log.finder_note.includes('[Tagged at Monument:')) monumentTagsCountMap[log.penguin_id] = (monumentTagsCountMap[log.penguin_id] || 0) + 1;
                 
                 if (log.stones_received) {
                     pebblesCountMap[log.penguin_id] = (pebblesCountMap[log.penguin_id] || 0) + parsePebbles(log.stones_received).length;
@@ -2128,7 +2190,6 @@
                 displayName: namesMap[id] ? `${namesMap[id]}` : id, 
                 miles: totalMiles, 
                 stopsCount: logsCountMap[id] || 1, 
-                // monumentsCount: monumentTagsCountMap[id] || 0,
                 pebblesCount: pebblesCountMap[id] || 0,
                 avatarColor: avatarMap[id],
                 customAvatar: customAvatarMap[id],
@@ -2137,7 +2198,6 @@
         });
 
         if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
-        // else if (activeTab === "monuments") { leaderboardData.sort((a, b) => b.monumentsCount - a.monumentsCount || b.miles - a.miles); }
         else if (activeTab === "pebbles") { leaderboardData.sort((a, b) => b.pebblesCount - a.pebblesCount || b.miles - a.miles); }
 
         leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
@@ -2195,8 +2255,6 @@
             let rightSideValueMetricsHTML = "";
             if (activeTab === "distance") { 
                 rightSideValueMetricsHTML = `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
-            } else if (activeTab === "monuments") {
-                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#cc00ff; text-shadow:0 0 8px rgba(204,0,255,0.4);">🏛️ ${item.monumentsCount} Tagged</span><span class="stat-subtext">${item.miles.toFixed(0)} total mi</span>`;
             } else {
                 rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">${getPebbleSvg(true)} ${item.pebblesCount}</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
             }
@@ -2219,8 +2277,8 @@
     // ===================================================
     // LANDMARK HISTORY PASSPORT SYSTEM (DISABLED)
     // ===================================================
+    /*
     function compilePassportLogsHistory(logs) {
-        /*
         computedPassportStampsArray = []; discoveredMonumentsSet.clear(); 
         if (!logs || logs.length === 0) { renderPassportPageLayout(); return; }
 
@@ -2234,20 +2292,27 @@
             }
         }
         activePassportPage = 1; renderPassportPageLayout();
-        */
     }
 
     function renderPassportPageLayout() {
-        /*
         const passportHistoryOutput = document.getElementById('passport-history-output'); const passportPagination = document.getElementById('passport-pagination');
         if (!passportHistoryOutput) return; passportHistoryOutput.innerHTML = "";
-        ...
-        */
     }
 
     function changePassportPage(directionOffset) { 
-        /* activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); */ 
+        activePassportPage += directionOffset; renderPassportPageLayout(); const card = document.getElementById('landmarks-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); 
     }
+    
+    function switchLandmarkTab(tabName) {
+        if (activeLandmarkTab === tabName) return; activeLandmarkTab = tabName;
+        document.getElementById('tab-landmark-nearby').classList.toggle('active', tabName === 'nearby');
+        document.getElementById('tab-landmark-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('landmark-nearby-container').style.display = (tabName === 'nearby') ? 'block' : 'none';
+        document.getElementById('landmark-history-container').style.display = (tabName === 'history') ? 'block' : 'none';
+        const refreshBtn = document.getElementById('manual-refresh-poi-btn');
+        if (refreshBtn) refreshBtn.style.display = (tabName === 'nearby') ? 'block' : 'none';
+    }
+    */
 
     // ===================================================
     // ALL STOPS HISTORY SYSTEM
@@ -2261,7 +2326,6 @@
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
             
-            // STRICT FILTER: Must have coordinates and not be a factory/ghost log to count as a physical stop
             if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note) || !entry.latitude || !entry.longitude) continue;
             
             let cleanNote = entry.finder_note || "";
