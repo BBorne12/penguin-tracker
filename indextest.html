@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -192,6 +192,7 @@
             width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s ease;
         }
         .sighting-card:hover .sighting-img, .gallery-card:hover .sighting-img { transform: scale(1.05); }
+        
         .sighting-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 12px 12px;
             background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
@@ -385,7 +386,6 @@
             <!-- Dynamically injected tabs -->
         </div>
         
-        <!-- Gallery Grid uses dynamic card wrappers instead of simple images -->
         <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; overflow-y: auto; flex: 1; padding-right: 5px;">
         </div>
             
@@ -454,6 +454,7 @@
             </div>
 
             <div id="my-penguin-container">
+                
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     
                     <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openFullscreenSightings()">🖼️ Gallery</button>
@@ -497,6 +498,19 @@
                 </ul>
             </div>
         </div>
+
+        <div class="glass-card" id="global-sightings-card">
+            <div class="card-header-flex" style="margin-bottom: 8px;">
+                <h2>📸 Recent Adventures</h2>
+                <button type="button" class="btn-inline-refresh" onclick="openFullscreenSightings()">⛶ Enlarge</button>
+            </div>
+            <div class="tab-bar" id="sightings-tabs" style="margin-bottom: 12px;">
+                <!-- Dynamically injected tabs -->
+            </div>
+            <div class="sightings-carousel" id="sightings-carousel-output">
+                <div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">Loading recent adventures...</div>
+            </div>
+        </div>
         
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Log an Adventure</h2>
@@ -515,7 +529,7 @@
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
-                    <!-- Button text reflects GPS state but stays static when clicked -->
+                    <!-- Button text stays static -->
                     <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Log Penguin Stop</button>
                 </div>
             </div>
@@ -552,19 +566,6 @@
                 <input type="checkbox" id="show-lines-main" onchange="toggleMapLines(this.checked)"> Show Adventure Paths
             </label>
         </div>
-        
-        <div class="glass-card" id="global-sightings-card">
-            <div class="card-header-flex" style="margin-bottom: 8px;">
-                <h2>📸 Recent Adventures</h2>
-                <button type="button" class="btn-inline-refresh" onclick="openFullscreenSightings()">⛶ Enlarge</button>
-            </div>
-            <div class="tab-bar" id="sightings-tabs" style="margin-bottom: 12px;">
-                <!-- Dynamically injected tabs -->
-            </div>
-            <div class="sightings-carousel" id="sightings-carousel-output">
-                <div style="text-align:center; color:#94a3b8; padding:15px; width:100%; font-size:11pt;">Loading recent adventures...</div>
-            </div>
-        </div>
 
         <div class="glass-card">
             <h2>🏆 Game Center Standings</h2>
@@ -594,7 +595,7 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.8.1</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 6.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
@@ -2089,6 +2090,182 @@
         if (fileInput && fileInput.files[0] && customCameraBtn) { customCameraBtn.innerHTML = "📸"; customCameraBtn.classList.add("photo-attached"); } 
         else if (customCameraBtn) { customCameraBtn.innerHTML = "📷"; customCameraBtn.classList.remove("photo-attached"); }
     }
+    // ===================================================
+    // LEADERBOARD LOGIC
+    // ===================================================
+    function switchLeaderboardTab(tabName) {
+        if (activeTab === tabName) return; activeTab = tabName;
+        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
+        activeLeaderboardPage = 1; buildLeaderboard();
+    }
+
+    function handleLeaderboardSearch() {
+        const inputEl = document.getElementById('leaderboard-search-input');
+        currentSearchQuery = inputEl ? inputEl.value.toLowerCase().trim() : "";
+        activeLeaderboardPage = 1;
+        renderLeaderboardPage();
+    }
+
+    async function buildLeaderboard() {
+        let allLogs = [];
+        let fetchMore = true;
+        let startRow = 0;
+        const rowLimit = 999; 
+
+        while (fetchMore) {
+            const { data, error } = await supabaseClient.from('penguin_logs')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received')
+                .order('created_at', { ascending: true })
+                .range(startRow, startRow + rowLimit);
+                
+            if (error || !data) {
+                fetchMore = false;
+                break;
+            }
+
+            allLogs.push(...data);
+            startRow += (rowLimit + 1);
+
+            if (data.length <= rowLimit) {
+                fetchMore = false;
+            }
+        }
+
+        if (allLogs.length === 0) return;
+
+        globalAllFleetLogs = allLogs; 
+        
+        const tracks = {}; const namesMap = {}; const logsCountMap = {}; 
+        const pebblesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
+
+        allLogs.forEach(log => {
+            if (!globalFleetProfiles[log.penguin_id]) globalFleetProfiles[log.penguin_id] = {};
+            
+            if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                globalFleetProfiles[log.penguin_id].name = log.custom_name;
+            }
+            if (log.avatar_color) globalFleetProfiles[log.penguin_id].color = log.avatar_color;
+            if (log.custom_avatar_url) globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
+            if (log.style_id) globalFleetProfiles[log.penguin_id].styleId = log.style_id;
+        });
+
+        allLogs.forEach(log => {
+            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (log.penguin_id) {
+                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
+                if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
+                
+                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
+                
+                if (log.stones_received) {
+                    pebblesCountMap[log.penguin_id] = (pebblesCountMap[log.penguin_id] || 0) + parsePebbles(log.stones_received).length;
+                }
+
+                if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                    namesMap[log.penguin_id] = log.custom_name;
+                }
+                
+                if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
+                if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
+                if (log.style_id) styleMap[log.penguin_id] = log.style_id;
+            }
+        });
+
+        const leaderboardData = [];
+        Object.keys(tracks).forEach(id => {
+            let totalDistanceMeters = 0; const points = tracks[id];
+            for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
+            const totalMiles = totalDistanceMeters * 0.000621371; 
+            
+            leaderboardData.push({ 
+                id: id, 
+                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
+                miles: totalMiles, 
+                stopsCount: logsCountMap[id] || 1, 
+                pebblesCount: pebblesCountMap[id] || 0,
+                avatarColor: avatarMap[id],
+                customAvatar: customAvatarMap[id],
+                styleId: styleMap[id]
+            });
+        });
+
+        if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
+        else if (activeTab === "pebbles") { leaderboardData.sort((a, b) => b.pebblesCount - a.pebblesCount || b.miles - a.miles); }
+
+        leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
+
+        computedLeaderboardArray = leaderboardData.slice(0, 100); 
+        activeLeaderboardPage = 1; renderLeaderboardPage();
+
+        renderGlobalSightings();
+    }
+
+    function renderLeaderboardPage() {
+        const listOutput = document.getElementById('leaderboard-output'); const paginationEl = document.getElementById('leaderboard-pagination');
+        if (!listOutput) return; listOutput.innerHTML = "";
+
+        let filteredArray = computedLeaderboardArray;
+        if (currentSearchQuery !== "") {
+            filteredArray = computedLeaderboardArray.filter(item => 
+                item.displayName.toLowerCase().includes(currentSearchQuery) || 
+                item.id.toLowerCase().includes(currentSearchQuery)
+            );
+        }
+
+        if (filteredArray.length === 0) {
+            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No penguins found matching "${currentSearchQuery}"</li>`;
+            if (paginationEl) paginationEl.style.display = "none";
+            return;
+        }
+
+        const totalPages = Math.ceil(filteredArray.length / LEADERBOARD_ITEMS_PER_PAGE);
+        if (paginationEl) {
+            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
+            document.getElementById('leaderboard-page-indicator').innerText = `Page ${activeLeaderboardPage} of ${totalPages}`;
+            document.getElementById('leaderboard-prev-btn').disabled = (activeLeaderboardPage === 1);
+            document.getElementById('leaderboard-next-btn').disabled = (activeLeaderboardPage === totalPages);
+        }
+
+        const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
+        const pageItemsSlice = filteredArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
+        pageItemsSlice.forEach((item) => {
+            const li = document.createElement('li'); li.className = 'leaderboard-row';
+            let absoluteRank = item.originalRank; 
+            let rankClass = ""; let medal = `#${absoluteRank}`;
+            if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
+
+            let rightSideValueMetricsHTML = "";
+            if (activeTab === "distance") { 
+                rightSideValueMetricsHTML = `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            } else {
+                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">${getPebbleSvg(true)} ${item.pebblesCount}</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            }
+
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <span class="rank-badge">${medal}</span>
+                    <div style="width:28px; height:28px; flex-shrink:0;">${getAvatarThumbnail(item.avatarColor, item.customAvatar, item.styleId)}</div>
+                    <span class="p-name">${item.displayName}</span>
+                </div>
+                <div style="text-align:right;">${rightSideValueMetricsHTML}</div>`;
+            
+            li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
+            listOutput.appendChild(li);
+        });
+    }
+
+    function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
 </script>
 </body>
 </html>
