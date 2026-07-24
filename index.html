@@ -941,9 +941,9 @@ async function loadPenguinHistory(targetId) {
 
     function switchSightingsMode(mode) {
         currentSightingsMode = mode;
-        currentGalleryMode = mode; 
+        
+        // Update ONLY the carousel UI
         renderSightingsTabs();
-        renderGalleryTabs();
         renderGlobalSightings();
     }
 
@@ -1266,12 +1266,9 @@ async function loadPenguinHistory(targetId) {
 
     function setGalleryMode(mode) {
         currentGalleryMode = mode;
-        currentSightingsMode = mode; 
         
+        // Update ONLY the gallery UI
         renderGalleryTabs();
-        renderSightingsTabs();
-        renderGlobalSightings(); 
-        
         compileGalleryImages();
         activeGalleryPage = 1;
         renderGalleryPage();
