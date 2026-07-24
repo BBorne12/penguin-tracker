@@ -2003,7 +2003,92 @@
     }
 
     function changeAllStopsPage(directionOffset) { activeAllStopsPage += directionOffset; renderAllStopsPageLayout(); const card = document.getElementById('journey-stops-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
+// ===================================================
+    // MAP INIT & GPS
+    // ===================================================
+    function initializeLiveMap() {
+        try {
+            map = L.map('map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+            historyLayerGroup = L.layerGroup().addTo(map);
+        } catch (e) {}
+    }
 
+    function activateViewOnlyUI() {
+        const safeHide = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
+        safeHide('safety-disclaimer-notice'); 
+        safeHide('edit-profile-btn'); 
+        safeHide('tab-stop-log');
+        switchStopsTab('history');
+        const t = document.getElementById('tracking-card-title'); if(t) t.innerText = "Location History";
+        if (marker) { marker.remove(); marker = null; }
+    }
+
+    function verifyCurrentGPS() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
+                if (map) map.setView([verifiedLat, verifiedLng], 15);
+                
+                const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
+                
+                updateDistanceToLastStop();
+            }, (err) => { 
+                // Handle GPS Blocked
+            }, { enableHighAccuracy: true });
+        }
+    }
+
+    function triggerManualProximityRefresh() {
+        if (isViewOnlyMode) return;
+        const refreshBtnList = document.getElementById('manual-refresh-poi-btn');
+        if (refreshBtnList) { refreshBtnList.disabled = true; }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
+                if (map && currentMainMode === 'my') { 
+                    map.setView([verifiedLat, verifiedLng], 15); 
+                }
+                updateDistanceToLastStop();
+            }, () => {
+                if (refreshBtnList) { refreshBtnList.disabled = false; }
+            }, { enableHighAccuracy: true });
+        }
+    }
+
+    function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 3958.8; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    async function fetchLastStopCity(lat, lng) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+            const data = await response.json();
+            const city = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state || "Unknown location";
+            const cityEl = document.getElementById('last-stop-city'); if (cityEl) cityEl.innerText = city;
+        } catch (e) {
+            const cityEl = document.getElementById('last-stop-city'); if (cityEl) cityEl.innerText = "Location mapped";
+        }
+    }
+
+    function updateDistanceToLastStop() {
+        if (!verifiedLat || !verifiedLng || !lastLogLat || !lastLogLng) return;
+        const distanceMiles = calculateHaversineDistance(verifiedLat, verifiedLng, lastLogLat, lastLogLng);
+        const distEl = document.getElementById('last-stop-distance');
+        if (distEl) distEl.innerText = `${distanceMiles.toFixed(1)} miles away`;
+    }
+
+    function triggerHardwareCameraCapture() { const fileInput = document.getElementById('penguin-photo'); if (fileInput) fileInput.click(); }
+    
+    function handleFileSelectionChange() {
+        const fileInput = document.getElementById('penguin-photo'); const customCameraBtn = document.getElementById('custom-camera-btn');
+        if (fileInput && fileInput.files[0] && customCameraBtn) { customCameraBtn.innerHTML = "📸"; customCameraBtn.classList.add("photo-attached"); } 
+        else if (customCameraBtn) { customCameraBtn.innerHTML = "📷"; customCameraBtn.classList.remove("photo-attached"); }
+    }
 </script>
 </body>
 </html>
