@@ -504,7 +504,6 @@
             </div>
         </div>
         
-        <!-- LOG AN ADVENTURE MOVED UP -->
         <div class="glass-card" id="journey-stops-card">
             <h2>📍 Log an Adventure</h2>
             
@@ -522,7 +521,6 @@
                 <input type="file" id="penguin-photo" class="hidden-file-input" accept="image/*" capture="environment" onchange="handleFileSelectionChange()">
                 <div class="glass-card-inner" style="display: flex; gap: 8px;">
                     <button type="button" class="btn-glow btn-camera" id="custom-camera-btn" onclick="triggerHardwareCameraCapture()" style="flex: 0 0 60px; margin: 0; padding: 12px 0;">📷</button>
-                    <!-- Button text reflects GPS state -->
                     <button class="btn-glow" id="submit-btn" onclick="submitDiscovery()" disabled>Acquiring GPS...</button>
                 </div>
             </div>
@@ -601,12 +599,11 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.4.4</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.5.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -746,8 +743,6 @@
     }
 
     window.addEventListener("DOMContentLoaded", async function() {
-        if (window.scrollY > 0) window.scrollTo(0, 0);
-
         await fetchStyles();
         
         initializeLiveMap();
@@ -1011,6 +1006,54 @@
             carousel.appendChild(card);
         });
     }
+
+    function closeSuccessModal() {
+        document.getElementById('success-modal').style.display = 'none';
+        if (requiresReload) {
+            window.scrollTo(0, 0);
+            location.reload();
+        }
+    }
+
+    function handleSuccessShareClick() {
+        document.getElementById('success-modal').style.display = 'none';
+        openShareModal();
+    }
+
+    function openShareModal() {
+        const shareUrl = "https://bborne12.github.io/penguin-tracker/?id=" + encodeURIComponent(penguinId);
+        document.getElementById('share-url-input').value = shareUrl;
+        document.getElementById('share-modal').style.display = 'flex';
+    }
+    
+    function closeShareModal() {
+        document.getElementById('share-modal').style.display = 'none';
+        if (requiresReload) {
+            window.scrollTo(0, 0);
+            location.reload();
+        }
+    }
+    
+    function copyShareUrl() {
+        const input = document.getElementById('share-url-input');
+        input.select();
+        document.execCommand('copy');
+        showToast('Link copied to clipboard!', 'success');
+    }
+    
+    function shareNative() {
+        const url = document.getElementById('share-url-input').value;
+        const shareText = `Track ${activeCustomName || penguinId}'s adventure!`;
+        if (navigator.share) {
+            navigator.share({ title: 'Penguin Tracker™', text: shareText, url: url });
+        } else {
+            showToast('Native sharing not supported on this browser.', 'error');
+        }
+    }
+    
+    function shareFacebook() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
+    function shareTwitter() { window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(document.getElementById('share-url-input').value)}&text=Track%20my%20penguin!`, '_blank'); }
+    function shareWhatsApp() { window.open(`https://api.whatsapp.com/send?text=Track%20my%20penguin!%20${encodeURIComponent(document.getElementById('share-url-input').value)}`, '_blank'); }
 
     async function submitDiscovery() {
         if (!verifiedLat || !verifiedLng) {
@@ -1899,6 +1942,7 @@
             custom_avatar_url: activeCustomAvatarUrl
         }).eq('penguin_id', penguinId);
         
+        window.scrollTo(0, 0);
         location.reload();
     }
 
