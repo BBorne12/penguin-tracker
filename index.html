@@ -834,7 +834,7 @@
         }, 150);
     });
 
-    async function loadPenguinHistory(targetId) {
+async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin") return;
 
         const { data: logs, error } = await supabaseClient.from('penguin_logs')
@@ -850,10 +850,14 @@
         let totalDistance = 0;
         let lastLat = null;
         let lastLng = null;
+        let totalPebbles = 0; // Added missing pebble counter
         
         let pathPoints = [];
         
         globalLogData.forEach(log => {
+            // Tally pebbles during the initial load loop
+            totalPebbles += parsePebbles(log.stones_received).length;
+
             if (log.custom_name && log.custom_name !== targetId) {
                 globalNamedEntry = log.custom_name;
                 activeCustomName = log.custom_name;
@@ -879,6 +883,12 @@
         }
         
         document.getElementById("total-stops-counter").innerText = `${validStops} Adventure Stops Logged`;
+        
+        // Push the calculated total to the profile card
+        const totalPebblesEl = document.getElementById("total-pebbles-counter");
+        if (totalPebblesEl) {
+            totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
+        }
         
         if (lastLat && lastLng) {
             lastLogLat = lastLat;
