@@ -11,246 +11,248 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* Base Setup & CSS Resets */
-        *, *::before, *::after { box-sizing: border-box; }
-        
-        body {
-            margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #02060d; color: #ffffff; font-size: 12pt; line-height: 1.5;
-        }
+<style>
+    /* Base Setup & CSS Resets */
+    *, *::before, *::after { box-sizing: border-box; }
+    
+    body {
+        margin: 0; padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #02060d; color: #ffffff; font-size: 12pt; line-height: 1.5;
+    }
 
-        .app-container {
-            width: 100%; max-width: 600px; margin: 0 auto; padding: 16px;
-            background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
-            min-height: 100vh; display: flex; flex-direction: column;
-        }
+    .app-container {
+        width: 100%; max-width: 600px; margin: 0 auto; padding: 16px;
+        background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
+        min-height: 100vh; display: flex; flex-direction: column;
+    }
 
-        h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
-        h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
-        h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-        .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
+    h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+    h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
+    h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
 
-        .layout-section { width: 100%; margin-top: 16px; flex: 1; }
+    .layout-section { width: 100%; margin-top: 16px; flex: 1; }
 
-        .bw-penguin { filter: grayscale(100%); display: inline-block; }
+    .bw-penguin { filter: grayscale(100%); display: inline-block; }
 
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(56, 189, 248, 0.15);
-            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            margin-bottom: 16px; position: relative;
-        }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(56, 189, 248, 0.15);
+        border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        margin-bottom: 16px; position: relative;
+    }
 
-        .glass-card-inner { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px; margin-top: 12px; }
-        .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .glass-card-inner { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px; margin-top: 12px; }
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
-        .aurora-glow { color: #39ff14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.6); font-weight: bold; }
-        .ice-glow { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); font-weight: bold; }
+    .aurora-glow { color: #39ff14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.6); font-weight: bold; }
+    .ice-glow { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); font-weight: bold; }
 
-        .status-badge {
-            display: inline-block; padding: 4px 10px; background: rgba(57, 255, 20, 0.1);
-            border: 1px solid rgba(57, 255, 20, 0.3); color: #39ff14; border-radius: 20px;
-            font-size: 10pt; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(57, 255, 20, 0.4); white-space: nowrap;
-        }
+    .status-badge {
+        display: inline-block; padding: 4px 10px; background: rgba(57, 255, 20, 0.1);
+        border: 1px solid rgba(57, 255, 20, 0.3); color: #39ff14; border-radius: 20px;
+        font-size: 10pt; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(57, 255, 20, 0.4); white-space: nowrap;
+    }
 
-        .warning-badge {
-            display: block; padding: 12px; background: rgba(239, 68, 68, 0.07);
-            border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; border-radius: 8px;
-            font-size: 11pt; margin-top: 12px; line-height: 1.4;
-        }
+    .warning-badge {
+        display: block; padding: 12px; background: rgba(239, 68, 68, 0.07);
+        border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; border-radius: 8px;
+        font-size: 11pt; margin-top: 12px; line-height: 1.4;
+    }
 
-        .note-textarea {
-            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px; padding: 10px; color: #ffffff; font-family: inherit; font-size: 12pt;
-            outline: none; transition: border-color 0.2s ease; box-sizing: border-box;
-            height: 80px; resize: none; margin-top: 4px; margin-bottom: 8px;
-        }
-        .note-textarea:focus { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 10px rgba(0, 229, 255, 0.1); }
+    .note-textarea {
+        width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 8px; padding: 10px; color: #ffffff; font-family: inherit; font-size: 12pt;
+        outline: none; transition: border-color 0.2s ease; box-sizing: border-box;
+        height: 80px; resize: none; margin-top: 4px; margin-bottom: 8px;
+    }
+    .note-textarea:focus { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 10px rgba(0, 229, 255, 0.1); }
 
-        .hidden-file-input { display: none !important; }
+    .hidden-file-input { display: none !important; }
 
-        .btn-glow {
-            display: block; width: 100%; text-align: center; padding: 14px;
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
-            border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; color: #ffffff;
-            font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); transition: opacity 0.2s ease, border-color 0.2s ease;
-        }
-        .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+    .btn-glow {
+        display: block; width: 100%; text-align: center; padding: 14px;
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
+        border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; color: #ffffff;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); transition: opacity 0.2s ease, border-color 0.2s ease;
+    }
+    .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
-        .btn-camera {
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
-            border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; font-size: 16pt;
-        }
-        .btn-camera.photo-attached {
-            border-color: #39ff14; color: #39ff14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
-            background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
-        }
+    .btn-camera {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(148, 163, 184, 0.1) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; font-size: 16pt;
+    }
+    .btn-camera.photo-attached {
+        border-color: #39ff14; color: #39ff14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+        background: linear-gradient(135deg, rgba(57, 255, 20, 0.15) 0%, rgba(0, 229, 255, 0.1) 100%);
+    }
 
-        .btn-inline-refresh {
-            background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);
-            color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 5px 10px; border-radius: 6px;
-            cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease;
-        }
-        .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
+    .btn-inline-refresh {
+        background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);
+        color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 5px 10px; border-radius: 6px;
+        cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease;
+    }
+    .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
 
-        /* PEBBLE BUTTONS */
-        .btn-pebble {
-            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); 
-            color: #fff; font-size: 9pt; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;
-            display: flex; align-items: center; gap: 4px; font-weight:bold; height: 100%; justify-content: center;
-        }
-        .btn-pebble:hover { background: rgba(255,255,255,0.15); }
-        .btn-pebble.pebbled { 
-            background: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.4); color: #f97316; 
-            box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); 
-        }
+    /* PEBBLE BUTTONS */
+    .btn-pebble {
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); 
+        color: #fff; font-size: 9pt; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; gap: 4px; font-weight:bold; height: 100%; justify-content: center;
+    }
+    .btn-pebble:hover { background: rgba(255,255,255,0.15); }
+    .btn-pebble.pebbled { 
+        background: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.4); color: #f97316; 
+        box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); 
+    }
 
-        /* UPPER-RIGHT PEBBLE BUTTON FOR CAROUSEL & GRID CARDS */
-        .sighting-pebble-btn {
-            position: absolute; top: 8px; right: 8px; z-index: 10;
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.2); color: #fff;
-            font-size: 9pt; padding: 4px 10px; border-radius: 20px;
-            cursor: pointer; transition: all 0.2s; display: flex;
-            align-items: center; gap: 4px; font-weight: bold;
-        }
-        .sighting-pebble-btn:hover { background: rgba(0, 0, 0, 0.8); border-color: rgba(249, 115, 22, 0.6); }
-        .sighting-pebble-btn.pebbled { 
-            background: rgba(249, 115, 22, 0.2); border-color: rgba(249, 115, 22, 0.6); color: #f97316; 
-        }
+    /* UPPER-RIGHT PEBBLE BUTTON FOR CAROUSEL & GRID CARDS */
+    .sighting-pebble-btn {
+        position: absolute; top: 8px; right: 8px; z-index: 10;
+        background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+        border: 1px solid rgba(255,255,255,0.2); color: #fff;
+        font-size: 9pt; padding: 4px 10px; border-radius: 20px;
+        cursor: pointer; transition: all 0.2s; display: flex;
+        align-items: center; gap: 4px; font-weight: bold;
+    }
+    .sighting-pebble-btn:hover { background: rgba(0, 0, 0, 0.8); border-color: rgba(249, 115, 22, 0.6); }
+    .sighting-pebble-btn.pebbled { 
+        background: rgba(249, 115, 22, 0.2); border-color: rgba(249, 115, 22, 0.6); color: #f97316; 
+    }
 
-        .tab-bar {
-            display: flex; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.15);
-            border-radius: 8px; padding: 4px; margin-bottom: 12px;
-        }
-        .tab-btn {
-            flex: 1; padding: 8px; background: transparent; border: none; color: #94a3b8;
-            font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.5px;
-            cursor: pointer; border-radius: 6px; transition: all 0.2s ease; line-height: 1.3;
-        }
-        .tab-btn.active { background: rgba(56, 189, 248, 0.15); color: #00e5ff; text-shadow: 0 0 8px rgba(0, 229, 255, 0.3); }
+    .tab-bar {
+        display: flex; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.15);
+        border-radius: 8px; padding: 4px; margin-bottom: 12px;
+    }
+    .tab-btn {
+        flex: 1; padding: 8px; background: transparent; border: none; color: #94a3b8;
+        font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.5px;
+        cursor: pointer; border-radius: 6px; transition: all 0.2s ease; line-height: 1.3;
+    }
+    .tab-btn.active { background: rgba(56, 189, 248, 0.15); color: #00e5ff; text-shadow: 0 0 8px rgba(0, 229, 255, 0.3); }
 
-        .pagination-container {
-            display: flex; justify-content: space-between; align-items: center; margin-top: 14px;
-            padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .page-arrow {
-            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); color: #00e5ff;
-            font-weight: bold; font-size: 14pt; padding: 4px 14px; border-radius: 6px; cursor: pointer;
-        }
-        .page-arrow:disabled { color: #4b5563; border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; background: transparent; }
-        .page-indicator { font-size: 10.5pt; color: #94a3b8; font-weight: 500; }
+    .pagination-container {
+        display: flex; justify-content: space-between; align-items: center; margin-top: 14px;
+        padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .page-arrow {
+        background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); color: #00e5ff;
+        font-weight: bold; font-size: 14pt; padding: 4px 14px; border-radius: 6px; cursor: pointer;
+    }
+    .page-arrow:disabled { color: #4b5563; border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; background: transparent; }
+    .page-indicator { font-size: 10.5pt; color: #94a3b8; font-weight: 500; }
 
-        .data-list, .leaderboard-list, .passport-history-list { margin: 0; padding: 0; list-style: none; }
-        .data-item { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .data-item:last-child { border-bottom: none; }
+    .data-list, .leaderboard-list, .passport-history-list { margin: 0; padding: 0; list-style: none; }
+    .data-item { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .data-item:last-child { border-bottom: none; }
 
-        .leaderboard-row, .passport-history-row {
-            display: flex; justify-content: space-between; align-items: center; padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; border-radius: 6px; transition: background 0.2s;
-        }
-        .leaderboard-row:hover, .passport-history-row:hover { background: rgba(255, 255, 255, 0.05); }
-        .leaderboard-row:last-child, .passport-history-row:last-child { border-bottom: none; }
+    .leaderboard-row, .passport-history-row {
+        display: flex; justify-content: space-between; align-items: center; padding: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; border-radius: 6px; transition: background 0.2s;
+    }
+    .leaderboard-row:hover, .passport-history-row:hover { background: rgba(255, 255, 255, 0.05); }
+    .leaderboard-row:last-child, .passport-history-row:last-child { border-bottom: none; }
 
-        .rank-badge, .passport-icon-badge { display: inline-block; width: 28px; font-weight: bold; color: #7dd3fc; }
-        .p-name, .passport-list-name { font-weight: 600; color: #f8fafc; }
-        .p-dist, .passport-list-date { font-weight: bold; color: #00e5ff; font-size: 11.5pt; }
+    .rank-badge, .passport-icon-badge { display: inline-block; width: 28px; font-weight: bold; color: #7dd3fc; }
+    .p-name, .passport-list-name { font-weight: 600; color: #f8fafc; }
+    .p-dist, .passport-list-date { font-weight: bold; color: #00e5ff; font-size: 11.5pt; }
 
-        .label { font-size: 10pt; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 2px; }
-        .value { font-size: 12pt; color: #f8fafc; }
-        .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
+    .label { font-size: 10pt; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .value { font-size: 12pt; color: #f8fafc; }
+    .stat-subtext { display: block; font-size: 9.5pt; color: #94a3b8; text-align: right; }
 
-        #map {
-            width: 100% !important; height: 300px !important; background: #030712 !important;
-            border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 0 0 0 0 !important; z-index: 5;
-        }
-        .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
+    #map {
+        width: 100% !important; height: 300px !important; background: #030712 !important;
+        border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 8px !important; margin: 0 0 0 0 !important; z-index: 5;
+    }
+    .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
 
-        /* CAROUSEL & GRID STYLES */
-        .sightings-carousel {
-            display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px;
-            scroll-snap-type: x mandatory; 
-        }
-        .sightings-carousel::-webkit-scrollbar { height: 8px; }
-        .sightings-carousel::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
-        .sightings-carousel::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 4px; }
-        
-        .sighting-card {
-            flex: 0 0 220px; height: 220px; border-radius: 12px; overflow: hidden;
-            position: relative; scroll-snap-align: start;
-            border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
-        }
-        
-        .gallery-card {
-            width: 100%; height: 240px; border-radius: 12px; overflow: hidden;
-            position: relative; border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
-        }
+    /* CAROUSEL & GRID STYLES */
+    .sightings-carousel {
+        display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px;
+        scroll-snap-type: x mandatory; 
+    }
+    .sightings-carousel::-webkit-scrollbar { height: 8px; }
+    .sightings-carousel::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+    .sightings-carousel::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 4px; }
+    
+    .sighting-card {
+        flex: 0 0 220px; height: 220px; border-radius: 12px; overflow: hidden;
+        position: relative; scroll-snap-align: start;
+        border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
+    }
+    
+    .gallery-card {
+        width: 100%; height: 240px; border-radius: 12px; overflow: hidden;
+        position: relative; border: 1px solid rgba(56, 189, 248, 0.3); background: #07111e;
+    }
 
-        .sighting-img {
-            width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s ease;
-        }
-        .sighting-card:hover .sighting-img, .gallery-card:hover .sighting-img { transform: scale(1.05); }
-        .sighting-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 12px 12px;
-            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
-            display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none;
-        }
-        .sighting-name { color: #fff; font-weight: bold; font-size: 11pt; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
-        .sighting-note { color: #cbd5e1; font-size: 9pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
-        
-        .sighting-btn-row { display: flex; gap: 6px; width: 100%; margin-top: 4px; }
-        .sighting-profile-btn {
-            pointer-events: auto; flex: 1; background: rgba(56, 189, 248, 0.15); text-align: center;
-            border: 1px solid #38bdf8; color: #e0f2fe; font-size: 8pt; padding: 6px 0; font-weight: bold;
-            border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
-        }
-        .sighting-profile-btn:hover { background: rgba(56, 189, 248, 0.35); box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
+    .sighting-img {
+        width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s ease;
+    }
+    .sighting-card:hover .sighting-img, .gallery-card:hover .sighting-img { transform: scale(1.05); }
+    .sighting-overlay {
+        position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 12px 12px;
+        background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
+        display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none;
+    }
+    .sighting-name { color: #fff; font-weight: bold; font-size: 11pt; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
+    .sighting-note { color: #cbd5e1; font-size: 9pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+    
+    .sighting-btn-row { display: flex; gap: 6px; width: 100%; margin-top: 4px; }
+    .sighting-profile-btn {
+        pointer-events: auto; flex: 1; background: rgba(56, 189, 248, 0.15); text-align: center;
+        border: 1px solid #38bdf8; color: #e0f2fe; font-size: 8pt; padding: 6px 0; font-weight: bold;
+        border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+    }
+    .sighting-profile-btn:hover { background: rgba(56, 189, 248, 0.35); box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
 
-        /* MODALS & OVERLAYS */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
-        }
-        .modal-card {
-            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
-            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 24px;
-            width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center;
-        }
-        .modal-input {
-            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 8px; padding: 12px; color: #ffffff; font-size: 12pt; margin: 8px 0 16px 0; outline: none; text-align: center;
-            box-sizing: border-box;
-        }
+    /* MODALS & OVERLAYS */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
+        display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+    }
+    .modal-card {
+        background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+        border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 24px;
+        width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center;
+    }
+    .modal-input {
+        width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 8px; padding: 12px; color: #ffffff; font-size: 12pt; margin: 8px 0 16px 0; outline: none; text-align: center;
+        box-sizing: border-box;
+    }
 
-        .avatar-option {
-            width: 55px; height: 55px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;
-            display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);
-        }
-        .avatar-option:hover { transform: scale(1.05); }
+    .avatar-option {
+        width: 55px; height: 55px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;
+        display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);
+    }
+    .avatar-option:hover { transform: scale(1.05); }
 
-        /* TOAST NOTIFICATIONS */
-        #toast-container {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 100000; display: flex; flex-direction: column; gap: 8px;
-            align-items: center; pointer-events: none; width: 90%; max-width: 400px;
-        }
-        .toast {
-            padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 11pt;
-            font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            transition: opacity 0.3s ease; text-align: center; width: 100%;
-        }
-        .toast-success { background: rgba(57, 255, 20, 0.9); border: 1px solid #39ff14; color: #02060d; }
-        .toast-error { background: rgba(239, 68, 68, 0.9); border: 1px solid #ef4444; }
-        .toast-info { background: rgba(56, 189, 248, 0.9); border: 1px solid #38bdf8; color: #02060d; }
+    /* TOAST NOTIFICATIONS */
+    #toast-container {
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        z-index: 100000; display: flex; flex-direction: column; gap: 8px;
+        align-items: center; pointer-events: none; width: 90%; max-width: 400px;
+    }
+    .toast {
+        padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 11pt;
+        font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        transition: opacity 0.3s ease; text-align: center; width: 100%;
+    }
+    .toast-success { background: rgba(57, 255, 20, 0.9); border: 1px solid #39ff14; color: #02060d; }
+    .toast-error { background: rgba(239, 68, 68, 0.9); border: 1px solid #ef4444; }
+    .toast-info { background: rgba(56, 189, 248, 0.9); border: 1px solid #38bdf8; color: #02060d; }
 
-        .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
-        .app-footer {
-            text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
-            line-height: 1.6; letter-spacing: 1px; font-weight: 500; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
-        }
-        @media(min-width: 480px) { .app-header { display: flex; justify-content: space-between; align-items: flex-end; } }
+    .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 8px; }
+    .app-footer {
+        text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
+        line-height: 1.6; letter-spacing: 1px; font-weight: 500; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
+    }
+    @media(min-width: 480px) { .app-header { display: flex; justify-content: space-between; align-items: flex-end; } }
+</style>
     </style>
 </head>
 <body>
@@ -390,7 +392,6 @@
             <!-- Dynamically injected tabs -->
         </div>
         
-        <!-- Gallery Grid uses dynamic card wrappers instead of simple images -->
         <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; overflow-y: auto; flex: 1; padding-right: 5px;">
         </div>
             
@@ -599,11 +600,12 @@
     </div>
 
     <div class="app-footer">
-        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.5.0</span><br>
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 5.6.0</span><br>
         <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
     </div>
 
 </div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- CONNECT CREDENTIALS ---
@@ -695,6 +697,19 @@
     const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
     const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
 
+    // ===================================================
+    // MISSING MODAL FUNCTIONS RESTORED
+    // ===================================================
+    function showWelcomeModal() {
+        document.getElementById('welcome-modal').style.display = 'flex';
+    }
+    function closeWelcomeModal() {
+        document.getElementById('welcome-modal').style.display = 'none';
+    }
+    function showSuccessModal() {
+        document.getElementById('success-modal').style.display = 'flex';
+    }
+    
     function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -743,6 +758,8 @@
     }
 
     window.addEventListener("DOMContentLoaded", async function() {
+        if (window.scrollY > 0) window.scrollTo(0, 0);
+
         await fetchStyles();
         
         initializeLiveMap();
@@ -780,7 +797,6 @@
         const backBtnContainer = document.getElementById('back-to-my-penguin-container');
         const strangerActionRow = document.getElementById('stranger-action-row');
 
-        // Initial Colony Fetch for Global Cache
         let fetchId = isPrimaryControl ? penguinId : (viewerId ? viewerId : null);
         if (fetchId) {
             const { data } = await supabaseClient.from('penguin_logs').select('colony_list').eq('penguin_id', fetchId);
@@ -900,7 +916,7 @@
         if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId) && !isViewOnlyMode) {
             document.getElementById('first-find-modal').style.display = 'flex';
         } else if (globalLogData.length === 0 && !isViewOnlyMode) {
-            document.getElementById('welcome-modal').style.display = 'flex';
+            showWelcomeModal();
         }
         
         renderFleetOnMap(map, historyLayerGroup, currentMainMode);
@@ -925,6 +941,19 @@
         renderSightingsTabs();
         renderGalleryTabs();
         renderGlobalSightings();
+    }
+
+    function openFullscreenForSighting(pId, lat, lng) {
+        closeImageModal();
+        closeGalleryModal();
+        setMainMapMode('all');
+        setFullscreenMode('all');
+        openFullscreenTrackingMap();
+        if (fsMap) {
+            setTimeout(() => {
+                fsMap.setView([lat, lng], 14);
+            }, 200);
+        }
     }
 
     function generateSightingCardHTML(log, absoluteIdx) {
@@ -1110,7 +1139,6 @@
             return;
         }
         
-        // Immediately execute success modal without waiting for notification text
         requiresReload = true;
         showSuccessModal();
 
@@ -1335,7 +1363,6 @@
         const startIdx = (activeGalleryPage - 1) * GALLERY_ITEMS_PER_PAGE;
         const pageItemsSlice = globalGalleryImages.slice(startIdx, startIdx + GALLERY_ITEMS_PER_PAGE);
 
-        // Render full cards inside the gallery grid
         pageItemsSlice.forEach((log, relativeIdx) => {
             const absoluteIdx = startIdx + relativeIdx;
             const card = document.createElement('div');
@@ -1978,6 +2005,227 @@
     }
 
     // ===================================================
+    // LAZY MINTING HATCH FIX & SEQUENCED MODALS
+    // ===================================================
+    async function saveCustomNameFromModal(btnElement) {
+        const nameInput = document.getElementById('modal-custom-name').value.trim();
+        if (nameInput) {
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.innerText = "Hatching...";
+            }
+            
+            activeCustomName = nameInput;
+
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
+                penguin_id: penguinId, custom_name: activeCustomName, avatar_color: activeAvatarColor,
+                finder_note: 'Penguin Hatched! 🥚', secret_tag: securityTagParam
+            }]);
+
+            if (error) {
+                showToast("Failed to hatch penguin.", "error");
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerText = "Save Name & Start Journey!";
+                }
+                return;
+            }
+            
+            try {
+                const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+                let discordMsg = `🥚 🐧 **A New Penguin Has Hatched!**\n**Base ID:** \`${penguinId}\`\n**Custom Name:** **${activeCustomName}**\n**Location:** The journey begins!`;
+                const message = { username: "Penguin Scout", content: discordMsg };
+                
+                // This await pauses the code for a microsecond so Discord receives the ping BEFORE the page reloads
+                await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+            } catch(e) {}
+
+            document.getElementById('first-find-modal').style.display = 'none';
+            window.scrollTo(0, 0); // Stops the viewport from jumping down when the keyboard collapses
+            location.reload();
+        } else {
+            showToast("Please give your penguin a name before starting its journey!", "error");
+        }
+    }
+
+    // ===================================================
+    // LEADERBOARD LOGIC
+    // ===================================================
+    function switchLeaderboardTab(tabName) {
+        if (activeTab === tabName) return; activeTab = tabName;
+        document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
+        document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
+        activeLeaderboardPage = 1; buildLeaderboard();
+    }
+
+    function handleLeaderboardSearch() {
+        const inputEl = document.getElementById('leaderboard-search-input');
+        currentSearchQuery = inputEl ? inputEl.value.toLowerCase().trim() : "";
+        activeLeaderboardPage = 1;
+        renderLeaderboardPage();
+    }
+
+    async function buildLeaderboard() {
+        let allLogs = [];
+        let fetchMore = true;
+        let startRow = 0;
+        const rowLimit = 999; 
+
+        while (fetchMore) {
+            const { data, error } = await supabaseClient.from('penguin_logs')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received')
+                .order('created_at', { ascending: true })
+                .range(startRow, startRow + rowLimit);
+                
+            if (error || !data) {
+                fetchMore = false;
+                break;
+            }
+
+            allLogs.push(...data);
+            startRow += (rowLimit + 1);
+
+            if (data.length <= rowLimit) {
+                fetchMore = false;
+            }
+        }
+
+        if (allLogs.length === 0) return;
+
+        globalAllFleetLogs = allLogs; 
+        
+        const tracks = {}; const namesMap = {}; const logsCountMap = {}; const monumentTagsCountMap = {}; 
+        const pebblesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
+
+        allLogs.forEach(log => {
+            if (!globalFleetProfiles[log.penguin_id]) globalFleetProfiles[log.penguin_id] = {};
+            
+            if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                globalFleetProfiles[log.penguin_id].name = log.custom_name;
+            }
+            if (log.avatar_color) globalFleetProfiles[log.penguin_id].color = log.avatar_color;
+            if (log.custom_avatar_url) globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
+            if (log.style_id) globalFleetProfiles[log.penguin_id].styleId = log.style_id;
+        });
+
+        allLogs.forEach(log => {
+            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (log.penguin_id) {
+                if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
+                if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
+                
+                logsCountMap[log.penguin_id] = (logsCountMap[log.penguin_id] || 0) + 1;
+                
+                if (log.stones_received) {
+                    pebblesCountMap[log.penguin_id] = (pebblesCountMap[log.penguin_id] || 0) + parsePebbles(log.stones_received).length;
+                }
+
+                if (log.custom_name && log.custom_name.trim() !== "" && log.custom_name !== log.penguin_id) {
+                    namesMap[log.penguin_id] = log.custom_name;
+                }
+                
+                if (log.avatar_color) avatarMap[log.penguin_id] = log.avatar_color;
+                if (log.custom_avatar_url) customAvatarMap[log.penguin_id] = log.custom_avatar_url;
+                if (log.style_id) styleMap[log.penguin_id] = log.style_id;
+            }
+        });
+
+        const leaderboardData = [];
+        Object.keys(tracks).forEach(id => {
+            let totalDistanceMeters = 0; const points = tracks[id];
+            for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
+            const totalMiles = totalDistanceMeters * 0.000621371; 
+            
+            leaderboardData.push({ 
+                id: id, 
+                displayName: namesMap[id] ? `${namesMap[id]}` : id, 
+                miles: totalMiles, 
+                stopsCount: logsCountMap[id] || 1, 
+                pebblesCount: pebblesCountMap[id] || 0,
+                avatarColor: avatarMap[id],
+                customAvatar: customAvatarMap[id],
+                styleId: styleMap[id]
+            });
+        });
+
+        if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
+        else if (activeTab === "pebbles") { leaderboardData.sort((a, b) => b.pebblesCount - a.pebblesCount || b.miles - a.miles); }
+
+        leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
+
+        computedLeaderboardArray = leaderboardData.slice(0, 100); 
+        activeLeaderboardPage = 1; renderLeaderboardPage();
+
+        renderGlobalSightings();
+    }
+
+    function renderLeaderboardPage() {
+        const listOutput = document.getElementById('leaderboard-output'); const paginationEl = document.getElementById('leaderboard-pagination');
+        if (!listOutput) return; listOutput.innerHTML = "";
+
+        let filteredArray = computedLeaderboardArray;
+        if (currentSearchQuery !== "") {
+            filteredArray = computedLeaderboardArray.filter(item => 
+                item.displayName.toLowerCase().includes(currentSearchQuery) || 
+                item.id.toLowerCase().includes(currentSearchQuery)
+            );
+        }
+
+        if (filteredArray.length === 0) {
+            listOutput.innerHTML = `<li style="text-align:center;color:#94a3b8;padding:15px;font-size:11pt;">No penguins found matching "${currentSearchQuery}"</li>`;
+            if (paginationEl) paginationEl.style.display = "none";
+            return;
+        }
+
+        const totalPages = Math.ceil(filteredArray.length / LEADERBOARD_ITEMS_PER_PAGE);
+        if (paginationEl) {
+            paginationEl.style.display = totalPages > 1 ? "flex" : "none";
+            document.getElementById('leaderboard-page-indicator').innerText = `Page ${activeLeaderboardPage} of ${totalPages}`;
+            document.getElementById('leaderboard-prev-btn').disabled = (activeLeaderboardPage === 1);
+            document.getElementById('leaderboard-next-btn').disabled = (activeLeaderboardPage === totalPages);
+        }
+
+        const startIdx = (activeLeaderboardPage - 1) * LEADERBOARD_ITEMS_PER_PAGE;
+        const pageItemsSlice = filteredArray.slice(startIdx, startIdx + LEADERBOARD_ITEMS_PER_PAGE);
+
+        let linkViewerParams = "";
+        if (isPrimaryControl) {
+            linkViewerParams = `&viewer=${penguinId}`;
+            if (securityTagParam) linkViewerParams += `&vtag=${securityTagParam}`;
+        } else if (isAuthorizedViewer) {
+            linkViewerParams = `&viewer=${viewerId}`;
+            if (viewerTagParam) linkViewerParams += `&vtag=${viewerTagParam}`;
+        }
+
+        pageItemsSlice.forEach((item) => {
+            const li = document.createElement('li'); li.className = 'leaderboard-row';
+            let absoluteRank = item.originalRank; 
+            let rankClass = ""; let medal = `#${absoluteRank}`;
+            if (absoluteRank === 1) { medal = "🥇"; rankClass = "ice-glow"; } else if (absoluteRank === 2) { medal = "🥈"; } else if (absoluteRank === 3) { medal = "🥉"; }
+
+            let rightSideValueMetricsHTML = "";
+            if (activeTab === "distance") { 
+                rightSideValueMetricsHTML = `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            } else {
+                rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">${getPebbleSvg(true)} ${item.pebblesCount}</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            }
+
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <span class="rank-badge">${medal}</span>
+                    <div style="width:28px; height:28px; flex-shrink:0;">${getAvatarThumbnail(item.avatarColor, item.customAvatar, item.styleId)}</div>
+                    <span class="p-name">${item.displayName}</span>
+                </div>
+                <div style="text-align:right;">${rightSideValueMetricsHTML}</div>`;
+            
+            li.onclick = () => { window.location.href = `?id=${item.id}${linkViewerParams}`; };
+            listOutput.appendChild(li);
+        });
+    }
+
+    function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
+
+    // ===================================================
     // ALL STOPS HISTORY SYSTEM
     // ===================================================
     function compileAllStopsHistory(logs) {
@@ -2049,6 +2297,5 @@
     function changeAllStopsPage(directionOffset) { activeAllStopsPage += directionOffset; renderAllStopsPageLayout(); const card = document.getElementById('journey-stops-card'); if (card) card.scrollIntoView({ behavior: 'smooth' }); }
 
 </script>
-
 </body>
 </html>
