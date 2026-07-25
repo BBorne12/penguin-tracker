@@ -946,7 +946,27 @@ async function loadPenguinHistory(targetId) {
         renderSightingsTabs();
         renderGlobalSightings();
     }
+    function openFullscreenForSighting(pId, lat, lng) {
+        closeImageModal();
+        closeGalleryModal();
+        
+        if (!lat || !lng) {
+            showToast("No GPS coordinates were logged for this specific photo.", "error");
+            return;
+        }
 
+        setMainMapMode('all');
+        openFullscreenTrackingMap();
+        setFullscreenMode('all');
+        
+        // Give the modal an extra split second to physically render before panning the camera
+        setTimeout(() => {
+            if (fsMap) {
+                fsMap.invalidateSize();
+                fsMap.setView([lat, lng], 14);
+            }
+        }, 300);
+    }
     function generateSightingCardHTML(log, absoluteIdx) {
         let pebblesArr = parsePebbles(log.stones_received);
         let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
@@ -967,6 +987,9 @@ async function loadPenguinHistory(targetId) {
         }
 
         let onClickAttr = absoluteIdx >= 0 ? `onclick="openFullscreenGallery(${absoluteIdx})"` : `onclick="openImageModal('${log.photo_url}')"`;
+        
+        let safeLat = log.latitude || "null";
+        let safeLng = log.longitude || "null";
 
         return `
             <img class="sighting-img" src="${log.photo_url}" ${onClickAttr} loading="lazy">
@@ -979,8 +1002,8 @@ async function loadPenguinHistory(targetId) {
                 <span class="sighting-name"><span class="bw-penguin">🐧</span> ${displayName}</span>
                 <span class="sighting-note">"${cleanNote}"</span>
                 <div class="sighting-btn-row">
-                    <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
-                    <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Map</button>
+                    <button class="sighting-profile-btn" onclick="event.stopPropagation(); window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+                    <button class="sighting-profile-btn" onclick="event.stopPropagation(); openFullscreenForSighting('${log.penguin_id}', ${safeLat}, ${safeLng})">View Map</button>
                 </div>
             </div>
         `;
