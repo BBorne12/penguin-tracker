@@ -8,10 +8,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 style=%22filter: grayscale(100%);%22>🐧</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- HTML5 QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     
-    <!-- Leaflet Map Library -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -28,20 +26,33 @@
 
         .header {
             background: rgba(2, 6, 13, 0.9); backdrop-filter: blur(10px);
-            padding: 16px; text-align: center; border-bottom: 1px solid rgba(217, 70, 239, 0.3);
+            padding: 16px 16px 0 16px; text-align: center; border-bottom: 1px solid rgba(217, 70, 239, 0.3);
             z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: relative;
         }
 
         h1 { margin: 0; font-size: 14pt; color: #fae8ff; letter-spacing: 1px; text-transform: uppercase; }
-        .subtitle { font-size: 8.5pt; color: #d946ef; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+        .subtitle { font-size: 8.5pt; color: #d946ef; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; margin-bottom: 12px; }
 
         .map-toggle-btn {
-            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+            position: absolute; right: 16px; top: 16px;
             background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);
             color: #00e5ff; padding: 6px 12px; border-radius: 6px; font-weight: bold;
             font-size: 9pt; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
         }
         .map-toggle-btn:active { background: rgba(56, 189, 248, 0.3); }
+
+        /* Mode Tabs */
+        .mode-tabs {
+            display: flex; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 70, 239, 0.3);
+            border-radius: 8px 8px 0 0; border-bottom: none; overflow: hidden;
+        }
+        .mode-tab {
+            flex: 1; padding: 10px; background: transparent; border: none; color: #94a3b8;
+            font-weight: 600; font-size: 9pt; text-transform: uppercase; cursor: pointer;
+            transition: all 0.2s ease; border-right: 1px solid rgba(217, 70, 239, 0.2);
+        }
+        .mode-tab:last-child { border-right: none; }
+        .mode-tab.active { background: rgba(217, 70, 239, 0.15); color: #fae8ff; text-shadow: 0 0 8px rgba(217, 70, 239, 0.5); }
 
         #reader-container {
             flex: 1; width: 100%; position: relative; background: #000;
@@ -67,14 +78,46 @@
             background: rgba(0,0,0,0.8); z-index: 50; padding: 20px; text-align: center;
         }
 
+        /* Prep Overlay Control */
+        #prep-controls {
+            position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+            background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(8px);
+            border: 1px solid rgba(217, 70, 239, 0.4); border-radius: 12px;
+            padding: 12px; width: 90%; max-width: 400px; text-align: center;
+            z-index: 40; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+        .prep-input {
+            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 70, 239, 0.3);
+            border-radius: 6px; padding: 10px; color: #fff; font-size: 11pt; text-align: center; outline: none;
+            margin-top: 8px; box-sizing: border-box;
+        }
+        .prep-input:focus { border-color: #d946ef; }
+
+        /* Deploy Screen */
+        #deploy-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #02060d; z-index: 60; display: none; flex-direction: column; padding: 20px;
+        }
+        .deploy-select {
+            width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(0, 229, 255, 0.4);
+            color: #00e5ff; font-size: 12pt; padding: 12px; border-radius: 8px; outline: none;
+            margin-top: 8px; margin-bottom: 24px; appearance: none; text-align: center; font-weight: bold;
+        }
+
         .btn-glow {
-            padding: 16px 32px; font-size: 12pt;
+            padding: 16px 32px; font-size: 12pt; width: 100%; max-width: 400px; margin: 0 auto;
             background: linear-gradient(135deg, rgba(217, 70, 239, 0.2) 0%, rgba(162, 28, 175, 0.2) 100%);
             border: 1px solid rgba(217, 70, 239, 0.6); border-radius: 8px; color: #ffffff;
             font-weight: bold; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
             box-shadow: 0 0 20px rgba(217, 70, 239, 0.3); transition: all 0.2s ease;
         }
         .btn-glow:active { transform: scale(0.95); }
+        .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; border-color: rgba(255,255,255,0.2); background: transparent; box-shadow: none; color: #94a3b8; }
+        
+        .btn-deploy {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.2) 100%);
+            border-color: rgba(56, 189, 248, 0.6); box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
 
         .status-panel {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -94,7 +137,6 @@
         .state-success { border-color: rgba(57, 255, 20, 0.6); box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
         .state-error { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
 
-        /* Fullscreen Map Overlay */
         #map-overlay {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
             background: #02060d; z-index: 1000; display: none; flex-direction: column;
@@ -113,18 +155,42 @@
         <h1>Field Deployment</h1>
         <div class="subtitle">Auto-Hide Scanner Active</div>
         <button class="map-toggle-btn" onclick="openHideMap()">🗺️ Map</button>
+        
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-single" onclick="setMode('single')">Single Hide</button>
+            <button class="mode-tab" id="tab-prep" onclick="setMode('prep')">Cache Prep</button>
+            <button class="mode-tab" id="tab-deploy" onclick="setMode('deploy')">Deploy Cache</button>
+        </div>
     </div>
 
     <div id="reader-container">
         <div id="reader"></div>
         
-        <!-- Start Screen Overlay -->
+        <div id="prep-controls">
+            <label style="color:#d946ef; font-size:9pt; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Assigning to Batch:</label>
+            <input type="text" id="batch-id-input" class="prep-input" value="Batch 01" placeholder="e.g. Batch 01">
+        </div>
+
         <div id="start-overlay" class="overlay-ui">
             <span style="font-size: 40pt; margin-bottom: 16px;">📷</span>
             <p style="color: #cbd5e1; margin-bottom: 32px; line-height: 1.5; font-size: 11pt;">
-                Point at a Tracker QR code to automatically lock GPS coordinates and log a secure deployment hide.
+                Initialize optics to lock GPS coordinates and log secure deployments or prep caches from home.
             </p>
             <button class="btn-glow" onclick="initializeScanner()">Initialize Optics</button>
+        </div>
+
+        <div id="deploy-overlay">
+            <h2 style="color:#00e5ff; text-align:center; margin-bottom: 8px; margin-top: 20px;">Deploy Active Cache</h2>
+            <p style="text-align:center; color:#94a3b8; font-size:10pt; margin-bottom: 32px;">Select a prepared batch to immediately deploy all contained penguins to your current GPS location.</p>
+            
+            <label style="color:#38bdf8; font-size:9pt; text-transform:uppercase; font-weight:bold; letter-spacing:1px; text-align: center; display: block;">Select Cache Batch</label>
+            <select id="batch-select" class="deploy-select">
+                <option value="">Querying database...</option>
+            </select>
+
+            <button id="btn-execute-deploy" class="btn-glow btn-deploy" onclick="executeCacheDeployment()" disabled>Lock GPS & Deploy Cache</button>
+            
+            <div id="deploy-status" style="margin-top: 24px; text-align: center; font-size: 11pt; color: #cbd5e1; height: 40px;"></div>
         </div>
 
         <div id="status-panel" class="status-panel state-idle" style="display: none;">
@@ -154,6 +220,33 @@
     let hideMap = null;
     let hideLayerGroup = null;
     let globalStyles = [];
+    
+    let currentMode = 'single'; // 'single', 'prep', 'deploy'
+    let preppedBatchesData = {}; // Stores raw batch arrays
+
+    function setMode(mode) {
+        if (isProcessing) return;
+        currentMode = mode;
+        
+        document.getElementById('tab-single').classList.toggle('active', mode === 'single');
+        document.getElementById('tab-prep').classList.toggle('active', mode === 'prep');
+        document.getElementById('tab-deploy').classList.toggle('active', mode === 'deploy');
+
+        document.getElementById('prep-controls').style.display = (mode === 'prep') ? 'block' : 'none';
+        
+        if (mode === 'deploy') {
+            document.getElementById('deploy-overlay').style.display = 'flex';
+            document.getElementById('status-panel').style.display = 'none';
+            if (html5QrCode && html5QrCode.getState() === 2) html5QrCode.pause(true);
+            fetchPreppedBatches();
+        } else {
+            document.getElementById('deploy-overlay').style.display = 'none';
+            if (document.getElementById('start-overlay').style.display === 'none') {
+                document.getElementById('status-panel').style.display = 'block';
+                if (html5QrCode && html5QrCode.getState() === 3) html5QrCode.resume();
+            }
+        }
+    }
 
     function updateStatus(state, icon, text, subtext) {
         const panel = document.getElementById('status-panel');
@@ -165,14 +258,10 @@
 
     function initializeScanner() {
         document.getElementById('start-overlay').style.display = 'none';
-        document.getElementById('status-panel').style.display = 'block';
+        if (currentMode !== 'deploy') document.getElementById('status-panel').style.display = 'block';
 
         html5QrCode = new Html5Qrcode("reader");
-        
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 }
-        };
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
         html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
         .catch(err => {
@@ -181,7 +270,7 @@
     }
 
     async function onScanSuccess(decodedText, decodedResult) {
-        if (isProcessing) return;
+        if (isProcessing || currentMode === 'deploy') return;
 
         try {
             const url = new URL(decodedText);
@@ -190,15 +279,38 @@
 
             if (pId && pId.startsWith("Penguin-")) {
                 isProcessing = true;
-                if (html5QrCode && html5QrCode.getState() === 2) { // 2 = SCANNING
+                if (html5QrCode && html5QrCode.getState() === 2) {
                     html5QrCode.pause();
                 }
                 if (navigator.vibrate) navigator.vibrate(50);
                 
-                await processHideLocation(pId, tag);
+                if (currentMode === 'single') {
+                    await processHideLocation(pId, tag);
+                } else if (currentMode === 'prep') {
+                    await processCachePrep(pId, tag);
+                }
             }
-        } catch (e) {
-            // Ignored invalid QR
+        } catch (e) {}
+    }
+
+    async function processCachePrep(pId, tag) {
+        let batchId = document.getElementById('batch-id-input').value.trim() || 'Batch 01';
+        updateStatus('working', '📦', `Prepping ${pId}...`, `Assigning to ${batchId}`);
+
+        const { error } = await supabaseClient.from('penguin_logs').insert([{
+            penguin_id: pId,
+            secret_tag: tag, 
+            finder_note: `[CACHE PREP: ${batchId}]`,
+            latitude: null,
+            longitude: null
+        }]);
+
+        if (error) {
+            triggerError(`Database rejection: ${error.message}`);
+        } else {
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
+            updateStatus('success', '✅', 'Added to Cache!', `${pId} assigned to ${batchId}`);
+            resetScanner();
         }
     }
 
@@ -206,8 +318,7 @@
         updateStatus('working', '📡', `Locking GPS for ${pId}...`, 'Acquiring satellites');
 
         if (!navigator.geolocation) {
-            triggerError("GPS not supported by device.");
-            return;
+            triggerError("GPS not supported by device."); return;
         }
 
         navigator.geolocation.getCurrentPosition(async (position) => {
@@ -229,39 +340,138 @@
             } else {
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
                 updateStatus('success', '✅', 'Hide Successfully Logged!', `${pId} deployed to grid.`);
-                
-                setTimeout(() => {
-                    isProcessing = false;
-                    if (html5QrCode && html5QrCode.getState() === 3) { // 3 = PAUSED
-                        html5QrCode.resume();
-                    }
-                    updateStatus('idle', '🎯', 'Scanning for Targets...', 'Align QR code within frame');
-                }, 2500);
+                resetScanner();
             }
-
         }, (error) => {
             triggerError("GPS Signal Lost. Ensure location services are enabled.");
         }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
+    function resetScanner() {
+        setTimeout(() => {
+            isProcessing = false;
+            if (currentMode !== 'deploy' && html5QrCode && html5QrCode.getState() === 3) {
+                html5QrCode.resume();
+            }
+            updateStatus('idle', '🎯', 'Scanning for Targets...', 'Align QR code within frame');
+        }, 2500);
+    }
+
     function triggerError(msg) {
         if (navigator.vibrate) navigator.vibrate(500);
         updateStatus('error', '❌', 'Deployment Failed', msg);
-        
         setTimeout(() => {
             isProcessing = false;
-            if (html5QrCode && html5QrCode.getState() === 3) {
-                html5QrCode.resume();
-            }
+            if (currentMode !== 'deploy' && html5QrCode && html5QrCode.getState() === 3) html5QrCode.resume();
             updateStatus('idle', '🎯', 'Scanning for Targets...', 'Align QR code within frame');
         }, 4000);
     }
 
+    // --- DEPLOY BATCH LOGIC ---
+    async function fetchPreppedBatches() {
+        const selectEl = document.getElementById('batch-select');
+        const btnDeploy = document.getElementById('btn-execute-deploy');
+        selectEl.innerHTML = '<option value="">Querying database pipelines...</option>';
+        btnDeploy.disabled = true;
+
+        // Fetch all logs to determine current status of each penguin
+        const { data: allLogs } = await supabaseClient.from('penguin_logs')
+            .select('penguin_id, secret_tag, finder_note')
+            .order('created_at', { ascending: true });
+        
+        let penguinStatus = {};
+        preppedBatchesData = {};
+
+        if (allLogs) {
+            allLogs.forEach(log => {
+                if (log.finder_note && log.finder_note.startsWith('[CACHE PREP:')) {
+                    const batchName = log.finder_note.replace('[CACHE PREP: ', '').replace(']', '');
+                    penguinStatus[log.penguin_id] = { status: 'prep', batch: batchName, tag: log.secret_tag };
+                } else if (log.finder_note === '[ADMIN CACHE LOCATION]' || log.finder_note === '[ADMIN HIDE LOCATION]' || !log.finder_note.startsWith('[')) {
+                    penguinStatus[log.penguin_id] = { status: 'deployed' };
+                }
+            });
+        }
+
+        // Group those still in 'prep' status into batches. Since data are plural, we compile them carefully.
+        Object.keys(penguinStatus).forEach(pId => {
+            const info = penguinStatus[pId];
+            if (info.status === 'prep') {
+                if (!preppedBatchesData[info.batch]) preppedBatchesData[info.batch] = [];
+                preppedBatchesData[info.batch].push({ penguin_id: pId, secret_tag: info.tag });
+            }
+        });
+
+        const batchNames = Object.keys(preppedBatchesData);
+        if (batchNames.length === 0) {
+            selectEl.innerHTML = '<option value="">No Active Preps Found</option>';
+            return;
+        }
+
+        selectEl.innerHTML = '';
+        batchNames.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.innerText = `${b} (${preppedBatchesData[b].length} Penguins)`;
+            selectEl.appendChild(opt);
+        });
+        
+        btnDeploy.disabled = false;
+    }
+
+    async function executeCacheDeployment() {
+        const batchName = document.getElementById('batch-select').value;
+        const penguinsToDeploy = preppedBatchesData[batchName];
+        if (!penguinsToDeploy || penguinsToDeploy.length === 0) return;
+
+        const statusText = document.getElementById('deploy-status');
+        const btnDeploy = document.getElementById('btn-execute-deploy');
+        
+        btnDeploy.disabled = true;
+        statusText.innerHTML = '📡 Acquiring satellites for bulk deployment...';
+
+        if (!navigator.geolocation) {
+            statusText.innerHTML = '<span style="color:#ef4444;">❌ GPS not supported by device.</span>';
+            btnDeploy.disabled = false;
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            statusText.innerHTML = `☁️ Uploading ${penguinsToDeploy.length} penguins to grid...`;
+
+            const insertPayload = penguinsToDeploy.map(p => ({
+                penguin_id: p.penguin_id,
+                secret_tag: p.secret_tag,
+                finder_note: '[ADMIN CACHE LOCATION]',
+                latitude: lat,
+                longitude: lng
+            }));
+
+            const { error } = await supabaseClient.from('penguin_logs').insert(insertPayload);
+
+            if (error) {
+                statusText.innerHTML = `<span style="color:#ef4444;">❌ Database rejection: ${error.message}</span>`;
+                btnDeploy.disabled = false;
+            } else {
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+                statusText.innerHTML = `<span style="color:#39ff14;">✅ Cache Deployed Successfully!</span>`;
+                setTimeout(() => {
+                    statusText.innerHTML = '';
+                    fetchPreppedBatches();
+                }, 3000);
+            }
+        }, (error) => {
+            statusText.innerHTML = '<span style="color:#ef4444;">❌ GPS Signal Lost. Ensure location services are enabled.</span>';
+            btnDeploy.disabled = false;
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
     // --- MAPPING ENGINE ---
     async function openHideMap() {
-        if (html5QrCode && html5QrCode.getState() === 2) {
-            html5QrCode.pause(true); // Pause video feed to save battery while map is open
-        }
+        if (html5QrCode && html5QrCode.getState() === 2) html5QrCode.pause(true);
         
         document.getElementById('map-overlay').style.display = 'flex';
 
@@ -273,21 +483,17 @@
             hideLayerGroup = L.layerGroup().addTo(hideMap);
         }
 
-        setTimeout(() => {
-            hideMap.invalidateSize();
-            loadHideMapData();
-        }, 200);
+        setTimeout(() => { hideMap.invalidateSize(); loadHideMapData(); }, 200);
     }
 
     function closeHideMap() {
         document.getElementById('map-overlay').style.display = 'none';
-        if (html5QrCode && html5QrCode.getState() === 3 && !isProcessing) {
+        if (currentMode !== 'deploy' && html5QrCode && html5QrCode.getState() === 3 && !isProcessing) {
             html5QrCode.resume();
         }
     }
 
     async function loadHideMapData() {
-        // Ensure styles are loaded for mapping physical descriptions
         if (globalStyles.length === 0) {
             const { data } = await supabaseClient.from('penguin_styles').select('*');
             if (data) globalStyles = data;
@@ -295,8 +501,8 @@
 
         const { data: hides, error } = await supabaseClient
             .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, style_id')
-            .eq('finder_note', '[ADMIN HIDE LOCATION]')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, style_id, finder_note')
+            .in('finder_note', ['[ADMIN HIDE LOCATION]', '[ADMIN CACHE LOCATION]'])
             .order('created_at', { ascending: false });
 
         if (error || !hides) return;
@@ -308,8 +514,13 @@
         const hideIcon = L.divIcon({ 
             className: 'custom-div-icon', 
             html: `<div style='background-color:#ef4444; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #ef4444;'></div>`, 
-            iconSize: [14, 14], 
-            iconAnchor: [7, 7] 
+            iconSize: [14, 14], iconAnchor: [7, 7] 
+        });
+        
+        const cacheIcon = L.divIcon({ 
+            className: 'custom-div-icon', 
+            html: `<div style='background-color:#38bdf8; width:16px; height:16px; border-radius:4px; border:2px solid white; box-shadow: 0 0 10px #38bdf8; transform: rotate(45deg);'></div>`, 
+            iconSize: [16, 16], iconAnchor: [8, 8] 
         });
 
         hides.forEach(log => {
@@ -324,10 +535,13 @@
 
             const displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
             const formattedDate = new Date(log.created_at).toLocaleDateString() + ' ' + new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const isCache = log.finder_note === '[ADMIN CACHE LOCATION]';
 
-            L.marker([log.latitude, log.longitude], { icon: hideIcon }).addTo(hideLayerGroup)
+            L.marker([log.latitude, log.longitude], { icon: isCache ? cacheIcon : hideIcon }).addTo(hideLayerGroup)
              .bindPopup(`
-                <b style="color:#00e5ff; font-size: 11pt;">🐧 ${displayName}</b><br>
+                <b style="color:${isCache ? '#38bdf8' : '#00e5ff'}; font-size: 11pt;">${isCache ? '📦 CACHE' : '🐧 HIDE'}</b><br>
+                <b style="color:#f8fafc;">${displayName}</b><br>
                 <span style="color:#cbd5e1; font-size: 9pt;">ID:</span> <span style="font-family:monospace;">${log.penguin_id}</span><br>
                 <span style="color:#cbd5e1; font-size: 9pt;">Style:</span> ${styleName}<br>
                 <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size:8.5pt; color:#94a3b8;">Deployed: ${formattedDate}</div>
