@@ -1474,7 +1474,12 @@ async function loadPenguinHistory(targetId) {
             namesHtml += `</span>`;
         }
 
+        let cleanNote = log.finder_note || "";
+        if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+        let noteHtml = cleanNote ? `<span style="color: #cbd5e1; font-size: 10.5pt; font-style: italic; text-align: center; margin-bottom: 8px; line-height: 1.4; display: block;">"${cleanNote}"</span>` : "";
+
         overlay.innerHTML = `
+            ${noteHtml}
             <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="margin-bottom: 4px; padding: 6px 16px;">
                 ${getPebbleSvg(hasPebbled)} ${pebblesCount}
             </button>
