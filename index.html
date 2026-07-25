@@ -964,6 +964,18 @@ async function loadPenguinHistory(targetId) {
             if (fsMap) {
                 fsMap.invalidateSize();
                 fsMap.setView([lat, lng], 14);
+                
+                // Hunt down the specific marker and pop it open
+                if (fsLayerGroup) {
+                    fsLayerGroup.eachLayer((layer) => {
+                        if (layer.getLatLng) {
+                            const markerLatLng = layer.getLatLng();
+                            if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lng) < 0.0001) {
+                                layer.openPopup();
+                            }
+                        }
+                    });
+                }
             }
         }, 300);
     }
