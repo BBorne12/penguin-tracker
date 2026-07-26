@@ -114,12 +114,12 @@
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+            display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10000;
         }
         .modal-card {
             background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
             border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 16px;
-            width: 100%; max-width: 95vw; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            width: 100%; max-width: 95vw; height: 95vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
         }
 
         .app-footer {
@@ -137,6 +137,25 @@
             <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; line-height: 1;" onclick="closeFullscreenMap()">×</button>
         </div>
         <div id="fs-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
+        
+        <!-- Fullscreen Filter Controls -->
+        <div style="margin-top: 12px;">
+            <div class="filter-container" style="margin-top: 0; padding-top: 0; border-top: none;">
+                <button class="filter-btn active" id="fs-filter-cache" onclick="toggleFilter('cache')">
+                    <span class="status-dot dot-cache"></span> Caches
+                </button>
+                <button class="filter-btn active" id="fs-filter-available" onclick="toggleFilter('available')">
+                    <span class="status-dot dot-available"></span> Potentially Available
+                </button>
+                <button class="filter-btn active" id="fs-filter-found" onclick="toggleFilter('found')">
+                    <span class="status-dot dot-found"></span> Found
+                </button>
+            </div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 9pt; color: #cbd5e1; justify-content: center;">
+                <input type="checkbox" id="fs-filter-14days" onchange="toggle14DaysFilter('fs')" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="fs-filter-14days" style="cursor: pointer;">Include deployments older than 14 days</label>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -170,9 +189,8 @@
                 </button>
             </div>
             
-            <!-- Updated 14 Day Filter Checkbox -->
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; gap: 8px; font-size: 9.5pt; color: #cbd5e1;">
-                <input type="checkbox" id="filter-14days" onchange="toggle14DaysFilter()" style="width: 16px; height: 16px; cursor: pointer;">
+                <input type="checkbox" id="filter-14days" onchange="toggle14DaysFilter('main')" style="width: 16px; height: 16px; cursor: pointer;">
                 <label for="filter-14days" style="cursor: pointer;">Include deployments older than 14 days</label>
             </div>
         </div>
@@ -211,11 +229,11 @@
     // --- STATE VARIABLES ---
     let mainMap, fsMap;
     let mainLayerGroup, fsLayerGroup;
-    let isInitialMapLoad = true; // Prevents jumping when toggling filters
+    let isInitialMapLoad = true; 
     
     let mapData = []; 
     let filters = { cache: true, available: true, found: true };
-    let includeOldItems = false; // Controls the 14-day filter
+    let includeOldItems = false; 
     
     let currentPage = 1;
     const ITEMS_PER_PAGE = 5; 
@@ -306,7 +324,7 @@
             const subsequentLogs = history.logs.filter(l => {
                 if (l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]') return false;
                 if (l.finder_note && l.finder_note.startsWith('[CACHE PREP')) return false;
-                if (l.finder_note === '[LIKELY MISSING]') return false; // Ignore our silent tag for this check
+                if (l.finder_note === '[LIKELY MISSING]') return false; 
                 return new Date(l.created_at).getTime() > adminHideTime;
             });
             
@@ -382,7 +400,6 @@
         if (error) {
             alert("Error updating status: " + error.message);
         } else {
-            // Re-fetch data to instantly apply the new state
             fetchAndProcessData();
         }
     }
@@ -416,17 +433,31 @@
     }
 
     // --- FILTER & VISIBILITY LOGIC ---
-    function toggle14DaysFilter() {
-        includeOldItems = document.getElementById('filter-14days').checked;
+    function toggle14DaysFilter(source) {
+        let isChecked = false;
+        if (source === 'main') {
+            isChecked = document.getElementById('filter-14days').checked;
+            document.getElementById('fs-filter-14days').checked = isChecked;
+        } else {
+            isChecked = document.getElementById('fs-filter-14days').checked;
+            document.getElementById('filter-14days').checked = isChecked;
+        }
+        includeOldItems = isChecked;
         renderMaps();
         renderList();
     }
     
     function toggleFilter(type) {
         filters[type] = !filters[type];
-        const btn = document.getElementById(`filter-${type}`);
-        if (filters[type]) btn.classList.add('active');
-        else btn.classList.remove('active');
+        
+        // Update both main screen and fullscreen buttons visually
+        ['', 'fs-'].forEach(prefix => {
+            const btn = document.getElementById(`${prefix}filter-${type}`);
+            if (btn) {
+                if (filters[type]) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+        });
         
         renderMaps();
         renderList();
@@ -435,11 +466,10 @@
     function isItemVisible(item) {
         if (item.type === 'cache' && !filters.cache) return false;
         if (item.type === 'available' && !filters.available) return false;
-        // Group likely_found strictly with the Found toggle
         if ((item.type === 'found' || item.type === 'likely_found') && !filters.found) return false;
         
-        // 14 day filter applied to ALL items if unchecked
-        if (!includeOldItems) {
+        // 14 day filter EXCLUDES caches. Caches always show.
+        if (!includeOldItems && item.type !== 'cache') {
             const ageInDays = (new Date().getTime() - new Date(item.date).getTime()) / (1000 * 3600 * 24);
             if (ageInDays > 14) return false;
         }
@@ -511,23 +541,28 @@
             let subtitle = '';
             let actionHtml = '';
 
+            const dirUrl = `https://maps.google.com/?q=${item.lat},${item.lng}`;
+            const btnDirections = `<button onclick="window.open('${dirUrl}', '_blank')" style="width:100%; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56,189,248,0.4); color:#00e5ff; padding:6px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">🗺️ Directions To</button>`;
+
             if (item.type === 'cache') {
                 icon = iconCache;
                 title = `📦 PENGUIN CACHE`;
                 subtitle = `${item.availableCount} Penguins Available<br><span style="font-size:8.5pt; color:#94a3b8;">${item.foundCount} Already Found</span>`;
+                actionHtml = `<div style="margin-top:10px;">${btnDirections}</div>`;
             } else if (item.type === 'found') {
                 icon = iconFound;
                 title = item.displayName ? `🐧 ${item.displayName}` : `🐧 Penguin Found`;
                 subtitle = `<span style="color:#94a3b8;">Origin location. Currently on an adventure.</span>`;
             } else if (item.type === 'likely_found') {
-                icon = iconFound; // Uses same visual dot as a found penguin
+                icon = iconFound; 
                 title = `🐧 Likely Found`;
                 subtitle = `<span style="color:#94a3b8;">Reported missing from deployment location.</span>`;
             } else {
                 icon = iconAvailable;
                 title = `🥚 POTENTIAL HIDE`;
                 subtitle = `A penguin was deployed near here.<br><span style="font-size:8.5pt; color:#94a3b8;">ID: ${item.id}</span>`;
-                actionHtml = `<button onclick="markLikelyMissing('${item.id}', ${item.lat}, ${item.lng})" style="margin-top:8px; width:100%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:4px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">Mark as Likely Found</button>`;
+                const btnMissing = `<button onclick="markLikelyMissing('${item.id}', ${item.lat}, ${item.lng})" style="width:100%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:6px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">Mark as Likely Found</button>`;
+                actionHtml = `<div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">${btnDirections}${btnMissing}</div>`;
             }
 
             const popupContent = `
@@ -551,7 +586,6 @@
             bounds.extend([item.lat, item.lng]);
         });
 
-        // Only auto-zoom on the very first load so filter clicking doesn't jar the camera
         if (validPoints && bounds.isValid() && isInitialMapLoad) {
             mainMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
             fsMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
