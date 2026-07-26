@@ -63,7 +63,6 @@
         /* Filter Toggles */
         .filter-container {
             display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
-            padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
         .filter-btn {
             flex: 1; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
@@ -170,12 +169,18 @@
                     <span class="status-dot dot-found"></span> Found
                 </button>
             </div>
+            
+            <!-- New 30 Day Filter Checkbox -->
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; gap: 8px; font-size: 9.5pt; color: #cbd5e1;">
+                <input type="checkbox" id="filter-30days" onchange="toggle30DaysFilter()" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="filter-30days" style="cursor: pointer;">Include Potentially Available placed more than 30 days</label>
+            </div>
         </div>
 
         <div class="glass-card">
             <div class="card-header-flex">
                 <h2 style="margin: 0;">📜 Recent Deployments</h2>
-                <button type="button" id="btn-find-nearest" class="btn-inline-action" onclick="findNearest()">📍 Find Nearest</button>
+                <button type="button" id="btn-find-nearest" class="btn-inline-action" onclick="toggleSortMode()">📍 Find Nearest</button>
             </div>
             
             <ul class="deployment-list" id="deployments-output">
@@ -209,13 +214,14 @@
     
     let mapData = []; 
     let filters = { cache: true, available: true, found: true };
+    let includeOldAvailable = false; // Controls the 30-day filter
     
     let currentPage = 1;
-    const ITEMS_PER_PAGE = 8;
+    const ITEMS_PER_PAGE = 5; // Reduced from 8
     let listData = []; 
     
     let isDistanceSortMode = false;
-    let cityCache = {}; // Caches geocoded locations
+    let cityCache = {}; 
 
     // --- ICONS ---
     const iconAvailable = L.divIcon({ className: 'custom-div-icon', html: `<div style='background-color:#39ff14; width:14px; height:14px; border-radius:50%; border:2px solid #02060d; box-shadow: 0 0 10px #39ff14;'></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
@@ -238,7 +244,7 @@
     }
 
     async function fetchAndProcessData() {
-        // We must fetch in chunks to bypass the 1000-row default limit
+        // Fetch in chunks to bypass the 1000-row limit
         let allLogs = [];
         let currentOffset = 0;
         const CHUNK_SIZE = 1000;
@@ -260,7 +266,6 @@
 
             allLogs = allLogs.concat(logs);
             
-            // If it returned exactly the chunk size, there might be more. Otherwise, we're done.
             if (logs.length === CHUNK_SIZE) {
                 currentOffset += CHUNK_SIZE;
             } else {
@@ -270,7 +275,6 @@
 
         let penguinHistory = {};
 
-        // Process these data using the full payload
         allLogs.forEach(log => {
             const pid = log.penguin_id;
             if (!penguinHistory[pid]) {
@@ -297,7 +301,6 @@
             const isCache = history.adminHide.finder_note === '[ADMIN CACHE LOCATION]';
             const adminHideTime = new Date(history.adminHide.created_at).getTime();
             
-            // STRICT LOGIC: A penguin is only found if there is a real adventure log AFTER the original admin hide timestamp
             const subsequentLogs = history.logs.filter(l => {
                 if (l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]') return false;
                 if (l.finder_note && l.finder_note.startsWith('[CACHE PREP')) return false;
@@ -322,7 +325,6 @@
                 if (isFound) caches[coordKey].foundCount++;
                 else caches[coordKey].availableCount++;
                 
-                // Keep the timestamp of the newest addition to the cache
                 if (adminHideTime > new Date(caches[coordKey].date).getTime()) {
                     caches[coordKey].date = history.adminHide.created_at;
                 }
@@ -344,7 +346,6 @@
             parsedDeployments.push(cache);
         });
 
-        // Strict descending sort based on absolute time
         parsedDeployments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         mapData = parsedDeployments;
@@ -363,7 +364,6 @@
             const [lat, lng] = coord.split(',');
             if (!cityCache[coord]) {
                 try {
-                    // Using free BigDataCloud reverse geocode to avoid strict rate limits
                     const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
                     const data = await res.json();
                     const city = data.city || data.locality || "Unknown";
@@ -374,58 +374,96 @@
                 }
             }
             
-            // Update items with resolved names
             mapData.forEach(item => {
                 if (`${item.lat},${item.lng}` === coord) {
                     item.cityName = cityCache[coord];
                 }
             });
         }
-        // Force a re-render once all cities are resolved
         renderMaps();
         renderList();
     }
 
-    // --- FIND NEAREST LOGIC ---
-    function findNearest() {
-        if (!navigator.geolocation) {
-            alert("Location services are not supported by your browser.");
-            return;
+    // --- FILTER & VISIBILITY LOGIC ---
+    function toggle30DaysFilter() {
+        includeOldAvailable = document.getElementById('filter-30days').checked;
+        renderMaps();
+        renderList();
+    }
+    
+    function toggleFilter(type) {
+        filters[type] = !filters[type];
+        const btn = document.getElementById(`filter-${type}`);
+        if (filters[type]) btn.classList.add('active');
+        else btn.classList.remove('active');
+        
+        renderMaps();
+        renderList();
+    }
+    
+    function isItemVisible(item) {
+        if (item.type === 'cache' && !filters.cache) return false;
+        if (item.type === 'available' && !filters.available) return false;
+        if (item.type === 'found' && !filters.found) return false;
+        
+        // 30 day filter logic applied to 'available' and 'cache' types
+        if (!includeOldAvailable && (item.type === 'available' || item.type === 'cache')) {
+            const ageInDays = (new Date().getTime() - new Date(item.date).getTime()) / (1000 * 3600 * 24);
+            if (ageInDays > 30) return false;
         }
+        
+        return true;
+    }
 
+    // --- SORT LOGIC ---
+    function toggleSortMode() {
         const btn = document.getElementById('btn-find-nearest');
-        btn.innerHTML = '⏳ Acquiring...';
-
-        navigator.geolocation.getCurrentPosition((position) => {
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
-            const userLocation = L.latLng(userLat, userLng);
-
-            // Calculate distance in miles for all points
-            listData.forEach(item => {
-                const itemLocation = L.latLng(item.lat, item.lng);
-                item.distanceMiles = userLocation.distanceTo(itemLocation) / 1609.344;
-            });
-
-            // Sort strictly by closest proximity
-            listData.sort((a, b) => a.distanceMiles - b.distanceMiles);
-            
-            isDistanceSortMode = true;
+        
+        if (isDistanceSortMode) {
+            // Restore chronological sort
+            isDistanceSortMode = false;
+            listData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             currentPage = 1;
-            
-            btn.innerHTML = '🎯 Sorted by Nearest';
-            btn.classList.add('active-location');
-
-            // Pan map to closest deployment
-            if (listData.length > 0) {
-                mainMap.setView([listData[0].lat, listData[0].lng], 9);
+            btn.innerHTML = '📍 Find Nearest';
+            btn.classList.remove('active-location');
+            renderList();
+        } else {
+            // Switch to nearest sort
+            if (!navigator.geolocation) {
+                alert("Location services are not supported by your browser.");
+                return;
             }
 
-            renderList();
-        }, (error) => {
-            alert("Could not access location. Please ensure permissions are granted.");
-            btn.innerHTML = '📍 Find Nearest';
-        }, { enableHighAccuracy: true });
+            btn.innerHTML = '⏳ Acquiring...';
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                const userLocation = L.latLng(userLat, userLng);
+
+                listData.forEach(item => {
+                    const itemLocation = L.latLng(item.lat, item.lng);
+                    item.distanceMiles = userLocation.distanceTo(itemLocation) / 1609.344;
+                });
+
+                listData.sort((a, b) => a.distanceMiles - b.distanceMiles);
+                
+                isDistanceSortMode = true;
+                currentPage = 1;
+                
+                btn.innerHTML = '🎯 Sorted by Nearest (Reset)';
+                btn.classList.add('active-location');
+
+                if (listData.length > 0) {
+                    mainMap.setView([listData[0].lat, listData[0].lng], 9);
+                }
+
+                renderList();
+            }, (error) => {
+                alert("Could not access location. Please ensure permissions are granted.");
+                btn.innerHTML = '📍 Find Nearest';
+            }, { enableHighAccuracy: true });
+        }
     }
 
     function renderMaps() {
@@ -435,9 +473,7 @@
         let validPoints = false;
 
         mapData.forEach(item => {
-            if (item.type === 'cache' && !filters.cache) return;
-            if (item.type === 'available' && !filters.available) return;
-            if (item.type === 'found' && !filters.found) return;
+            if (!isItemVisible(item)) return;
 
             validPoints = true;
             let icon = iconAvailable;
@@ -479,31 +515,15 @@
         });
 
         if (validPoints && bounds.isValid() && !isDistanceSortMode) {
-            // Apply maxZoom so auto-framing doesn't drop to street level when only a few pins exist
             mainMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
             fsMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
         }
     }
 
-    function toggleFilter(type) {
-        filters[type] = !filters[type];
-        const btn = document.getElementById(`filter-${type}`);
-        if (filters[type]) btn.classList.add('active');
-        else btn.classList.remove('active');
-        
-        renderMaps();
-        renderList();
-    }
-
     function renderList() {
         const out = document.getElementById('deployments-output');
         
-        const filteredList = listData.filter(item => {
-            if (item.type === 'cache' && !filters.cache) return false;
-            if (item.type === 'available' && !filters.available) return false;
-            if (item.type === 'found' && !filters.found) return false;
-            return true;
-        });
+        const filteredList = listData.filter(item => isItemVisible(item));
 
         if (filteredList.length === 0) {
             out.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:20px; font-size:10pt;">No deployments match the current filters.</li>`;
@@ -540,7 +560,6 @@
                 badgeText = 'POTENTIALLY AVAILABLE';
             }
 
-            // Display distance if sorted by location, otherwise standard date
             const rightSideText = isDistanceSortMode && item.distanceMiles !== undefined
                 ? `${item.distanceMiles.toFixed(1)} mi` 
                 : new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -578,7 +597,11 @@
     // --- MODAL CONTROLS ---
     function openFullscreenMap() {
         document.getElementById('fullscreen-map-overlay').style.display = 'flex';
-        setTimeout(() => { fsMap.invalidateSize(); }, 200);
+        setTimeout(() => { 
+            fsMap.invalidateSize(); 
+            // Fetch current center and zoom from the main map directly so they sync perfectly
+            fsMap.setView(mainMap.getCenter(), mainMap.getZoom(), { animate: false });
+        }, 200);
     }
 
     function closeFullscreenMap() {
@@ -588,7 +611,6 @@
     function openFullscreenMapAt(lat, lng) {
         openFullscreenMap();
         setTimeout(() => {
-            // Pulled zoom level back from 15 to 13 for better neighborhood context
             fsMap.setView([lat, lng], 13);
             
             fsLayerGroup.eachLayer(layer => {
