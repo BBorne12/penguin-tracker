@@ -42,20 +42,14 @@
 
         .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
-        .btn-inline-refresh {
+        .btn-inline-action {
             background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);
-            color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 5px 10px; border-radius: 6px;
+            color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 6px 12px; border-radius: 6px;
             cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 4px;
         }
-        .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
-
-        .btn-glow {
-            display: block; width: 100%; text-align: center; padding: 14px;
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
-            border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; color: #ffffff;
-            font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); transition: opacity 0.2s ease, border-color 0.2s ease;
-        }
+        .btn-inline-action:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
+        .btn-inline-action.active-location { background: rgba(57, 255, 20, 0.15); border-color: rgba(57, 255, 20, 0.5); color: #39ff14; box-shadow: 0 0 8px rgba(57, 255, 20, 0.2); }
 
         /* Map Styling */
         #main-map {
@@ -73,8 +67,8 @@
         }
         .filter-btn {
             flex: 1; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
-            color: #94a3b8; font-size: 9pt; font-weight: bold; border-radius: 6px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;
+            color: #94a3b8; font-size: 8.5pt; font-weight: bold; border-radius: 6px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; text-transform: uppercase;
         }
         .filter-btn.active {
             background: rgba(56, 189, 248, 0.15); color: #f8fafc;
@@ -97,7 +91,7 @@
         .deployment-row:last-child { border-bottom: none; }
         
         .d-title { font-weight: 600; color: #f8fafc; font-size: 11pt; margin-bottom: 2px; }
-        .d-subtitle { font-size: 9pt; color: #94a3b8; }
+        .d-subtitle { font-size: 8.5pt; color: #94a3b8; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
         .d-date { font-size: 9pt; color: #00e5ff; text-align: right; }
         .d-status-badge {
             display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; margin-top: 4px;
@@ -160,7 +154,7 @@
         <div class="glass-card">
             <div class="card-header-flex">
                 <h2 style="margin: 0;">Active Locations</h2>
-                <button type="button" class="btn-inline-refresh" onclick="openFullscreenMap()">⛶ Enlarge</button>
+                <button type="button" class="btn-inline-action" onclick="openFullscreenMap()">⛶ Enlarge</button>
             </div>
             
             <div id="main-map"></div>
@@ -170,7 +164,7 @@
                     <span class="status-dot dot-cache"></span> Caches
                 </button>
                 <button class="filter-btn active" id="filter-available" onclick="toggleFilter('available')">
-                    <span class="status-dot dot-available"></span> Available
+                    <span class="status-dot dot-available"></span> Potentially Available
                 </button>
                 <button class="filter-btn active" id="filter-found" onclick="toggleFilter('found')">
                     <span class="status-dot dot-found"></span> Found
@@ -179,7 +173,10 @@
         </div>
 
         <div class="glass-card">
-            <h2>📜 Recent Deployments</h2>
+            <div class="card-header-flex">
+                <h2 style="margin: 0;">📜 Recent Deployments</h2>
+                <button type="button" id="btn-find-nearest" class="btn-inline-action" onclick="findNearest()">📍 Find Nearest</button>
+            </div>
             
             <ul class="deployment-list" id="deployments-output">
                 <li style="text-align:center; color:#94a3b8; padding:20px; font-size:11pt;">Querying intelligence pipelines...</li>
@@ -210,16 +207,15 @@
     let mainMap, fsMap;
     let mainLayerGroup, fsLayerGroup;
     
-    // Processed deployment locations
     let mapData = []; 
-    
-    // Filters
     let filters = { cache: true, available: true, found: true };
     
-    // Pagination
     let currentPage = 1;
     const ITEMS_PER_PAGE = 8;
     let listData = []; 
+    
+    let isDistanceSortMode = false;
+    let cityCache = {}; // Caches geocoded locations
 
     // --- ICONS ---
     const iconAvailable = L.divIcon({ className: 'custom-div-icon', html: `<div style='background-color:#39ff14; width:14px; height:14px; border-radius:50%; border:2px solid #02060d; box-shadow: 0 0 10px #39ff14;'></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
@@ -232,17 +228,16 @@
     });
 
     function initMaps() {
-        mainMap = L.map('main-map', { zoomControl: false }).setView([39.8283, -98.5795], 4);
+        mainMap = L.map('main-map', { zoomControl: false }).setView([39.9783, -86.1180], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mainMap);
         mainLayerGroup = L.layerGroup().addTo(mainMap);
 
-        fsMap = L.map('fs-map').setView([39.8283, -98.5795], 4);
+        fsMap = L.map('fs-map').setView([39.9783, -86.1180], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(fsMap);
         fsLayerGroup = L.layerGroup().addTo(fsMap);
     }
 
     async function fetchAndProcessData() {
-        // Query the database pipelines. Data are retrieved and sorted chronologically.
         const { data: logs, error } = await supabaseClient
             .from('penguin_logs')
             .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
@@ -255,7 +250,6 @@
 
         let penguinHistory = {};
 
-        // Aggregate individual histories
         logs.forEach(log => {
             const pid = log.penguin_id;
             if (!penguinHistory[pid]) {
@@ -275,21 +269,23 @@
         let caches = {}; 
         let parsedDeployments = [];
 
-        // Process these data into clean deploy records
         Object.keys(penguinHistory).forEach(pid => {
             const history = penguinHistory[pid];
-            
-            // If it was never officially deployed via admin scanner, skip it for this map
             if (!history.adminHide || !history.adminHide.latitude) return;
 
             const isCache = history.adminHide.finder_note === '[ADMIN CACHE LOCATION]';
+            const adminHideTime = new Date(history.adminHide.created_at).getTime();
             
-            // It is 'found' if it has a custom name OR if it has subsequent non-admin logs
-            const subsequentLogs = history.logs.filter(l => l.finder_note !== '[ADMIN HIDE LOCATION]' && l.finder_note !== '[ADMIN CACHE LOCATION]' && !l.finder_note?.startsWith('[CACHE PREP'));
+            // STRICT LOGIC: A penguin is only found if there is a real adventure log AFTER the original admin hide timestamp
+            const subsequentLogs = history.logs.filter(l => {
+                if (l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]') return false;
+                if (l.finder_note && l.finder_note.startsWith('[CACHE PREP')) return false;
+                return new Date(l.created_at).getTime() > adminHideTime;
+            });
+            
             const isFound = (history.customName !== null) || (subsequentLogs.length > 0);
 
             if (isCache) {
-                // Group cache coordinates securely. Coordinate strings ensure exact match grouping.
                 const coordKey = `${history.adminHide.latitude}_${history.adminHide.longitude}`;
                 if (!caches[coordKey]) {
                     caches[coordKey] = {
@@ -297,47 +293,118 @@
                         lat: history.adminHide.latitude,
                         lng: history.adminHide.longitude,
                         date: history.adminHide.created_at,
-                        totalCount: 0,
-                        availableCount: 0,
-                        foundCount: 0
+                        totalCount: 0, availableCount: 0, foundCount: 0,
+                        cityName: "Locating..."
                     };
                 }
                 caches[coordKey].totalCount++;
-                if (isFound) {
-                    caches[coordKey].foundCount++;
-                } else {
-                    caches[coordKey].availableCount++;
+                if (isFound) caches[coordKey].foundCount++;
+                else caches[coordKey].availableCount++;
+                
+                // Keep the timestamp of the newest addition to the cache
+                if (adminHideTime > new Date(caches[coordKey].date).getTime()) {
+                    caches[coordKey].date = history.adminHide.created_at;
                 }
             } else {
-                // Standard Single Hide
                 parsedDeployments.push({
                     id: pid,
                     type: isFound ? 'found' : 'available',
                     lat: history.adminHide.latitude,
                     lng: history.adminHide.longitude,
                     date: history.adminHide.created_at,
-                    displayName: history.customName || pid
+                    displayName: history.customName || pid,
+                    cityName: "Locating..."
                 });
             }
         });
 
-        // Push cache groups into the main array
         Object.values(caches).forEach(cache => {
-            // If a cache is completely empty, it functionally becomes a historical 'found' point
-            if (cache.availableCount === 0) {
-                cache.type = 'found'; 
-            }
+            if (cache.availableCount === 0) cache.type = 'found'; 
             parsedDeployments.push(cache);
         });
 
-        // Sort data descending by date for the list
-        parsedDeployments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Strict descending sort based on absolute time
+        parsedDeployments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         mapData = parsedDeployments;
-        listData = parsedDeployments;
+        listData = [...parsedDeployments];
 
         renderMaps();
         renderList();
+        resolveCityNames();
+    }
+
+    // --- REVERSE GEOCODING ---
+    async function resolveCityNames() {
+        const uniqueCoords = [...new Set(mapData.map(item => `${item.lat},${item.lng}`))];
+        
+        for (const coord of uniqueCoords) {
+            const [lat, lng] = coord.split(',');
+            if (!cityCache[coord]) {
+                try {
+                    // Using free BigDataCloud reverse geocode to avoid strict rate limits
+                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+                    const data = await res.json();
+                    const city = data.city || data.locality || "Unknown";
+                    const state = data.principalSubdivision || "";
+                    cityCache[coord] = state ? `${city}, ${state}` : city;
+                } catch (e) {
+                    cityCache[coord] = "Unknown Location";
+                }
+            }
+            
+            // Update items with resolved names
+            mapData.forEach(item => {
+                if (`${item.lat},${item.lng}` === coord) {
+                    item.cityName = cityCache[coord];
+                }
+            });
+        }
+        // Force a re-render once all cities are resolved
+        renderMaps();
+        renderList();
+    }
+
+    // --- FIND NEAREST LOGIC ---
+    function findNearest() {
+        if (!navigator.geolocation) {
+            alert("Location services are not supported by your browser.");
+            return;
+        }
+
+        const btn = document.getElementById('btn-find-nearest');
+        btn.innerHTML = '⏳ Acquiring...';
+
+        navigator.geolocation.getCurrentPosition((position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            const userLocation = L.latLng(userLat, userLng);
+
+            // Calculate distance in miles for all points
+            listData.forEach(item => {
+                const itemLocation = L.latLng(item.lat, item.lng);
+                item.distanceMiles = userLocation.distanceTo(itemLocation) / 1609.344;
+            });
+
+            // Sort strictly by closest proximity
+            listData.sort((a, b) => a.distanceMiles - b.distanceMiles);
+            
+            isDistanceSortMode = true;
+            currentPage = 1;
+            
+            btn.innerHTML = '🎯 Sorted by Nearest';
+            btn.classList.add('active-location');
+
+            // Pan map to closest deployment
+            if (listData.length > 0) {
+                mainMap.setView([listData[0].lat, listData[0].lng], 9);
+            }
+
+            renderList();
+        }, (error) => {
+            alert("Could not access location. Please ensure permissions are granted.");
+            btn.innerHTML = '📍 Find Nearest';
+        }, { enableHighAccuracy: true });
     }
 
     function renderMaps() {
@@ -347,7 +414,6 @@
         let validPoints = false;
 
         mapData.forEach(item => {
-            // Apply current filters
             if (item.type === 'cache' && !filters.cache) return;
             if (item.type === 'available' && !filters.available) return;
             if (item.type === 'found' && !filters.found) return;
@@ -376,6 +442,7 @@
                     <b style="color:#f8fafc; font-size:11pt; display:block; margin-bottom:4px;">${title}</b>
                     <span style="color:#cbd5e1; font-size: 9.5pt;">${subtitle}</span>
                     <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); font-size:8pt; color:#64748b;">
+                        📍 ${item.cityName}<br>
                         Deployed: ${new Date(item.date).toLocaleDateString()}
                     </div>
                 </div>
@@ -384,38 +451,32 @@
             const m1 = L.marker([item.lat, item.lng], { icon: icon }).addTo(mainLayerGroup).bindPopup(popupContent);
             const m2 = L.marker([item.lat, item.lng], { icon: icon }).addTo(fsLayerGroup).bindPopup(popupContent);
             
-            // Attach coordinates so we can trigger click events programmatically from the list
             m1.itemData = item;
             m2.itemData = item;
 
             bounds.extend([item.lat, item.lng]);
         });
 
-        if (validPoints && bounds.isValid()) {
-            mainMap.fitBounds(bounds, { padding: [30, 30] });
-            fsMap.fitBounds(bounds, { padding: [40, 40] });
+        if (validPoints && bounds.isValid() && !isDistanceSortMode) {
+            // Apply maxZoom so auto-framing doesn't drop to street level when only a few pins exist
+            mainMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
+            fsMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
         }
     }
 
     function toggleFilter(type) {
         filters[type] = !filters[type];
-        
         const btn = document.getElementById(`filter-${type}`);
-        if (filters[type]) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
+        if (filters[type]) btn.classList.add('active');
+        else btn.classList.remove('active');
         
         renderMaps();
         renderList();
     }
 
-    // --- LIST & PAGINATION ---
     function renderList() {
         const out = document.getElementById('deployments-output');
         
-        // Filter the list based on the active map toggles
         const filteredList = listData.filter(item => {
             if (item.type === 'cache' && !filters.cache) return false;
             if (item.type === 'available' && !filters.available) return false;
@@ -455,19 +516,23 @@
             } else {
                 title = item.displayName || 'Unknown Penguin';
                 badgeClass = 'badge-available';
-                badgeText = 'AVAILABLE';
+                badgeText = 'POTENTIALLY AVAILABLE';
             }
 
-            const formattedDate = new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+            // Display distance if sorted by location, otherwise standard date
+            const rightSideText = isDistanceSortMode && item.distanceMiles !== undefined
+                ? `${item.distanceMiles.toFixed(1)} mi` 
+                : new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
             li.innerHTML = `
                 <div>
                     <div class="d-title">${title}</div>
+                    <div class="d-subtitle">📍 ${item.cityName}</div>
                     <div class="d-status-badge ${badgeClass}">${badgeText}</div>
                 </div>
                 <div style="text-align: right;">
-                    <div class="d-date">${formattedDate}</div>
-                    <div style="font-size: 14pt; color: #38bdf8; margin-top: 4px;">📍</div>
+                    <div class="d-date">${rightSideText}</div>
+                    <div style="font-size: 14pt; color: #38bdf8; margin-top: 4px;">🔍</div>
                 </div>
             `;
             out.appendChild(li);
@@ -502,9 +567,9 @@
     function openFullscreenMapAt(lat, lng) {
         openFullscreenMap();
         setTimeout(() => {
-            fsMap.setView([lat, lng], 15);
+            // Pulled zoom level back from 15 to 13 for better neighborhood context
+            fsMap.setView([lat, lng], 13);
             
-            // Find and open the popup for this specific marker
             fsLayerGroup.eachLayer(layer => {
                 if (layer.itemData && layer.itemData.lat === lat && layer.itemData.lng === lng) {
                     layer.openPopup();
