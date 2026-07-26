@@ -222,7 +222,7 @@
     let globalStyles = [];
     
     let currentMode = 'single'; // 'single', 'prep', 'deploy'
-    let preppedBatchesData = {}; // Stores raw batch arrays
+    let preppedBatchesData = {}; 
 
     function setMode(mode) {
         if (isProcessing) return;
@@ -327,6 +327,13 @@
 
             updateStatus('working', '☁️', `Uploading Deployment...`, `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
 
+            // WIPE ANY PREVIOUS HIDE DATA FOR THIS PENGUIN TO PREVENT DUPLICATES
+            await supabaseClient.from('penguin_logs')
+                .delete()
+                .eq('penguin_id', pId)
+                .in('finder_note', ['[ADMIN HIDE LOCATION]', '[ADMIN CACHE LOCATION]', '[LIKELY MISSING]', '[ADMIN MARKED FOUND]']);
+
+            // INSERT BRAND NEW HIDE
             const { error } = await supabaseClient.from('penguin_logs').insert([{
                 penguin_id: pId,
                 secret_tag: tag, 
@@ -374,7 +381,6 @@
         selectEl.innerHTML = '<option value="">Querying database pipelines...</option>';
         btnDeploy.disabled = true;
 
-        // Fetch all logs to determine current status of each penguin
         const { data: allLogs } = await supabaseClient.from('penguin_logs')
             .select('penguin_id, secret_tag, finder_note')
             .order('created_at', { ascending: true });
@@ -393,7 +399,6 @@
             });
         }
 
-        // Group those still in 'prep' status into batches. Since data are plural, we compile them carefully.
         Object.keys(penguinStatus).forEach(pId => {
             const info = penguinStatus[pId];
             if (info.status === 'prep') {
@@ -442,6 +447,13 @@
 
             statusText.innerHTML = `☁️ Uploading ${penguinsToDeploy.length} penguins to grid...`;
 
+            // WIPE ANY PREVIOUS HIDE DATA FOR THESE PENGUINS
+            const penguinIds = penguinsToDeploy.map(p => p.penguin_id);
+            await supabaseClient.from('penguin_logs')
+                .delete()
+                .in('penguin_id', penguinIds)
+                .in('finder_note', ['[ADMIN HIDE LOCATION]', '[ADMIN CACHE LOCATION]', '[LIKELY MISSING]', '[ADMIN MARKED FOUND]']);
+
             const insertPayload = penguinsToDeploy.map(p => ({
                 penguin_id: p.penguin_id,
                 secret_tag: p.secret_tag,
@@ -469,7 +481,7 @@
         }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
-    // --- MAPPING ENGINE ---
+    // --- MAPPING ENGINE & POPUP ACTIONS ---
     async function openHideMap() {
         if (html5QrCode && html5QrCode.getState() === 2) html5QrCode.pause(true);
         
@@ -493,15 +505,42 @@
         }
     }
 
+    // MAP ADMIN FUNCTIONS
+    async function redeployHide(logId) {
+        if(!confirm("Update this hide's deployment time to right now?")) return;
+        const now = new Date().toISOString();
+        const { error } = await supabaseClient.from('penguin_logs').update({ created_at: now }).eq('id', logId);
+        if (error) alert("Error updating time: " + error.message);
+        else loadHideMapData();
+    }
+
+    async function removeHide(logId) {
+        if(!confirm("Permanently remove this hide from the map?")) return;
+        const { error } = await supabaseClient.from('penguin_logs').delete().eq('id', logId);
+        if (error) alert("Error removing hide: " + error.message);
+        else loadHideMapData();
+    }
+
+    async function adminMarkFound(pId) {
+        if(!confirm("Mark as found on the public map? (It will still act as Unfound for normal users when scanned)")) return;
+        const { error } = await supabaseClient.from('penguin_logs').insert([{
+            penguin_id: pId,
+            finder_note: '[ADMIN MARKED FOUND]'
+        }]);
+        if (error) alert("Error marking found: " + error.message);
+        else loadHideMapData();
+    }
+
     async function loadHideMapData() {
         if (globalStyles.length === 0) {
             const { data } = await supabaseClient.from('penguin_styles').select('*');
             if (data) globalStyles = data;
         }
 
+        // Include 'id' so we can update/delete specific rows
         const { data: hides, error } = await supabaseClient
             .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, style_id, finder_note')
+            .select('id, penguin_id, latitude, longitude, created_at, custom_name, style_id, finder_note')
             .in('finder_note', ['[ADMIN HIDE LOCATION]', '[ADMIN CACHE LOCATION]'])
             .order('created_at', { ascending: false });
 
@@ -538,14 +577,24 @@
             
             const isCache = log.finder_note === '[ADMIN CACHE LOCATION]';
 
+            const popupContent = `
+                <div style="min-width: 190px;">
+                    <b style="color:${isCache ? '#38bdf8' : '#00e5ff'}; font-size: 11pt;">${isCache ? '📦 CACHE' : '🐧 HIDE'}</b><br>
+                    <b style="color:#f8fafc;">${displayName}</b><br>
+                    <span style="color:#cbd5e1; font-size: 9pt;">ID:</span> <span style="font-family:monospace;">${log.penguin_id}</span><br>
+                    <span style="color:#cbd5e1; font-size: 9pt;">Style:</span> ${styleName}<br>
+                    <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size:8.5pt; color:#94a3b8;">Deployed: ${formattedDate}</div>
+                    
+                    <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
+                        <button onclick="redeployHide('${log.id}')" style="width:100%; background:rgba(57,255,20,0.15); border:1px solid rgba(57,255,20,0.4); color:#39ff14; padding:6px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">🔄 Refresh Date/Time</button>
+                        <button onclick="adminMarkFound('${log.penguin_id}')" style="width:100%; background:rgba(217,70,239,0.15); border:1px solid rgba(217,70,239,0.4); color:#d946ef; padding:6px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">✅ Mark as Found</button>
+                        <button onclick="removeHide('${log.id}')" style="width:100%; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:6px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">🗑️ Remove Hide</button>
+                    </div>
+                </div>
+            `;
+
             L.marker([log.latitude, log.longitude], { icon: isCache ? cacheIcon : hideIcon }).addTo(hideLayerGroup)
-             .bindPopup(`
-                <b style="color:${isCache ? '#38bdf8' : '#00e5ff'}; font-size: 11pt;">${isCache ? '📦 CACHE' : '🐧 HIDE'}</b><br>
-                <b style="color:#f8fafc;">${displayName}</b><br>
-                <span style="color:#cbd5e1; font-size: 9pt;">ID:</span> <span style="font-family:monospace;">${log.penguin_id}</span><br>
-                <span style="color:#cbd5e1; font-size: 9pt;">Style:</span> ${styleName}<br>
-                <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size:8.5pt; color:#94a3b8;">Deployed: ${formattedDate}</div>
-             `);
+             .bindPopup(popupContent);
 
             bounds.extend([log.latitude, log.longitude]);
         });
