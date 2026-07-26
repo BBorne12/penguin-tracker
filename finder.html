@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penguin Finder™ - Field Map</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 style=%22filter: grayscale(100%);%22>🐧</text></svg>">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Base Setup & CSS Resets */
+        *, *::before, *::after { box-sizing: border-box; }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #02060d; color: #ffffff; font-size: 12pt; line-height: 1.5;
+        }
+
+        .app-container {
+            width: 100%; max-width: 600px; margin: 0 auto; padding: 16px;
+            background: radial-gradient(circle at 50% 0%, #102a45 0%, #07111e 60%, #02060d 100%);
+            min-height: 100vh; display: flex; flex-direction: column;
+        }
+
+        h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+        h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
+        h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
+
+        .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 16px; }
+        .layout-section { width: 100%; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+        .btn-inline-refresh {
+            background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #00e5ff; font-size: 9.5pt; font-weight: bold; padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease;
+        }
+        .btn-inline-refresh:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
+
+        .btn-glow {
+            display: block; width: 100%; text-align: center; padding: 14px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(0, 229, 255, 0.2) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; color: #ffffff;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); transition: opacity 0.2s ease, border-color 0.2s ease;
+        }
+
+        /* Map Styling */
+        #main-map {
+            width: 100%; height: 350px; background: #030712;
+            border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; z-index: 5;
+        }
+        .leaflet-tile { filter: hue-rotate(180deg) invert(90%) contrast(110%) brightness(95%); }
+        .leaflet-popup-content-wrapper { background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; }
+        .leaflet-popup-tip { background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+        /* Filter Toggles */
+        .filter-container {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+            padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .filter-btn {
+            flex: 1; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(56, 189, 248, 0.2);
+            color: #94a3b8; font-size: 9pt; font-weight: bold; border-radius: 6px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: rgba(56, 189, 248, 0.15); color: #f8fafc;
+            border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Status Colors */
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot-available { background: #39ff14; box-shadow: 0 0 8px #39ff14; }
+        .dot-cache { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; border-radius: 2px; }
+        .dot-found { background: #64748b; box-shadow: 0 0 4px #64748b; }
+
+        /* List Styling */
+        .deployment-list { margin: 0; padding: 0; list-style: none; }
+        .deployment-row {
+            display: flex; justify-content: space-between; align-items: center; padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; border-radius: 6px; transition: background 0.2s;
+        }
+        .deployment-row:hover { background: rgba(255, 255, 255, 0.05); }
+        .deployment-row:last-child { border-bottom: none; }
+        
+        .d-title { font-weight: 600; color: #f8fafc; font-size: 11pt; margin-bottom: 2px; }
+        .d-subtitle { font-size: 9pt; color: #94a3b8; }
+        .d-date { font-size: 9pt; color: #00e5ff; text-align: right; }
+        .d-status-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; margin-top: 4px;
+        }
+        .badge-available { background: rgba(57, 255, 20, 0.1); color: #39ff14; border: 1px solid rgba(57, 255, 20, 0.3); }
+        .badge-cache { background: rgba(0, 229, 255, 0.1); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); }
+        .badge-found { background: rgba(100, 116, 139, 0.1); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); }
+
+        .pagination-container {
+            display: flex; justify-content: space-between; align-items: center; margin-top: 14px;
+            padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .page-arrow {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); color: #00e5ff;
+            font-weight: bold; font-size: 14pt; padding: 4px 14px; border-radius: 6px; cursor: pointer;
+        }
+        .page-arrow:disabled { color: #4b5563; border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; background: transparent; }
+        .page-indicator { font-size: 10.5pt; color: #94a3b8; font-weight: 500; }
+
+        /* Fullscreen Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+        }
+        .modal-card {
+            background: linear-gradient(135deg, #0b1d33 0%, #040d1a 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 16px;
+            width: 100%; max-width: 95vw; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .app-footer {
+            text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
+            line-height: 1.6; letter-spacing: 1px; font-weight: 500; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="fullscreen-map-overlay">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="color: #00e5ff; margin: 0;">Global Intel Map</h2>
+            <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; line-height: 1;" onclick="closeFullscreenMap()">×</button>
+        </div>
+        <div id="fs-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
+    </div>
+</div>
+
+<div class="app-container">
+    
+    <div class="app-header">
+        <div class="subtitle">Field Operations</div>
+        <h1>PENGUIN FINDER™</h1>
+        <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active penguin caches and potentially available hides in the wild.</p>
+    </div>
+
+    <div class="layout-section">
+        
+        <div class="glass-card">
+            <div class="card-header-flex">
+                <h2 style="margin: 0;">Active Locations</h2>
+                <button type="button" class="btn-inline-refresh" onclick="openFullscreenMap()">⛶ Enlarge</button>
+            </div>
+            
+            <div id="main-map"></div>
+
+            <div class="filter-container">
+                <button class="filter-btn active" id="filter-cache" onclick="toggleFilter('cache')">
+                    <span class="status-dot dot-cache"></span> Caches
+                </button>
+                <button class="filter-btn active" id="filter-available" onclick="toggleFilter('available')">
+                    <span class="status-dot dot-available"></span> Available
+                </button>
+                <button class="filter-btn active" id="filter-found" onclick="toggleFilter('found')">
+                    <span class="status-dot dot-found"></span> Found
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2>📜 Recent Deployments</h2>
+            
+            <ul class="deployment-list" id="deployments-output">
+                <li style="text-align:center; color:#94a3b8; padding:20px; font-size:11pt;">Querying intelligence pipelines...</li>
+            </ul>
+
+            <div class="pagination-container" id="deploy-pagination" style="display: none;">
+                <button class="page-arrow" id="deploy-prev-btn" onclick="changeListPage(-1)">←</button>
+                <span class="page-indicator" id="deploy-page-indicator">Page 1 of 1</span>
+                <button class="page-arrow" id="deploy-next-btn" onclick="changeListPage(1)">→</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="app-footer">
+        <span style="text-transform: uppercase;">Antarctic Game Engine™ • Version 6.0</span><br>
+        <span style="font-size: 8.5pt; color: #6b7280;">© 2026 Benjamin J Borne. All Rights Reserved.</span>
+    </div>
+</div>
+
+<script>
+    // --- SUPABASE SETUP ---
+    const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --- STATE VARIABLES ---
+    let mainMap, fsMap;
+    let mainLayerGroup, fsLayerGroup;
+    
+    // Processed deployment locations
+    let mapData = []; 
+    
+    // Filters
+    let filters = { cache: true, available: true, found: true };
+    
+    // Pagination
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 8;
+    let listData = []; 
+
+    // --- ICONS ---
+    const iconAvailable = L.divIcon({ className: 'custom-div-icon', html: `<div style='background-color:#39ff14; width:14px; height:14px; border-radius:50%; border:2px solid #02060d; box-shadow: 0 0 10px #39ff14;'></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
+    const iconFound = L.divIcon({ className: 'custom-div-icon', html: `<div style='background-color:#64748b; width:12px; height:12px; border-radius:50%; border:2px solid #02060d; opacity: 0.7;'></div>`, iconSize: [12, 12], iconAnchor: [6, 6] });
+    const iconCache = L.divIcon({ className: 'custom-div-icon', html: `<div style='background-color:#00e5ff; width:16px; height:16px; border-radius:3px; border:2px solid #02060d; box-shadow: 0 0 12px #00e5ff; transform: rotate(45deg);'></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+
+    document.addEventListener("DOMContentLoaded", () => {
+        initMaps();
+        fetchAndProcessData();
+    });
+
+    function initMaps() {
+        mainMap = L.map('main-map', { zoomControl: false }).setView([39.8283, -98.5795], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mainMap);
+        mainLayerGroup = L.layerGroup().addTo(mainMap);
+
+        fsMap = L.map('fs-map').setView([39.8283, -98.5795], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(fsMap);
+        fsLayerGroup = L.layerGroup().addTo(fsMap);
+    }
+
+    async function fetchAndProcessData() {
+        // Query the database pipelines. Data are retrieved and sorted chronologically.
+        const { data: logs, error } = await supabaseClient
+            .from('penguin_logs')
+            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
+            .order('created_at', { ascending: true });
+
+        if (error || !logs) {
+            document.getElementById('deployments-output').innerHTML = `<li style="text-align:center; color:#ef4444; padding:20px;">Failed to load data pipelines.</li>`;
+            return;
+        }
+
+        let penguinHistory = {};
+
+        // Aggregate individual histories
+        logs.forEach(log => {
+            const pid = log.penguin_id;
+            if (!penguinHistory[pid]) {
+                penguinHistory[pid] = { logs: [], adminHide: null, customName: null };
+            }
+            penguinHistory[pid].logs.push(log);
+            
+            if (log.custom_name && log.custom_name.trim() !== '') {
+                penguinHistory[pid].customName = log.custom_name;
+            }
+            
+            if (log.finder_note === '[ADMIN HIDE LOCATION]' || log.finder_note === '[ADMIN CACHE LOCATION]') {
+                penguinHistory[pid].adminHide = log;
+            }
+        });
+
+        let caches = {}; 
+        let parsedDeployments = [];
+
+        // Process these data into clean deploy records
+        Object.keys(penguinHistory).forEach(pid => {
+            const history = penguinHistory[pid];
+            
+            // If it was never officially deployed via admin scanner, skip it for this map
+            if (!history.adminHide || !history.adminHide.latitude) return;
+
+            const isCache = history.adminHide.finder_note === '[ADMIN CACHE LOCATION]';
+            
+            // It is 'found' if it has a custom name OR if it has subsequent non-admin logs
+            const subsequentLogs = history.logs.filter(l => l.finder_note !== '[ADMIN HIDE LOCATION]' && l.finder_note !== '[ADMIN CACHE LOCATION]' && !l.finder_note?.startsWith('[CACHE PREP'));
+            const isFound = (history.customName !== null) || (subsequentLogs.length > 0);
+
+            if (isCache) {
+                // Group cache coordinates securely. Coordinate strings ensure exact match grouping.
+                const coordKey = `${history.adminHide.latitude}_${history.adminHide.longitude}`;
+                if (!caches[coordKey]) {
+                    caches[coordKey] = {
+                        type: 'cache',
+                        lat: history.adminHide.latitude,
+                        lng: history.adminHide.longitude,
+                        date: history.adminHide.created_at,
+                        totalCount: 0,
+                        availableCount: 0,
+                        foundCount: 0
+                    };
+                }
+                caches[coordKey].totalCount++;
+                if (isFound) {
+                    caches[coordKey].foundCount++;
+                } else {
+                    caches[coordKey].availableCount++;
+                }
+            } else {
+                // Standard Single Hide
+                parsedDeployments.push({
+                    id: pid,
+                    type: isFound ? 'found' : 'available',
+                    lat: history.adminHide.latitude,
+                    lng: history.adminHide.longitude,
+                    date: history.adminHide.created_at,
+                    displayName: history.customName || pid
+                });
+            }
+        });
+
+        // Push cache groups into the main array
+        Object.values(caches).forEach(cache => {
+            // If a cache is completely empty, it functionally becomes a historical 'found' point
+            if (cache.availableCount === 0) {
+                cache.type = 'found'; 
+            }
+            parsedDeployments.push(cache);
+        });
+
+        // Sort data descending by date for the list
+        parsedDeployments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        mapData = parsedDeployments;
+        listData = parsedDeployments;
+
+        renderMaps();
+        renderList();
+    }
+
+    function renderMaps() {
+        mainLayerGroup.clearLayers();
+        fsLayerGroup.clearLayers();
+        const bounds = L.latLngBounds();
+        let validPoints = false;
+
+        mapData.forEach(item => {
+            // Apply current filters
+            if (item.type === 'cache' && !filters.cache) return;
+            if (item.type === 'available' && !filters.available) return;
+            if (item.type === 'found' && !filters.found) return;
+
+            validPoints = true;
+            let icon = iconAvailable;
+            let title = '';
+            let subtitle = '';
+
+            if (item.type === 'cache') {
+                icon = iconCache;
+                title = `📦 PENGUIN CACHE`;
+                subtitle = `${item.availableCount} Penguins Available<br><span style="font-size:8.5pt; color:#94a3b8;">${item.foundCount} Already Found</span>`;
+            } else if (item.type === 'found') {
+                icon = iconFound;
+                title = item.displayName ? `🐧 ${item.displayName}` : `🐧 Penguin Found`;
+                subtitle = `<span style="color:#94a3b8;">Origin location. Currently on an adventure.</span>`;
+            } else {
+                icon = iconAvailable;
+                title = `🥚 POTENTIAL HIDE`;
+                subtitle = `A penguin was deployed near here.<br><span style="font-size:8.5pt; color:#94a3b8;">ID: ${item.id}</span>`;
+            }
+
+            const popupContent = `
+                <div style="min-width: 150px;">
+                    <b style="color:#f8fafc; font-size:11pt; display:block; margin-bottom:4px;">${title}</b>
+                    <span style="color:#cbd5e1; font-size: 9.5pt;">${subtitle}</span>
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); font-size:8pt; color:#64748b;">
+                        Deployed: ${new Date(item.date).toLocaleDateString()}
+                    </div>
+                </div>
+            `;
+
+            const m1 = L.marker([item.lat, item.lng], { icon: icon }).addTo(mainLayerGroup).bindPopup(popupContent);
+            const m2 = L.marker([item.lat, item.lng], { icon: icon }).addTo(fsLayerGroup).bindPopup(popupContent);
+            
+            // Attach coordinates so we can trigger click events programmatically from the list
+            m1.itemData = item;
+            m2.itemData = item;
+
+            bounds.extend([item.lat, item.lng]);
+        });
+
+        if (validPoints && bounds.isValid()) {
+            mainMap.fitBounds(bounds, { padding: [30, 30] });
+            fsMap.fitBounds(bounds, { padding: [40, 40] });
+        }
+    }
+
+    function toggleFilter(type) {
+        filters[type] = !filters[type];
+        
+        const btn = document.getElementById(`filter-${type}`);
+        if (filters[type]) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+        
+        renderMaps();
+        renderList();
+    }
+
+    // --- LIST & PAGINATION ---
+    function renderList() {
+        const out = document.getElementById('deployments-output');
+        
+        // Filter the list based on the active map toggles
+        const filteredList = listData.filter(item => {
+            if (item.type === 'cache' && !filters.cache) return false;
+            if (item.type === 'available' && !filters.available) return false;
+            if (item.type === 'found' && !filters.found) return false;
+            return true;
+        });
+
+        if (filteredList.length === 0) {
+            out.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:20px; font-size:10pt;">No deployments match the current filters.</li>`;
+            document.getElementById('deploy-pagination').style.display = 'none';
+            return;
+        }
+
+        const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE);
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+        const pageItems = filteredList.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+        out.innerHTML = '';
+        pageItems.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'deployment-row';
+            li.onclick = () => openFullscreenMapAt(item.lat, item.lng);
+
+            let title, badgeClass, badgeText;
+            
+            if (item.type === 'cache') {
+                title = `Penguin Cache (${item.availableCount} left)`;
+                badgeClass = 'badge-cache';
+                badgeText = 'CACHE';
+            } else if (item.type === 'found') {
+                title = item.displayName || 'Found Penguin';
+                badgeClass = 'badge-found';
+                badgeText = 'FOUND';
+            } else {
+                title = item.displayName || 'Unknown Penguin';
+                badgeClass = 'badge-available';
+                badgeText = 'AVAILABLE';
+            }
+
+            const formattedDate = new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            li.innerHTML = `
+                <div>
+                    <div class="d-title">${title}</div>
+                    <div class="d-status-badge ${badgeClass}">${badgeText}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="d-date">${formattedDate}</div>
+                    <div style="font-size: 14pt; color: #38bdf8; margin-top: 4px;">📍</div>
+                </div>
+            `;
+            out.appendChild(li);
+        });
+
+        const pagContainer = document.getElementById('deploy-pagination');
+        if (totalPages > 1) {
+            pagContainer.style.display = 'flex';
+            document.getElementById('deploy-page-indicator').innerText = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('deploy-prev-btn').disabled = (currentPage === 1);
+            document.getElementById('deploy-next-btn').disabled = (currentPage === totalPages);
+        } else {
+            pagContainer.style.display = 'none';
+        }
+    }
+
+    function changeListPage(dir) {
+        currentPage += dir;
+        renderList();
+    }
+
+    // --- MODAL CONTROLS ---
+    function openFullscreenMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'flex';
+        setTimeout(() => { fsMap.invalidateSize(); }, 200);
+    }
+
+    function closeFullscreenMap() {
+        document.getElementById('fullscreen-map-overlay').style.display = 'none';
+    }
+
+    function openFullscreenMapAt(lat, lng) {
+        openFullscreenMap();
+        setTimeout(() => {
+            fsMap.setView([lat, lng], 15);
+            
+            // Find and open the popup for this specific marker
+            fsLayerGroup.eachLayer(layer => {
+                if (layer.itemData && layer.itemData.lat === lat && layer.itemData.lng === lng) {
+                    layer.openPopup();
+                }
+            });
+        }, 300);
+    }
+
+</script>
+
+</body>
+</html>
