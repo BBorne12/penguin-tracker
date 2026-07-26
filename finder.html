@@ -238,19 +238,40 @@
     }
 
     async function fetchAndProcessData() {
-        const { data: logs, error } = await supabaseClient
-            .from('penguin_logs')
-            .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
-            .order('created_at', { ascending: true });
+        // We must fetch in chunks to bypass the 1000-row default limit
+        let allLogs = [];
+        let currentOffset = 0;
+        const CHUNK_SIZE = 1000;
+        let fetching = true;
 
-        if (error || !logs) {
-            document.getElementById('deployments-output').innerHTML = `<li style="text-align:center; color:#ef4444; padding:20px;">Failed to load data pipelines.</li>`;
-            return;
+        document.getElementById('deployments-output').innerHTML = `<li style="text-align:center; color:#94a3b8; padding:20px;">Downloading full intelligence history...</li>`;
+
+        while (fetching) {
+            const { data: logs, error } = await supabaseClient
+                .from('penguin_logs')
+                .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
+                .order('created_at', { ascending: true })
+                .range(currentOffset, currentOffset + CHUNK_SIZE - 1);
+
+            if (error) {
+                document.getElementById('deployments-output').innerHTML = `<li style="text-align:center; color:#ef4444; padding:20px;">Failed to load data pipelines: ${error.message}</li>`;
+                return;
+            }
+
+            allLogs = allLogs.concat(logs);
+            
+            // If it returned exactly the chunk size, there might be more. Otherwise, we're done.
+            if (logs.length === CHUNK_SIZE) {
+                currentOffset += CHUNK_SIZE;
+            } else {
+                fetching = false;
+            }
         }
 
         let penguinHistory = {};
 
-        logs.forEach(log => {
+        // Process these data using the full payload
+        allLogs.forEach(log => {
             const pid = log.penguin_id;
             if (!penguinHistory[pid]) {
                 penguinHistory[pid] = { logs: [], adminHide: null, customName: null };
