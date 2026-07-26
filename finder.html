@@ -170,10 +170,10 @@
                 </button>
             </div>
             
-            <!-- New 30 Day Filter Checkbox -->
+            <!-- Updated 14 Day Filter Checkbox -->
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; gap: 8px; font-size: 9.5pt; color: #cbd5e1;">
-                <input type="checkbox" id="filter-30days" onchange="toggle30DaysFilter()" style="width: 16px; height: 16px; cursor: pointer;">
-                <label for="filter-30days" style="cursor: pointer;">Include Potentially Available placed more than 30 days</label>
+                <input type="checkbox" id="filter-14days" onchange="toggle14DaysFilter()" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="filter-14days" style="cursor: pointer;">Include deployments older than 14 days</label>
             </div>
         </div>
 
@@ -211,13 +211,14 @@
     // --- STATE VARIABLES ---
     let mainMap, fsMap;
     let mainLayerGroup, fsLayerGroup;
+    let isInitialMapLoad = true; // Prevents jumping when toggling filters
     
     let mapData = []; 
     let filters = { cache: true, available: true, found: true };
-    let includeOldAvailable = false; // Controls the 30-day filter
+    let includeOldItems = false; // Controls the 14-day filter
     
     let currentPage = 1;
-    const ITEMS_PER_PAGE = 5; // Reduced from 8
+    const ITEMS_PER_PAGE = 5; 
     let listData = []; 
     
     let isDistanceSortMode = false;
@@ -244,7 +245,6 @@
     }
 
     async function fetchAndProcessData() {
-        // Fetch in chunks to bypass the 1000-row limit
         let allLogs = [];
         let currentOffset = 0;
         const CHUNK_SIZE = 1000;
@@ -301,13 +301,17 @@
             const isCache = history.adminHide.finder_note === '[ADMIN CACHE LOCATION]';
             const adminHideTime = new Date(history.adminHide.created_at).getTime();
             
+            const hasLikelyMissing = history.logs.some(l => l.finder_note === '[LIKELY MISSING]');
+            
             const subsequentLogs = history.logs.filter(l => {
                 if (l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]') return false;
                 if (l.finder_note && l.finder_note.startsWith('[CACHE PREP')) return false;
+                if (l.finder_note === '[LIKELY MISSING]') return false; // Ignore our silent tag for this check
                 return new Date(l.created_at).getTime() > adminHideTime;
             });
             
             const isFound = (history.customName !== null) || (subsequentLogs.length > 0);
+            const isLikelyFound = !isFound && hasLikelyMissing;
 
             if (isCache) {
                 const coordKey = `${history.adminHide.latitude}_${history.adminHide.longitude}`;
@@ -322,16 +326,24 @@
                     };
                 }
                 caches[coordKey].totalCount++;
-                if (isFound) caches[coordKey].foundCount++;
-                else caches[coordKey].availableCount++;
+                
+                if (isFound || isLikelyFound) {
+                    caches[coordKey].foundCount++;
+                } else {
+                    caches[coordKey].availableCount++;
+                }
                 
                 if (adminHideTime > new Date(caches[coordKey].date).getTime()) {
                     caches[coordKey].date = history.adminHide.created_at;
                 }
             } else {
+                let finalType = 'available';
+                if (isFound) finalType = 'found';
+                else if (isLikelyFound) finalType = 'likely_found';
+                
                 parsedDeployments.push({
                     id: pid,
-                    type: isFound ? 'found' : 'available',
+                    type: finalType,
                     lat: history.adminHide.latitude,
                     lng: history.adminHide.longitude,
                     date: history.adminHide.created_at,
@@ -354,6 +366,25 @@
         renderMaps();
         renderList();
         resolveCityNames();
+    }
+
+    // --- COMMUNITY TAGGING ---
+    async function markLikelyMissing(pid, lat, lng) {
+        if (!confirm(`Mark ${pid} as likely found? This will update the map for everyone.`)) return;
+
+        const { error } = await supabaseClient.from('penguin_logs').insert([{
+            penguin_id: pid,
+            latitude: lat,
+            longitude: lng,
+            finder_note: '[LIKELY MISSING]'
+        }]);
+
+        if (error) {
+            alert("Error updating status: " + error.message);
+        } else {
+            // Re-fetch data to instantly apply the new state
+            fetchAndProcessData();
+        }
     }
 
     // --- REVERSE GEOCODING ---
@@ -385,8 +416,8 @@
     }
 
     // --- FILTER & VISIBILITY LOGIC ---
-    function toggle30DaysFilter() {
-        includeOldAvailable = document.getElementById('filter-30days').checked;
+    function toggle14DaysFilter() {
+        includeOldItems = document.getElementById('filter-14days').checked;
         renderMaps();
         renderList();
     }
@@ -404,12 +435,13 @@
     function isItemVisible(item) {
         if (item.type === 'cache' && !filters.cache) return false;
         if (item.type === 'available' && !filters.available) return false;
-        if (item.type === 'found' && !filters.found) return false;
+        // Group likely_found strictly with the Found toggle
+        if ((item.type === 'found' || item.type === 'likely_found') && !filters.found) return false;
         
-        // 30 day filter logic applied to 'available' and 'cache' types
-        if (!includeOldAvailable && (item.type === 'available' || item.type === 'cache')) {
+        // 14 day filter applied to ALL items if unchecked
+        if (!includeOldItems) {
             const ageInDays = (new Date().getTime() - new Date(item.date).getTime()) / (1000 * 3600 * 24);
-            if (ageInDays > 30) return false;
+            if (ageInDays > 14) return false;
         }
         
         return true;
@@ -420,7 +452,6 @@
         const btn = document.getElementById('btn-find-nearest');
         
         if (isDistanceSortMode) {
-            // Restore chronological sort
             isDistanceSortMode = false;
             listData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             currentPage = 1;
@@ -428,7 +459,6 @@
             btn.classList.remove('active-location');
             renderList();
         } else {
-            // Switch to nearest sort
             if (!navigator.geolocation) {
                 alert("Location services are not supported by your browser.");
                 return;
@@ -479,6 +509,7 @@
             let icon = iconAvailable;
             let title = '';
             let subtitle = '';
+            let actionHtml = '';
 
             if (item.type === 'cache') {
                 icon = iconCache;
@@ -488,10 +519,15 @@
                 icon = iconFound;
                 title = item.displayName ? `🐧 ${item.displayName}` : `🐧 Penguin Found`;
                 subtitle = `<span style="color:#94a3b8;">Origin location. Currently on an adventure.</span>`;
+            } else if (item.type === 'likely_found') {
+                icon = iconFound; // Uses same visual dot as a found penguin
+                title = `🐧 Likely Found`;
+                subtitle = `<span style="color:#94a3b8;">Reported missing from deployment location.</span>`;
             } else {
                 icon = iconAvailable;
                 title = `🥚 POTENTIAL HIDE`;
                 subtitle = `A penguin was deployed near here.<br><span style="font-size:8.5pt; color:#94a3b8;">ID: ${item.id}</span>`;
+                actionHtml = `<button onclick="markLikelyMissing('${item.id}', ${item.lat}, ${item.lng})" style="margin-top:8px; width:100%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:4px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">Mark as Likely Found</button>`;
             }
 
             const popupContent = `
@@ -502,6 +538,7 @@
                         📍 ${item.cityName}<br>
                         Deployed: ${new Date(item.date).toLocaleDateString()}
                     </div>
+                    ${actionHtml}
                 </div>
             `;
 
@@ -514,15 +551,16 @@
             bounds.extend([item.lat, item.lng]);
         });
 
-        if (validPoints && bounds.isValid() && !isDistanceSortMode) {
+        // Only auto-zoom on the very first load so filter clicking doesn't jar the camera
+        if (validPoints && bounds.isValid() && isInitialMapLoad) {
             mainMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
             fsMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
+            isInitialMapLoad = false;
         }
     }
 
     function renderList() {
         const out = document.getElementById('deployments-output');
-        
         const filteredList = listData.filter(item => isItemVisible(item));
 
         if (filteredList.length === 0) {
@@ -554,6 +592,10 @@
                 title = item.displayName || 'Found Penguin';
                 badgeClass = 'badge-found';
                 badgeText = 'FOUND';
+            } else if (item.type === 'likely_found') {
+                title = 'Unknown Penguin';
+                badgeClass = 'badge-found';
+                badgeText = 'LIKELY FOUND';
             } else {
                 title = item.displayName || 'Unknown Penguin';
                 badgeClass = 'badge-available';
@@ -599,7 +641,6 @@
         document.getElementById('fullscreen-map-overlay').style.display = 'flex';
         setTimeout(() => { 
             fsMap.invalidateSize(); 
-            // Fetch current center and zoom from the main map directly so they sync perfectly
             fsMap.setView(mainMap.getCenter(), mainMap.getZoom(), { animate: false });
         }, 200);
     }
