@@ -603,6 +603,48 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    async function saveCustomNameFromModal(buttonElement) {
+    // 1. Get the name the user typed into the input field
+    const nameInput = document.getElementById('modal-custom-name');
+    const newName = nameInput.value.trim();
+
+    // 2. Validate that they actually entered a name
+    if (!newName) {
+        alert("Please enter a name for your penguin!");
+        return;
+    }
+
+    // Optional: Give visual feedback by changing the button text while saving
+    const originalText = buttonElement.innerText;
+    buttonElement.innerText = "Saving...";
+    buttonElement.disabled = true;
+
+    try {
+        // 3. Send the new name to your Supabase database
+        // IMPORTANT: Replace 'penguins' with your actual table name, 
+        // and 'currentPenguinId' with the variable you use to track which QR code was scanned.
+        const { error } = await supabase
+            .from('penguins') 
+            .update({ name: newName })
+            .eq('id', currentPenguinId); 
+
+        if (error) throw error;
+
+        // 4. Success! Let the user know and close the modal
+        alert(`Awesome! The journey of ${newName} begins!`);
+        
+        // Add your code here to hide the modal window (e.g., setting display to 'none')
+        // document.getElementById('your-modal-id').style.display = 'none';
+
+    } catch (error) {
+        console.error("Error saving name:", error.message);
+        alert("There was an error saving the name. Please try again.");
+    } finally {
+        // Reset the button back to normal
+        buttonElement.innerText = originalText;
+        buttonElement.disabled = false;
+    }
+}
     // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
