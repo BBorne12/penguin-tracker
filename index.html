@@ -608,7 +608,6 @@ async function saveCustomNameFromModal(buttonElement) {
     const newName = nameInput.value.trim();
 
     if (!newName) {
-        // Using your app's built-in UI instead of a system alert
         showToast("Please enter a name for your penguin!", "error");
         return;
     }
@@ -618,10 +617,10 @@ async function saveCustomNameFromModal(buttonElement) {
     buttonElement.disabled = true;
 
     try {
-        // 1. Update the app's memory so the main form knows the name for the upcoming DB insert
+        // 1. Update the app's memory
         activeCustomName = newName;
 
-        // 2. Quietly update any PAST logs in the database (if this penguin has been found before)
+        // 2. Quietly update any PAST logs in the database 
         await supabaseClient
             .from('penguin_logs') 
             .update({ custom_name: newName })
@@ -631,14 +630,29 @@ async function saveCustomNameFromModal(buttonElement) {
         const nameDisplay = document.getElementById("penguin-name-display");
         if (nameDisplay) nameDisplay.innerText = newName;
 
-        // 4. Hide the modals so the user can hit the main "Submit Discovery" button
+        // 4. Hide the modals 
         const firstFindModal = document.getElementById('first-find-modal');
         const welcomeModal = document.getElementById('welcome-modal');
         if (firstFindModal) firstFindModal.style.display = 'none';
         if (welcomeModal) welcomeModal.style.display = 'none';
 
-        // 5. Show a friendly toast notification
         showToast(`Awesome! The journey of ${newName} begins!`, "success");
+
+        // 5. Fire the Discord Webhook for the Naming Event
+        try {
+            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+            const discordMsg = `🏷️ **A Penguin Has Been Named!**\n**ID:** ${penguinId}\n**New Name:** ${newName}`;
+            const message = { username: "Penguin Scout", content: discordMsg };
+            
+            // Send the request in the background
+            fetch(DISCORD_WEBHOOK_URL, { 
+                method: "POST", 
+                headers: { "Content-Type": "application/json" }, 
+                body: JSON.stringify(message) 
+            });
+        } catch(e) {
+            console.error("Webhook notification failed:", e);
+        }
 
     } catch (error) {
         console.error("Error saving name:", error.message);
