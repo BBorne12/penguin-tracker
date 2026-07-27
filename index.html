@@ -620,17 +620,28 @@ async function saveCustomNameFromModal(buttonElement) {
         // 1. Update the app's memory
         activeCustomName = newName;
 
-        // 2. Quietly update any PAST logs in the database 
+        // 2. Update any existing logs (just in case this is a rename)
         await supabaseClient
             .from('penguin_logs') 
             .update({ custom_name: newName })
             .eq('penguin_id', penguinId); 
+
+        // 3. CREATE THE ADMIN LOG ENTRY (This restores your reset ability!)
+        // We use "Penguin Hatched" so the admin sees it, but the public map ignores it.
+        await supabaseClient
+            .from('penguin_logs')
+            .insert([{
+                penguin_id: penguinId,
+                custom_name: newName,
+                finder_note: "Penguin Hatched", 
+                secret_tag: securityTagParam
+            }]);
         
-        // 3. Update the UI text immediately
+        // 4. Update the UI text immediately
         const nameDisplay = document.getElementById("penguin-name-display");
         if (nameDisplay) nameDisplay.innerText = newName;
 
-        // 4. Hide the modals 
+        // 5. Hide the modals 
         const firstFindModal = document.getElementById('first-find-modal');
         const welcomeModal = document.getElementById('welcome-modal');
         if (firstFindModal) firstFindModal.style.display = 'none';
@@ -638,13 +649,12 @@ async function saveCustomNameFromModal(buttonElement) {
 
         showToast(`Awesome! The journey of ${newName} begins!`, "success");
 
-        // 5. Fire the Discord Webhook for the Naming Event
+        // 6. Fire the Discord Webhook for the Naming Event
         try {
             const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
             const discordMsg = `🏷️ **A Penguin Has Been Named!**\n**ID:** ${penguinId}\n**New Name:** ${newName}`;
             const message = { username: "Penguin Scout", content: discordMsg };
             
-            // Send the request in the background
             fetch(DISCORD_WEBHOOK_URL, { 
                 method: "POST", 
                 headers: { "Content-Type": "application/json" }, 
