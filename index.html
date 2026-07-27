@@ -603,7 +603,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    async function saveCustomNameFromModal(buttonElement) {
+async function saveCustomNameFromModal(buttonElement) {
     // 1. Get the name the user typed into the input field
     const nameInput = document.getElementById('modal-custom-name');
     const newName = nameInput.value.trim();
@@ -614,27 +614,36 @@
         return;
     }
 
-    // Optional: Give visual feedback by changing the button text while saving
+    // Give visual feedback by changing the button text while saving
     const originalText = buttonElement.innerText;
     buttonElement.innerText = "Saving...";
     buttonElement.disabled = true;
 
     try {
-        // 3. Send the new name to your Supabase database
-        // IMPORTANT: Replace 'penguins' with your actual table name, 
-        // and 'currentPenguinId' with the variable you use to track which QR code was scanned.
-        const { error } = await supabase
-            .from('penguins') 
-            .update({ name: newName })
-            .eq('id', currentPenguinId); 
+        // 3. Update your app's global state
+        activeCustomName = newName;
+
+        // 4. Send the new name to your Supabase database using your specific variables
+        const { error } = await supabaseClient
+            .from('penguin_logs') 
+            .update({ custom_name: newName })
+            .eq('penguin_id', penguinId); 
 
         if (error) throw error;
 
-        // 4. Success! Let the user know and close the modal
+        // 5. Success! Let the user know and close the modal
         alert(`Awesome! The journey of ${newName} begins!`);
         
-        // Add your code here to hide the modal window (e.g., setting display to 'none')
-        // document.getElementById('your-modal-id').style.display = 'none';
+        // Hide the modal windows
+        const firstFindModal = document.getElementById('first-find-modal');
+        const welcomeModal = document.getElementById('welcome-modal');
+        
+        if (firstFindModal) firstFindModal.style.display = 'none';
+        if (welcomeModal) welcomeModal.style.display = 'none';
+
+        // Optional: Update the UI text immediately
+        const nameDisplay = document.getElementById("penguin-name-display");
+        if (nameDisplay) nameDisplay.innerText = newName;
 
     } catch (error) {
         console.error("Error saving name:", error.message);
