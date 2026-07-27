@@ -142,7 +142,7 @@
         <div style="margin-top: 12px;">
             <div class="filter-container" style="margin-top: 0; padding-top: 0; border-top: none;">
                 <button class="filter-btn active" id="fs-filter-cache" onclick="toggleFilter('cache')">
-                    <span class="status-dot dot-cache"></span> Caches
+                    <span class="status-dot dot-cache"></span> Rookery Caches
                 </button>
                 <button class="filter-btn active" id="fs-filter-available" onclick="toggleFilter('available')">
                     <span class="status-dot dot-available"></span> Potentially Available
@@ -164,7 +164,7 @@
     <div class="app-header">
         <div class="subtitle">Field Operations</div>
         <h1>PENGUIN FINDER™</h1>
-        <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active penguin caches and potentially available hides in the wild.</p>
+        <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active rookery caches and potentially available hides in the wild.</p>
     </div>
 
     <div class="layout-section">
@@ -179,7 +179,7 @@
 
             <div class="filter-container">
                 <button class="filter-btn active" id="filter-cache" onclick="toggleFilter('cache')">
-                    <span class="status-dot dot-cache"></span> Caches
+                    <span class="status-dot dot-cache"></span> Rookery Caches
                 </button>
                 <button class="filter-btn active" id="filter-available" onclick="toggleFilter('available')">
                     <span class="status-dot dot-available"></span> Potentially Available
@@ -546,7 +546,7 @@
 
             if (item.type === 'cache') {
                 icon = iconCache;
-                title = `📦 PENGUIN CACHE`;
+                title = `📦 ROOKERY CACHE`;
                 subtitle = `${item.availableCount} Penguins Available<br><span style="font-size:8.5pt; color:#94a3b8;">${item.foundCount} Already Found</span>`;
                 actionHtml = `<div style="margin-top:10px;">${btnDirections}</div>`;
             } else if (item.type === 'found') {
@@ -619,7 +619,7 @@
             let title, badgeClass, badgeText;
             
             if (item.type === 'cache') {
-                title = `Penguin Cache (${item.availableCount} left)`;
+                title = `Rookery Cache (${item.availableCount} left)`;
                 badgeClass = 'badge-cache';
                 badgeText = 'CACHE';
             } else if (item.type === 'found') {
