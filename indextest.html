@@ -457,7 +457,7 @@
                 
                 <div style="position: relative; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 12px;">
                     
-                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openFullscreenSightings()">🖼️ Gallery</button>
+                    <button id="gallery-profile-btn" style="display: none; position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openFullscreenSightings('penguin')">🖼️ Gallery</button>
 
                     <button id="edit-profile-btn" style="display: none; position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 9pt; transition: background 0.2s; z-index: 11;" onclick="openEditModal()">✏️ Edit</button>
                     
@@ -603,6 +603,54 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+async function saveCustomNameFromModal(buttonElement) {
+    const nameInput = document.getElementById('modal-custom-name').value.trim();
+
+    if (!nameInput) {
+        showToast("Please give your penguin a name before starting its journey!", "error");
+        return;
+    }
+
+    const originalText = buttonElement.innerText;
+    buttonElement.innerText = "Hatching...";
+    buttonElement.disabled = true;
+
+    try {
+        activeCustomName = nameInput;
+
+        // 1. EXACT match to your old working database insert
+        const { error } = await supabaseClient
+            .from('penguin_logs')
+            .insert([{
+                penguin_id: penguinId, 
+                custom_name: activeCustomName, 
+                avatar_color: activeAvatarColor,
+                finder_note: 'Penguin Hatched! 🥚', 
+                secret_tag: securityTagParam
+            }]);
+
+        if (error) throw error;
+
+        // 2. EXACT match to your old working Discord webhook
+        try {
+            const DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1513994516065943562/T2B1grKGX0ubA7hGDYRIDHj5_bMhrYWWniu4AgPOBeDVPlJCWRJKPglOCRzbyncDmb9R";
+            let discordMsg = `🥚 🐧 **A New Penguin Has Hatched!**\n**Base ID:** \`${penguinId}\`\n**Custom Name:** **${activeCustomName}**\n**Location:** The journey begins!`;
+            const message = { username: "Penguin Scout", content: discordMsg };
+            await fetch(DISCORD_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
+        } catch(e) {
+            console.error("Webhook notification failed:", e);
+        }
+
+        // 3. Restore the original page reload to sync the UI naturally
+        location.reload();
+
+    } catch (error) {
+        console.error("Error saving name:", error.message);
+        showToast("Failed to hatch penguin.", "error");
+        buttonElement.innerText = originalText;
+        buttonElement.disabled = false;
+    }
+}
     // --- CONNECT CREDENTIALS ---
     const SUPABASE_URL = "https://ylpgdjiucsserioafdas.supabase.co"; 
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGdkaml1Y3NzZXJpb2FmZGFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDk3NTcsImV4cCI6MjA5NjU4NTc1N30.TW94FMIi_X69FM3A1-Wg0wHmgyx0oJGEN7sEgewldiY";
@@ -834,7 +882,7 @@
         }, 150);
     });
 
-    async function loadPenguinHistory(targetId) {
+async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin") return;
 
         const { data: logs, error } = await supabaseClient.from('penguin_logs')
@@ -850,10 +898,14 @@
         let totalDistance = 0;
         let lastLat = null;
         let lastLng = null;
+        let totalPebbles = 0; // Added missing pebble counter
         
         let pathPoints = [];
         
         globalLogData.forEach(log => {
+            // Tally pebbles during the initial load loop
+            totalPebbles += parsePebbles(log.stones_received).length;
+
             if (log.custom_name && log.custom_name !== targetId) {
                 globalNamedEntry = log.custom_name;
                 activeCustomName = log.custom_name;
@@ -879,6 +931,12 @@
         }
         
         document.getElementById("total-stops-counter").innerText = `${validStops} Adventure Stops Logged`;
+        
+        // Push the calculated total to the profile card
+        const totalPebblesEl = document.getElementById("total-pebbles-counter");
+        if (totalPebblesEl) {
+            totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
+        }
         
         if (lastLat && lastLng) {
             lastLogLat = lastLat;
@@ -931,12 +989,44 @@
 
     function switchSightingsMode(mode) {
         currentSightingsMode = mode;
-        currentGalleryMode = mode; 
+        
+        // Update ONLY the carousel UI
         renderSightingsTabs();
-        renderGalleryTabs();
         renderGlobalSightings();
     }
+    function openFullscreenForSighting(pId, lat, lng) {
+        closeImageModal();
+        closeGalleryModal();
+        
+        if (!lat || !lng) {
+            showToast("No GPS coordinates were logged for this specific photo.", "error");
+            return;
+        }
 
+        setMainMapMode('all');
+        openFullscreenTrackingMap();
+        setFullscreenMode('all');
+        
+        // Give the modal an extra split second to physically render before panning the camera
+        setTimeout(() => {
+            if (fsMap) {
+                fsMap.invalidateSize();
+                fsMap.setView([lat, lng], 14);
+                
+                // Hunt down the specific marker and pop it open
+                if (fsLayerGroup) {
+                    fsLayerGroup.eachLayer((layer) => {
+                        if (layer.getLatLng) {
+                            const markerLatLng = layer.getLatLng();
+                            if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lng) < 0.0001) {
+                                layer.openPopup();
+                            }
+                        }
+                    });
+                }
+            }
+        }, 300);
+    }
     function generateSightingCardHTML(log, absoluteIdx) {
         let pebblesArr = parsePebbles(log.stones_received);
         let hasPebbled = activeUserId ? pebblesArr.some(s => s.id === activeUserId) : false;
@@ -957,6 +1047,9 @@
         }
 
         let onClickAttr = absoluteIdx >= 0 ? `onclick="openFullscreenGallery(${absoluteIdx})"` : `onclick="openImageModal('${log.photo_url}')"`;
+        
+        let safeLat = log.latitude || "null";
+        let safeLng = log.longitude || "null";
 
         return `
             <img class="sighting-img" src="${log.photo_url}" ${onClickAttr} loading="lazy">
@@ -969,8 +1062,8 @@
                 <span class="sighting-name"><span class="bw-penguin">🐧</span> ${displayName}</span>
                 <span class="sighting-note">"${cleanNote}"</span>
                 <div class="sighting-btn-row">
-                    <button class="sighting-profile-btn" onclick="window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
-                    <button class="sighting-profile-btn" onclick="openFullscreenForSighting('${log.penguin_id}', ${log.latitude}, ${log.longitude})">View Map</button>
+                    <button class="sighting-profile-btn" onclick="event.stopPropagation(); window.location.href='?id=${log.penguin_id}${linkViewerParams}'">View Profile</button>
+                    <button class="sighting-profile-btn" onclick="event.stopPropagation(); openFullscreenForSighting('${log.penguin_id}', ${safeLat}, ${safeLng})">View Map</button>
                 </div>
             </div>
         `;
@@ -1256,12 +1349,9 @@
 
     function setGalleryMode(mode) {
         currentGalleryMode = mode;
-        currentSightingsMode = mode; 
         
+        // Update ONLY the gallery UI
         renderGalleryTabs();
-        renderSightingsTabs();
-        renderGlobalSightings(); 
-        
         compileGalleryImages();
         activeGalleryPage = 1;
         renderGalleryPage();
@@ -1298,8 +1388,8 @@
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
-    function openFullscreenSightings() {
-        setGalleryMode(currentSightingsMode);
+    function openFullscreenSightings(overrideMode) {
+        setGalleryMode(overrideMode || currentSightingsMode);
         document.getElementById('gallery-modal').style.display = 'flex';
     }
 
@@ -1432,7 +1522,12 @@
             namesHtml += `</span>`;
         }
 
+        let cleanNote = log.finder_note || "";
+        if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
+        let noteHtml = cleanNote ? `<span style="color: #cbd5e1; font-size: 10.5pt; font-style: italic; text-align: center; margin-bottom: 8px; line-height: 1.4; display: block;">"${cleanNote}"</span>` : "";
+
         overlay.innerHTML = `
+            ${noteHtml}
             <button class="btn-pebble ${hasPebbled ? 'pebbled' : ''} stone-btn-${log.id}" title="Like this stop by giving a pebble" onclick="togglePebble('${log.id}', '${log.penguin_id}', event)" style="margin-bottom: 4px; padding: 6px 16px;">
                 ${getPebbleSvg(hasPebbled)} ${pebblesCount}
             </button>
@@ -2012,6 +2107,9 @@
             map = L.map('map').setView([39.8283, -98.5795], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
             historyLayerGroup = L.layerGroup().addTo(map);
+            
+            // Restores the live tracking pin
+            if (!isViewOnlyMode) marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
         } catch (e) {}
     }
 
@@ -2030,6 +2128,9 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
+                
+                // Restores the pin movement
+                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
                 
@@ -2051,6 +2152,10 @@
                 if (map && currentMainMode === 'my') { 
                     map.setView([verifiedLat, verifiedLng], 15); 
                 }
+                
+                // Restores the pin movement on manual refresh
+                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
+                
                 updateDistanceToLastStop();
             }, () => {
                 if (refreshBtnList) { refreshBtnList.disabled = false; }
