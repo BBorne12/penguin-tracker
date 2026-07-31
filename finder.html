@@ -90,7 +90,7 @@
         .deployment-row:last-child { border-bottom: none; }
         
         .d-title { font-weight: 600; color: #f8fafc; font-size: 11pt; margin-bottom: 2px; }
-        .d-subtitle { font-size: 8.5pt; color: #94a3b8; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+        .d-subtitle { font-size: 8.5pt; color: #94a3b8; margin-top: 3px; display: flex; align-items: center; gap: 6px; }
         .d-date { font-size: 9pt; color: #00e5ff; text-align: right; }
         .d-status-badge {
             display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; margin-top: 4px;
@@ -126,6 +126,12 @@
             text-align: center; padding: 24px 0 8px 0; font-size: 9.5pt; color: #4b5563;
             line-height: 1.6; letter-spacing: 1px; font-weight: 500; border-top: 1px solid rgba(255, 255, 255, 0.02); margin-top: 32px;
         }
+
+        .time-select {
+            background: rgba(2, 6, 13, 0.8); color: #00e5ff; 
+            border: 1px solid rgba(56, 189, 248, 0.4); padding: 4px; 
+            border-radius: 4px; outline: none; font-size: 9pt; cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -134,7 +140,21 @@
     <div class="modal-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="color: #00e5ff; margin: 0;">Global Intel Map</h2>
-            <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; line-height: 1;" onclick="closeFullscreenMap()">×</button>
+            
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 9pt; color: #cbd5e1;">
+                    <span>Hidden within:</span>
+                    <select id="time-filter-fs" class="time-select" onchange="updateTimeFilter(this.value)">
+                        <option value="7">7 Days</option>
+                        <option value="14" selected>14 Days</option>
+                        <option value="30">1 Month</option>
+                        <option value="60">2 Months</option>
+                        <option value="90">3 Months</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+                <button style="background: transparent; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; line-height: 1;" onclick="closeFullscreenMap()">×</button>
+            </div>
         </div>
         <div id="fs-map" style="width: 100%; flex: 1; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.3); z-index: 10;"></div>
         
@@ -150,10 +170,6 @@
                 <button class="filter-btn active" id="fs-filter-found" onclick="toggleFilter('found')">
                     <span class="status-dot dot-found"></span> Found
                 </button>
-            </div>
-            <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 9pt; color: #cbd5e1; justify-content: center;">
-                <input type="checkbox" id="fs-filter-14days" onchange="toggle14DaysFilter('fs')" style="width: 16px; height: 16px; cursor: pointer;">
-                <label for="fs-filter-14days" style="cursor: pointer;">Include deployments older than 14 days</label>
             </div>
         </div>
     </div>
@@ -172,7 +188,21 @@
         <div class="glass-card">
             <div class="card-header-flex">
                 <h2 style="margin: 0;">Active Locations</h2>
-                <button type="button" class="btn-inline-action" onclick="openFullscreenMap()">⛶ Enlarge</button>
+                
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 4px; font-size: 9pt; color: #cbd5e1;">
+                        <span>Hidden within:</span>
+                        <select id="time-filter-main" class="time-select" onchange="updateTimeFilter(this.value)">
+                            <option value="7">7 Days</option>
+                            <option value="14" selected>14 Days</option>
+                            <option value="30">1 Month</option>
+                            <option value="60">2 Months</option>
+                            <option value="90">3 Months</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-inline-action" onclick="openFullscreenMap()">⛶ Enlarge</button>
+                </div>
             </div>
             
             <div id="main-map"></div>
@@ -187,11 +217,6 @@
                 <button class="filter-btn active" id="filter-found" onclick="toggleFilter('found')">
                     <span class="status-dot dot-found"></span> Found
                 </button>
-            </div>
-            
-            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; gap: 8px; font-size: 9.5pt; color: #cbd5e1;">
-                <input type="checkbox" id="filter-14days" onchange="toggle14DaysFilter('main')" style="width: 16px; height: 16px; cursor: pointer;">
-                <label for="filter-14days" style="cursor: pointer;">Include deployments older than 14 days</label>
             </div>
         </div>
 
@@ -233,14 +258,14 @@
     
     let mapData = []; 
     let filters = { cache: true, available: true, found: true };
-    let includeOldItems = false; 
+    let timeFilterDays = "14"; 
     
     let currentPage = 1;
     const ITEMS_PER_PAGE = 5; 
     let listData = []; 
+    let globalStyles = [];
     
     let isDistanceSortMode = false;
-    let cityCache = {}; 
 
     // --- ICONS ---
     const iconAvailable = L.divIcon({ className: 'custom-div-icon', html: `<div style='background-color:#39ff14; width:14px; height:14px; border-radius:50%; border:2px solid #02060d; box-shadow: 0 0 10px #39ff14;'></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
@@ -262,7 +287,41 @@
         fsLayerGroup = L.layerGroup().addTo(fsMap);
     }
 
+    // --- AVATAR RENDERING ENGINE ---
+    function getPenguinSvg(bgColor) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
+            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
+            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
+            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
+            <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
+            <circle cx="36" cy="45" r="15" fill="#ffffff"/>
+            <circle cx="64" cy="45" r="15" fill="#ffffff"/>
+            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
+            <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
+            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
+        </svg>`;
+    }
+
+    function renderPopupAvatar(styleId) {
+        if (!styleId) return getPenguinSvg('#38bdf8');
+        const s = globalStyles.find(x => x.id === styleId);
+        if (s && s.image_url) {
+            return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:6px;">`;
+        }
+        return getPenguinSvg('#38bdf8');
+    }
+
     async function fetchAndProcessData() {
+        if (globalStyles.length === 0) {
+            const { data } = await supabaseClient.from('penguin_styles').select('*');
+            if (data) globalStyles = data;
+        }
+
         let allLogs = [];
         let currentOffset = 0;
         const CHUNK_SIZE = 1000;
@@ -273,7 +332,7 @@
         while (fetching) {
             const { data: logs, error } = await supabaseClient
                 .from('penguin_logs')
-                .select('penguin_id, latitude, longitude, created_at, custom_name, finder_note')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, style_id')
                 .order('created_at', { ascending: true })
                 .range(currentOffset, currentOffset + CHUNK_SIZE - 1);
 
@@ -296,12 +355,15 @@
         allLogs.forEach(log => {
             const pid = log.penguin_id;
             if (!penguinHistory[pid]) {
-                penguinHistory[pid] = { logs: [], adminHide: null, customName: null };
+                penguinHistory[pid] = { logs: [], adminHide: null, customName: null, styleId: null };
             }
             penguinHistory[pid].logs.push(log);
             
             if (log.custom_name && log.custom_name.trim() !== '') {
                 penguinHistory[pid].customName = log.custom_name;
+            }
+            if (log.style_id) {
+                penguinHistory[pid].styleId = log.style_id;
             }
             
             if (log.finder_note === '[ADMIN HIDE LOCATION]' || log.finder_note === '[ADMIN CACHE LOCATION]') {
@@ -339,8 +401,7 @@
                         lat: history.adminHide.latitude,
                         lng: history.adminHide.longitude,
                         date: history.adminHide.created_at,
-                        totalCount: 0, availableCount: 0, foundCount: 0,
-                        cityName: "Locating..."
+                        totalCount: 0, availableCount: 0, foundCount: 0
                     };
                 }
                 caches[coordKey].totalCount++;
@@ -361,12 +422,13 @@
                 
                 parsedDeployments.push({
                     id: pid,
+                    logId: history.adminHide.id,
                     type: finalType,
                     lat: history.adminHide.latitude,
                     lng: history.adminHide.longitude,
                     date: history.adminHide.created_at,
                     displayName: history.customName || pid,
-                    cityName: "Locating..."
+                    styleId: history.styleId
                 });
             }
         });
@@ -383,10 +445,9 @@
 
         renderMaps();
         renderList();
-        resolveCityNames();
     }
 
-    // --- COMMUNITY TAGGING ---
+    // --- COMMUNITY TAGGING & STATUS UPDATES ---
     async function markLikelyMissing(pid, lat, lng) {
         if (!confirm(`Mark ${pid} as likely found? This will update the map for everyone.`)) return;
 
@@ -404,45 +465,26 @@
         }
     }
 
-    // --- REVERSE GEOCODING ---
-    async function resolveCityNames() {
-        const uniqueCoords = [...new Set(mapData.map(item => `${item.lat},${item.lng}`))];
+    async function markStillThere(logId, pId) {
+        if (!confirm(`Confirm that ${pId} is still actively deployed at this location?`)) return;
         
-        for (const coord of uniqueCoords) {
-            const [lat, lng] = coord.split(',');
-            if (!cityCache[coord]) {
-                try {
-                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
-                    const data = await res.json();
-                    const city = data.city || data.locality || "Unknown";
-                    const state = data.principalSubdivision || "";
-                    cityCache[coord] = state ? `${city}, ${state}` : city;
-                } catch (e) {
-                    cityCache[coord] = "Unknown Location";
-                }
-            }
-            
-            mapData.forEach(item => {
-                if (`${item.lat},${item.lng}` === coord) {
-                    item.cityName = cityCache[coord];
-                }
-            });
+        const now = new Date().toISOString();
+        const { error } = await supabaseClient.from('penguin_logs')
+            .update({ created_at: now })
+            .eq('id', logId);
+
+        if (error) {
+            alert("Error updating timestamp: " + error.message);
+        } else {
+            fetchAndProcessData();
         }
-        renderMaps();
-        renderList();
     }
 
     // --- FILTER & VISIBILITY LOGIC ---
-    function toggle14DaysFilter(source) {
-        let isChecked = false;
-        if (source === 'main') {
-            isChecked = document.getElementById('filter-14days').checked;
-            document.getElementById('fs-filter-14days').checked = isChecked;
-        } else {
-            isChecked = document.getElementById('fs-filter-14days').checked;
-            document.getElementById('filter-14days').checked = isChecked;
-        }
-        includeOldItems = isChecked;
+    function updateTimeFilter(val) {
+        timeFilterDays = val;
+        document.getElementById('time-filter-main').value = val;
+        document.getElementById('time-filter-fs').value = val;
         renderMaps();
         renderList();
     }
@@ -450,7 +492,6 @@
     function toggleFilter(type) {
         filters[type] = !filters[type];
         
-        // Update both main screen and fullscreen buttons visually
         ['', 'fs-'].forEach(prefix => {
             const btn = document.getElementById(`${prefix}filter-${type}`);
             if (btn) {
@@ -468,10 +509,9 @@
         if (item.type === 'available' && !filters.available) return false;
         if ((item.type === 'found' || item.type === 'likely_found') && !filters.found) return false;
         
-        // 14 day filter EXCLUDES caches. Caches always show.
-        if (!includeOldItems && item.type !== 'cache') {
+        if (timeFilterDays !== 'all' && item.type !== 'cache') {
             const ageInDays = (new Date().getTime() - new Date(item.date).getTime()) / (1000 * 3600 * 24);
-            if (ageInDays > 14) return false;
+            if (ageInDays > parseInt(timeFilterDays)) return false;
         }
         
         return true;
@@ -541,6 +581,12 @@
             let subtitle = '';
             let actionHtml = '';
 
+            let styleName = "Base Model";
+            if (item.styleId) {
+                const s = globalStyles.find(x => x.id === item.styleId);
+                if (s) styleName = s.style_name;
+            }
+
             const dirUrl = `https://maps.google.com/?q=${item.lat},${item.lng}`;
             const btnDirections = `<button onclick="window.open('${dirUrl}', '_blank')" style="width:100%; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56,189,248,0.4); color:#00e5ff; padding:6px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">🗺️ Directions To</button>`;
 
@@ -562,15 +608,23 @@
                 title = `🥚 POTENTIAL HIDE`;
                 subtitle = `A penguin was deployed near here.<br><span style="font-size:8.5pt; color:#94a3b8;">ID: ${item.id}</span>`;
                 const btnMissing = `<button onclick="markLikelyMissing('${item.id}', ${item.lat}, ${item.lng})" style="width:100%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:6px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">Mark as Likely Found</button>`;
-                actionHtml = `<div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">${btnDirections}${btnMissing}</div>`;
+                const btnStillThere = `<button onclick="markStillThere('${item.logId}', '${item.id}')" style="width:100%; background:rgba(57, 255, 20, 0.15); border:1px solid rgba(57,255,20,0.4); color:#39ff14; padding:6px 8px; border-radius:4px; font-size:8pt; font-weight:bold; cursor:pointer; text-transform:uppercase;">Mark as Still There</button>`;
+                actionHtml = `<div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">${btnDirections}${btnMissing}${btnStillThere}</div>`;
             }
 
             const popupContent = `
-                <div style="min-width: 150px;">
-                    <b style="color:#f8fafc; font-size:11pt; display:block; margin-bottom:4px;">${title}</b>
-                    <span style="color:#cbd5e1; font-size: 9.5pt;">${subtitle}</span>
-                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); font-size:8pt; color:#64748b;">
-                        📍 ${item.cityName}<br>
+                <div style="min-width: 170px;">
+                    <div style="display:flex; align-items:center; gap: 10px; margin-bottom: 8px;">
+                        <div style="width:34px; height:34px; flex-shrink:0;">
+                            ${item.type === 'cache' ? getPenguinSvg('#00e5ff') : renderPopupAvatar(item.styleId)}
+                        </div>
+                        <div style="line-height: 1.2;">
+                            <b style="color:#f8fafc; font-size:11pt; display:block;">${title}</b>
+                            <span style="color:#cbd5e1; font-size: 8.5pt;">${item.type === 'cache' ? 'Multiple Styles' : styleName}</span>
+                        </div>
+                    </div>
+                    <span style="color:#cbd5e1; font-size: 9.5pt; display:block; margin-bottom:4px;">${subtitle}</span>
+                    <div style="padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size:8pt; color:#64748b;">
                         Deployed: ${new Date(item.date).toLocaleDateString()}
                     </div>
                     ${actionHtml}
@@ -618,10 +672,17 @@
 
             let title, badgeClass, badgeText;
             
+            let styleName = "Base Model";
+            if (item.styleId) {
+                const s = globalStyles.find(x => x.id === item.styleId);
+                if (s) styleName = s.style_name;
+            }
+            
             if (item.type === 'cache') {
                 title = `Rookery Cache (${item.availableCount} left)`;
                 badgeClass = 'badge-cache';
                 badgeText = 'CACHE';
+                styleName = 'Multiple Styles';
             } else if (item.type === 'found') {
                 title = item.displayName || 'Found Penguin';
                 badgeClass = 'badge-found';
@@ -643,7 +704,12 @@
             li.innerHTML = `
                 <div>
                     <div class="d-title">${title}</div>
-                    <div class="d-subtitle">📍 ${item.cityName}</div>
+                    <div class="d-subtitle">
+                        <div style="width:18px; height:18px; flex-shrink:0;">
+                            ${item.type === 'cache' ? getPenguinSvg('#00e5ff') : renderPopupAvatar(item.styleId)}
+                        </div>
+                        <span>${styleName}</span>
+                    </div>
                     <div class="d-status-badge ${badgeClass}">${badgeText}</div>
                 </div>
                 <div style="text-align: right;">
