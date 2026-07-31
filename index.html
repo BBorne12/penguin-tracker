@@ -11,6 +11,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
+        /* App Mode Toggle */
+        .mode-tabs {
+            display: flex; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px; overflow: hidden; margin-bottom: 20px; margin-top: 10px;
+        }
+        .mode-tab {
+            flex: 1; padding: 12px; background: transparent; border: none; color: #94a3b8;
+            font-weight: 600; font-size: 9pt; text-transform: uppercase; cursor: pointer;
+            transition: all 0.2s ease; border-right: 1px solid rgba(56, 189, 248, 0.2);
+            letter-spacing: 0.5px;
+        }
+        .mode-tab:last-child { border-right: none; }
+        .mode-tab:hover:not(.active) { background: rgba(255, 255, 255, 0.05); }
+        .mode-tab.active { background: rgba(56, 189, 248, 0.15); color: #e0f2fe; text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
         /* Base Setup & CSS Resets */
         *, *::before, *::after { box-sizing: border-box; }
         
@@ -430,7 +444,11 @@
         </div>
         <button id="help-btn" onclick="document.getElementById('welcome-modal').style.display='flex';" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
     </div>
-
+<!-- Toggle Buttons -->
+    <div class="mode-tabs">
+        <button class="mode-tab active">Penguin Tracker</button>
+        <button class="mode-tab" onclick="switchToFinder()">Penguin Finder</button>
+    </div>
     <div class="layout-section" id="game-panel">
         
         <div id="view-mode-banner" class="warning-badge" style="display: none; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
@@ -603,6 +621,26 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // --- APP SWITCHING LOGIC ---
+    function switchToFinder() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentId = urlParams.get('id');
+        const currentTag = urlParams.get('tag');
+        const currentViewer = urlParams.get('viewer');
+        const currentVtag = urlParams.get('vtag');
+
+        // Package up the current state to send to finder.html
+        let destUrl = 'finder.html';
+        let params = new URLSearchParams();
+        
+        if (currentId) params.append('returnId', currentId);
+        if (currentTag) params.append('returnTag', currentTag);
+        if (currentViewer) params.append('returnViewer', currentViewer);
+        if (currentVtag) params.append('returnVtag', currentVtag);
+
+        let paramString = params.toString();
+        window.location.href = paramString ? `${destUrl}?${paramString}` : destUrl;
+    }
 async function saveCustomNameFromModal(buttonElement) {
     const nameInput = document.getElementById('modal-custom-name').value.trim();
 
@@ -2107,6 +2145,9 @@ async function loadPenguinHistory(targetId) {
             map = L.map('map').setView([39.8283, -98.5795], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
             historyLayerGroup = L.layerGroup().addTo(map);
+            
+            // Restores the live tracking pin
+            if (!isViewOnlyMode) marker = L.marker([39.8283, -98.5795], { draggable: false }).addTo(map);
         } catch (e) {}
     }
 
@@ -2125,6 +2166,9 @@ async function loadPenguinHistory(targetId) {
             navigator.geolocation.getCurrentPosition((position) => {
                 verifiedLat = position.coords.latitude; verifiedLng = position.coords.longitude;
                 if (map) map.setView([verifiedLat, verifiedLng], 15);
+                
+                // Restores the pin movement
+                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
                 
                 const submitBtn = document.getElementById('submit-btn'); if (submitBtn) submitBtn.disabled = false;
                 
@@ -2146,6 +2190,10 @@ async function loadPenguinHistory(targetId) {
                 if (map && currentMainMode === 'my') { 
                     map.setView([verifiedLat, verifiedLng], 15); 
                 }
+                
+                // Restores the pin movement on manual refresh
+                if (marker) marker.setLatLng([verifiedLat, verifiedLng]);
+                
                 updateDistanceToLastStop();
             }, () => {
                 if (refreshBtnList) { refreshBtnList.disabled = false; }
