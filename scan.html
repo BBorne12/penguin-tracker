@@ -224,6 +224,13 @@
     let currentMode = 'single'; // 'single', 'prep', 'deploy'
     let preppedBatchesData = {}; 
 
+    // --- BULLETPROOF FILTERS ---
+    const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
+    const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
+    const isCacheLog = (note) => note && note.includes('[ADMIN CACHE LOCATION]');
+    const isMarkedFound = (note) => note && note.includes('[ADMIN MARKED FOUND]');
+    const isMissingLog = (note) => note && note.includes('[LIKELY MISSING]');
+
     function setMode(mode) {
         if (isProcessing) return;
         currentMode = mode;
@@ -393,7 +400,7 @@
                 if (log.finder_note && log.finder_note.startsWith('[CACHE PREP:')) {
                     const batchName = log.finder_note.replace('[CACHE PREP: ', '').replace(']', '');
                     penguinStatus[log.penguin_id] = { status: 'prep', batch: batchName, tag: log.secret_tag };
-                } else if (log.finder_note === '[ADMIN CACHE LOCATION]' || log.finder_note === '[ADMIN HIDE LOCATION]' || !log.finder_note.startsWith('[')) {
+                } else if (isCacheLog(log.finder_note) || isAdminHideLog(log.finder_note) || !log.finder_note.startsWith('[')) {
                     penguinStatus[log.penguin_id] = { status: 'deployed' };
                 }
             });
@@ -531,41 +538,94 @@
         else loadHideMapData();
     }
 
+    // --- AVATAR RENDERING ENGINE ---
+    function getPenguinSvg(bgColor) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+            <rect width="100" height="100" rx="20" fill="${bgColor}"/>
+            <ellipse cx="22" cy="60" rx="8" ry="18" transform="rotate(15 22 60)" fill="#1e293b"/>
+            <ellipse cx="78" cy="60" rx="8" ry="18" transform="rotate(-15 78 60)" fill="#1e293b"/>
+            <ellipse cx="50" cy="55" rx="35" ry="38" fill="#1e293b"/>
+            <ellipse cx="50" cy="65" rx="28" ry="25" fill="#ffffff"/>
+            <circle cx="36" cy="45" r="15" fill="#ffffff"/>
+            <circle cx="64" cy="45" r="15" fill="#ffffff"/>
+            <ellipse cx="35" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <ellipse cx="65" cy="88" rx="12" ry="6" fill="#f97316"/>
+            <circle cx="36" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="64" cy="45" r="4.5" fill="#0f172a"/>
+            <circle cx="37" cy="44" r="1.5" fill="#ffffff"/>
+            <circle cx="65" cy="44" r="1.5" fill="#ffffff"/>
+            <ellipse cx="50" cy="52" rx="8" ry="5" fill="#f97316"/>
+        </svg>`;
+    }
+
+    function renderPopupAvatar(log) {
+        // Fallback generic SVG if no style
+        if (!log.style_id) return getPenguinSvg('#38bdf8');
+        
+        const s = globalStyles.find(x => x.id === log.style_id);
+        
+        // Match found with an image
+        if (s && s.image_url) {
+            return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        }
+        
+        // Style found but no image URL exists in the DB
+        return getPenguinSvg('#38bdf8');
+    }
+
     async function loadHideMapData() {
         if (globalStyles.length === 0) {
             const { data } = await supabaseClient.from('penguin_styles').select('*');
             if (data) globalStyles = data;
         }
 
-        // Include 'id' so we can update/delete specific rows
-        const { data: hides, error } = await supabaseClient
+        // Pull the entire log history to determine what has been "Found"
+        const { data: allLogs, error } = await supabaseClient
             .from('penguin_logs')
             .select('id, penguin_id, latitude, longitude, created_at, custom_name, style_id, finder_note')
-            .in('finder_note', ['[ADMIN HIDE LOCATION]', '[ADMIN CACHE LOCATION]'])
             .order('created_at', { ascending: false });
 
-        if (error || !hides) return;
+        if (error || !allLogs) return;
 
         hideLayerGroup.clearLayers();
         const bounds = L.latLngBounds();
         let validPoints = false;
-
-        const hideIcon = L.divIcon({ 
-            className: 'custom-div-icon', 
-            html: `<div style='background-color:#ef4444; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px #ef4444;'></div>`, 
-            iconSize: [14, 14], iconAnchor: [7, 7] 
-        });
         
-        const cacheIcon = L.divIcon({ 
-            className: 'custom-div-icon', 
-            html: `<div style='background-color:#38bdf8; width:16px; height:16px; border-radius:4px; border:2px solid white; box-shadow: 0 0 10px #38bdf8; transform: rotate(45deg);'></div>`, 
-            iconSize: [16, 16], iconAnchor: [8, 8] 
+        // Object to store which penguins have been discovered
+        const discoveredPenguins = new Set();
+        
+        // Build the discovery list. If a log exists that is NOT an admin/factory log, it was found!
+        allLogs.forEach(log => {
+            if (!isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note) && !isCacheLog(log.finder_note) && !isMarkedFound(log.finder_note) && !isMissingLog(log.finder_note)) {
+                discoveredPenguins.add(log.penguin_id);
+            }
         });
 
-        hides.forEach(log => {
+        // Now filter the logs to ONLY show the actual hides we want on the map
+        const activeHides = allLogs.filter(log => isCacheLog(log.finder_note) || isAdminHideLog(log.finder_note));
+
+        activeHides.forEach(log => {
             if (!log.latitude || !log.longitude) return;
             validPoints = true;
 
+            // Determine Status Color
+            const isFound = discoveredPenguins.has(log.penguin_id);
+            const statusColor = isFound ? '#00e5ff' : '#ef4444'; // Blue if found, Red if untouched
+
+            // Configure Icons using the dynamic statusColor
+            const hideIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${statusColor}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px ${statusColor};'></div>`, 
+                iconSize: [14, 14], iconAnchor: [7, 7] 
+            });
+            
+            const cacheIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${statusColor}; width:16px; height:16px; border-radius:4px; border:2px solid white; box-shadow: 0 0 10px ${statusColor}; transform: rotate(45deg);'></div>`, 
+                iconSize: [16, 16], iconAnchor: [8, 8] 
+            });
+
+            // Get Style Name
             let styleName = "Base Model";
             if (log.style_id) {
                 const s = globalStyles.find(x => x.id === log.style_id);
@@ -575,12 +635,17 @@
             const displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
             const formattedDate = new Date(log.created_at).toLocaleDateString() + ' ' + new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            const isCache = log.finder_note === '[ADMIN CACHE LOCATION]';
+            const isCache = isCacheLog(log.finder_note);
 
             const popupContent = `
                 <div style="min-width: 190px;">
-                    <b style="color:${isCache ? '#38bdf8' : '#00e5ff'}; font-size: 11pt;">${isCache ? '📦 ROOKERY CACHE' : '🐧 HIDE'}</b><br>
-                    <b style="color:#f8fafc;">${displayName}</b><br>
+                    <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
+                        <div style="width:34px; height:34px; flex-shrink:0;">${renderPopupAvatar(log)}</div>
+                        <div style="line-height: 1.2;">
+                            <b style="color:${isFound ? '#00e5ff' : '#ef4444'}; font-size: 11pt;">${isFound ? '✅ DISCOVERED' : (isCache ? '📦 CACHE' : '🐧 HIDE')}</b><br>
+                            <b style="color:#f8fafc;">${displayName}</b>
+                        </div>
+                    </div>
                     <span style="color:#cbd5e1; font-size: 9pt;">ID:</span> <span style="font-family:monospace;">${log.penguin_id}</span><br>
                     <span style="color:#cbd5e1; font-size: 9pt;">Style:</span> ${styleName}<br>
                     <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size:8.5pt; color:#94a3b8;">Deployed: ${formattedDate}</div>
