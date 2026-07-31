@@ -32,7 +32,23 @@
         h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
 
-        .app-header { border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 14px; margin-bottom: 16px; }
+        .app-header { margin-bottom: 16px; text-align: center; }
+        
+        /* App Mode Toggle */
+        .mode-tabs {
+            display: flex; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px; overflow: hidden; margin-bottom: 20px;
+        }
+        .mode-tab {
+            flex: 1; padding: 12px; background: transparent; border: none; color: #94a3b8;
+            font-weight: 600; font-size: 9pt; text-transform: uppercase; cursor: pointer;
+            transition: all 0.2s ease; border-right: 1px solid rgba(56, 189, 248, 0.2);
+            letter-spacing: 0.5px;
+        }
+        .mode-tab:last-child { border-right: none; }
+        .mode-tab:hover:not(.active) { background: rgba(255, 255, 255, 0.05); }
+        .mode-tab.active { background: rgba(56, 189, 248, 0.15); color: #e0f2fe; text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
+
         .layout-section { width: 100%; flex: 1; display: flex; flex-direction: column; gap: 16px; }
 
         .glass-card {
@@ -183,6 +199,12 @@
         <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active rookery caches and potentially available hides in the wild.</p>
     </div>
 
+    <!-- Toggle Buttons -->
+    <div class="mode-tabs">
+        <button class="mode-tab" onclick="switchToTracker()">Penguin Tracker</button>
+        <button class="mode-tab active">Field Map</button>
+    </div>
+
     <div class="layout-section">
         
         <div class="glass-card">
@@ -276,6 +298,30 @@
         initMaps();
         fetchAndProcessData();
     });
+
+    // --- APP SWITCHING LOGIC ---
+    function switchToTracker() {
+        // Read URL params passed from the Tracker
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnId = urlParams.get('returnId');
+        const returnTag = urlParams.get('returnTag');
+        const returnViewer = urlParams.get('returnViewer');
+        const returnVtag = urlParams.get('returnVtag');
+
+        // Construct the return URL for index.html
+        let destUrl = 'index.html';
+        let params = new URLSearchParams();
+        
+        if (returnId) params.append('id', returnId);
+        if (returnTag) params.append('tag', returnTag);
+        if (returnViewer) params.append('viewer', returnViewer);
+        if (returnVtag) params.append('vtag', returnVtag);
+
+        let paramString = params.toString();
+        
+        // If there's no returnId, this routes cleanly to index.html (Mystery Penguin default)
+        window.location.href = paramString ? `${destUrl}?${paramString}` : destUrl;
+    }
 
     function initMaps() {
         mainMap = L.map('main-map', { zoomControl: false }).setView([39.9783, -86.1180], 5);
