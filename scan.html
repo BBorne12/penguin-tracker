@@ -225,10 +225,8 @@
     let preppedBatchesData = {}; 
 
     // --- BULLETPROOF FILTERS ---
-    const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
     const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
     const isCacheLog = (note) => note && note.includes('[ADMIN CACHE LOCATION]');
-    const isMarkedFound = (note) => note && note.includes('[ADMIN MARKED FOUND]');
     const isMissingLog = (note) => note && note.includes('[LIKELY MISSING]');
 
     function setMode(mode) {
@@ -558,18 +556,14 @@
         </svg>`;
     }
 
-    function renderPopupAvatar(log) {
-        // Fallback generic SVG if no style
-        if (!log.style_id) return getPenguinSvg('#38bdf8');
+    function renderPopupAvatar(styleId) {
+        if (!styleId) return getPenguinSvg('#38bdf8');
         
-        const s = globalStyles.find(x => x.id === log.style_id);
-        
-        // Match found with an image
+        const s = globalStyles.find(x => x.id === styleId);
         if (s && s.image_url) {
             return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
         }
         
-        // Style found but no image URL exists in the DB
         return getPenguinSvg('#38bdf8');
     }
 
@@ -579,7 +573,6 @@
             if (data) globalStyles = data;
         }
 
-        // Pull the entire log history to determine what has been "Found"
         const { data: allLogs, error } = await supabaseClient
             .from('penguin_logs')
             .select('id, penguin_id, latitude, longitude, created_at, custom_name, style_id, finder_note')
@@ -591,28 +584,56 @@
         const bounds = L.latLngBounds();
         let validPoints = false;
         
-        // Object to store which penguins have been discovered
-        const discoveredPenguins = new Set();
+        const penguinProfiles = {};
         
-        // Build the discovery list. If a log exists that is NOT an admin/factory log, it was found!
+        // 1. Build a master profile for every penguin from its timeline
         allLogs.forEach(log => {
-            if (!isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note) && !isCacheLog(log.finder_note) && !isMarkedFound(log.finder_note) && !isMissingLog(log.finder_note)) {
-                discoveredPenguins.add(log.penguin_id);
+            if (!penguinProfiles[log.penguin_id]) {
+                penguinProfiles[log.penguin_id] = {
+                    isFound: false,
+                    customName: log.penguin_id,
+                    styleId: null,
+                    hasName: false,
+                    hasStyle: false,
+                    statusDetermined: false
+                };
+            }
+            
+            let profile = penguinProfiles[log.penguin_id];
+            
+            // Capture the newest non-null name and style
+            if (log.custom_name && log.custom_name.trim() !== "" && !profile.hasName) {
+                profile.customName = log.custom_name;
+                profile.hasName = true;
+            }
+            if (log.style_id && !profile.hasStyle) {
+                profile.styleId = log.style_id;
+                profile.hasStyle = true;
+            }
+            
+            // Determine the CURRENT found status based on its most recent action
+            if (!profile.statusDetermined) {
+                const note = log.finder_note || "";
+                if (isAdminHideLog(note) || isCacheLog(note) || isMissingLog(note) || note.toLowerCase().includes('initial factory registration')) {
+                    profile.isFound = false; // The latest thing that happened was a hide/reset
+                } else {
+                    profile.isFound = true;  // The latest thing was a user logging it
+                }
+                profile.statusDetermined = true;
             }
         });
 
-        // Now filter the logs to ONLY show the actual hides we want on the map
+        // 2. Filter logs down to just the active physical hides/caches to draw on the map
         const activeHides = allLogs.filter(log => isCacheLog(log.finder_note) || isAdminHideLog(log.finder_note));
 
         activeHides.forEach(log => {
             if (!log.latitude || !log.longitude) return;
             validPoints = true;
 
-            // Determine Status Color
-            const isFound = discoveredPenguins.has(log.penguin_id);
+            const profile = penguinProfiles[log.penguin_id];
+            const isFound = profile.isFound;
             const statusColor = isFound ? '#00e5ff' : '#ef4444'; // Blue if found, Red if untouched
 
-            // Configure Icons using the dynamic statusColor
             const hideIcon = L.divIcon({ 
                 className: 'custom-div-icon', 
                 html: `<div style='background-color:${statusColor}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px ${statusColor};'></div>`, 
@@ -625,25 +646,23 @@
                 iconSize: [16, 16], iconAnchor: [8, 8] 
             });
 
-            // Get Style Name
+            // Use the aggregated profile data for the popup, NOT the outdated hide log row data
             let styleName = "Base Model";
-            if (log.style_id) {
-                const s = globalStyles.find(x => x.id === log.style_id);
+            if (profile.styleId) {
+                const s = globalStyles.find(x => x.id === profile.styleId);
                 if (s) styleName = s.style_name;
             }
 
-            const displayName = log.custom_name && log.custom_name.trim() !== "" ? log.custom_name : log.penguin_id;
             const formattedDate = new Date(log.created_at).toLocaleDateString() + ' ' + new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
             const isCache = isCacheLog(log.finder_note);
 
             const popupContent = `
                 <div style="min-width: 190px;">
                     <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
-                        <div style="width:34px; height:34px; flex-shrink:0;">${renderPopupAvatar(log)}</div>
+                        <div style="width:34px; height:34px; flex-shrink:0;">${renderPopupAvatar(profile.styleId)}</div>
                         <div style="line-height: 1.2;">
                             <b style="color:${isFound ? '#00e5ff' : '#ef4444'}; font-size: 11pt;">${isFound ? '✅ DISCOVERED' : (isCache ? '📦 CACHE' : '🐧 HIDE')}</b><br>
-                            <b style="color:#f8fafc;">${displayName}</b>
+                            <b style="color:#f8fafc;">${profile.customName}</b>
                         </div>
                     </div>
                     <span style="color:#cbd5e1; font-size: 9pt;">ID:</span> <span style="font-family:monospace;">${log.penguin_id}</span><br>
