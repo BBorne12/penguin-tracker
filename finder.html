@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penguin Finder™ - Field Map</title>
+    <title>Penguin Finder™</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 style=%22filter: grayscale(100%);%22>🐧</text></svg>">
     
@@ -32,7 +32,7 @@
         h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
 
-        .app-header { margin-bottom: 16px; text-align: center; }
+        .app-header { margin-bottom: 16px; text-align: left; }
         
         /* App Mode Toggle */
         .mode-tabs {
@@ -194,7 +194,7 @@
 <div class="app-container">
     
     <div class="app-header">
-        <div class="subtitle">Field Operations</div>
+        <div class="subtitle">The Traveling Penguin Game</div>
         <h1>PENGUIN FINDER™</h1>
         <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active rookery caches and potentially available hides in the wild.</p>
     </div>
@@ -202,7 +202,7 @@
     <!-- Toggle Buttons -->
     <div class="mode-tabs">
         <button class="mode-tab" onclick="switchToTracker()">Penguin Tracker</button>
-        <button class="mode-tab active">Field Map</button>
+        <button class="mode-tab active">Penguin Finder</button>
     </div>
 
     <div class="layout-section">
@@ -301,14 +301,12 @@
 
     // --- APP SWITCHING LOGIC ---
     function switchToTracker() {
-        // Read URL params passed from the Tracker
         const urlParams = new URLSearchParams(window.location.search);
         const returnId = urlParams.get('returnId');
         const returnTag = urlParams.get('returnTag');
         const returnViewer = urlParams.get('returnViewer');
         const returnVtag = urlParams.get('returnVtag');
 
-        // Construct the return URL for index.html
         let destUrl = 'index.html';
         let params = new URLSearchParams();
         
@@ -318,8 +316,6 @@
         if (returnVtag) params.append('vtag', returnVtag);
 
         let paramString = params.toString();
-        
-        // If there's no returnId, this routes cleanly to index.html (Mystery Penguin default)
         window.location.href = paramString ? `${destUrl}?${paramString}` : destUrl;
     }
 
