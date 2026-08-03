@@ -408,7 +408,6 @@
                 penguinHistory[pid].styleId = log.style_id;
             }
             
-            // UPDATE: Now checking for [COMMUNITY HIDE] as well
             if (log.finder_note === '[ADMIN HIDE LOCATION]' || log.finder_note === '[ADMIN CACHE LOCATION]' || (log.finder_note && log.finder_note.startsWith('[COMMUNITY HIDE]'))) {
                 penguinHistory[pid].adminHide = log;
             }
@@ -422,19 +421,32 @@
             if (!history.adminHide || !history.adminHide.latitude) return;
 
             const isCache = history.adminHide.finder_note === '[ADMIN CACHE LOCATION]';
+            const isCommunityHide = history.adminHide.finder_note && history.adminHide.finder_note.startsWith('[COMMUNITY HIDE]');
             const adminHideTime = new Date(history.adminHide.created_at).getTime();
             
             const hasLikelyMissing = history.logs.some(l => l.finder_note === '[LIKELY MISSING]');
             
             const subsequentLogs = history.logs.filter(l => {
                 if (l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]') return false;
-                if (l.finder_note && l.finder_note.startsWith('[COMMUNITY HIDE]')) return false; // UPDATE: Filter community hides out of subsequent logs
+                if (l.finder_note && l.finder_note.startsWith('[COMMUNITY HIDE]')) return false; 
                 if (l.finder_note && l.finder_note.startsWith('[CACHE PREP')) return false;
                 if (l.finder_note === '[LIKELY MISSING]') return false; 
                 return new Date(l.created_at).getTime() > adminHideTime;
             });
             
-            const isFound = (history.customName !== null) || (subsequentLogs.length > 0);
+            // =====================================
+            // THE FIX: BYPASS NAME CHECK FOR COMMUNITY HIDES
+            // =====================================
+            let isFound = false;
+            if (isCommunityHide) {
+                // If it's a community hide, it ONLY counts as found if someone logged it AFTER the hide event.
+                isFound = subsequentLogs.length > 0;
+            } else {
+                // Standard admin hides: it's found if it has a name OR subsequent logs.
+                isFound = (history.customName !== null) || (subsequentLogs.length > 0);
+            }
+            // =====================================
+
             const isLikelyFound = !isFound && hasLikelyMissing;
 
             if (isCache) {
