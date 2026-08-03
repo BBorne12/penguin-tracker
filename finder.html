@@ -408,7 +408,8 @@
                 penguinHistory[pid].styleId = log.style_id;
             }
             
-            if (log.finder_note === '[ADMIN HIDE LOCATION]' || log.finder_note === '[ADMIN CACHE LOCATION]') {
+            // UPDATE: Now checking for [COMMUNITY HIDE] as well
+            if (log.finder_note === '[ADMIN HIDE LOCATION]' || log.finder_note === '[ADMIN CACHE LOCATION]' || (log.finder_note && log.finder_note.startsWith('[COMMUNITY HIDE]'))) {
                 penguinHistory[pid].adminHide = log;
             }
         });
@@ -427,6 +428,7 @@
             
             const subsequentLogs = history.logs.filter(l => {
                 if (l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]') return false;
+                if (l.finder_note && l.finder_note.startsWith('[COMMUNITY HIDE]')) return false; // UPDATE: Filter community hides out of subsequent logs
                 if (l.finder_note && l.finder_note.startsWith('[CACHE PREP')) return false;
                 if (l.finder_note === '[LIKELY MISSING]') return false; 
                 return new Date(l.created_at).getTime() > adminHideTime;
