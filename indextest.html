@@ -967,6 +967,13 @@ async function saveCustomNameFromModal(buttonElement) {
 async function loadPenguinHistory(targetId) {
         if (targetId === "Mystery Penguin") return;
 
+        // --- FIX 1: Reset global variables so names and styles don't bleed between different scans ---
+        globalNamedEntry = null;
+        activeCustomName = null;
+        activeAvatarColor = null;
+        activeCustomAvatarUrl = null;
+        activeStyleId = null;
+
         const { data: logs, error } = await supabaseClient.from('penguin_logs')
             .select('*')
             .eq('penguin_id', targetId)
@@ -1046,12 +1053,11 @@ async function loadPenguinHistory(targetId) {
         if (galleryBtn) galleryBtn.style.display = 'block';
 
         // ==========================================
-        // NEW: COMMUNITY HIDE DETECTION & MODAL LOGIC
+        // COMMUNITY HIDE DETECTION & MODAL LOGIC
         // ==========================================
         let isCommunityHide = false;
         let hideNoteRaw = "";
         
-        // Check the very last log in the array to see if it was a Community Hide
         if (globalLogData.length > 0) {
             const lastLog = globalLogData[globalLogData.length - 1];
             if (lastLog.finder_note && lastLog.finder_note.startsWith('[COMMUNITY HIDE]')) {
@@ -1061,29 +1067,29 @@ async function loadPenguinHistory(targetId) {
             }
         }
 
+        // --- FIX 2: Correctly trigger the Second Wind modal for anyone holding the physical tag ---
         if (!isViewOnlyMode) {
             if (isCommunityHide && globalNamedEntry && globalNamedEntry !== targetId) {
-                // Penguin has history AND a custom name - trigger the Second Wind modal!
                 const secondWindModal = document.getElementById('second-wind-modal');
                 if (secondWindModal) {
                     document.getElementById('sw-old-name').innerText = globalNamedEntry;
                     document.getElementById('sw-hide-note').innerText = `"${hideNoteRaw}"`;
                     secondWindModal.style.display = 'flex';
                 }
-            } else if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId)) {
-                // Penguin has logs but was never named (or is fresh from a community hide with no name)
-                document.getElementById('first-find-modal').style.display = 'flex';
-            } else if (globalLogData.length === 0) {
-                // Brand new, zero logs
-                if (typeof showWelcomeModal === 'function') {
-                    showWelcomeModal();
-                } else {
-                    document.getElementById('welcome-modal').style.display = 'flex';
+            } else {
+                // Standard checks for non-community hides or brand-new penguins
+                if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId)) {
+                    document.getElementById('first-find-modal').style.display = 'flex';
+                } else if (globalLogData.length === 0) {
+                    if (typeof showWelcomeModal === 'function') {
+                        showWelcomeModal();
+                    } else {
+                        document.getElementById('welcome-modal').style.display = 'flex';
+                    }
                 }
             }
         }
 
-        // Reveal the "Hide a Penguin" card only to the active possessor
         const hideCard = document.getElementById('hide-penguin-card');
         if (hideCard) {
             hideCard.style.display = isPrimaryControl ? 'block' : 'none';
