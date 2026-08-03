@@ -9,7 +9,7 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         /* App Mode Toggle */
         .mode-tabs {
@@ -273,7 +273,35 @@
 <body>
 
 <div id="toast-container"></div>
+    
+<div class="modal-overlay" id="hide-success-modal">
+    <div class="modal-card">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">📍</span>
+        <h2 style="color: #39ff14; font-size: 16pt; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">Penguin Hidden!</h2>
+        <p style="font-size: 11.5pt; color: #cbd5e1; margin-bottom: 24px; line-height: 1.5;">
+            Successfully marked as hidden at your current location. It will now appear on the public Penguin Finder map!
+        </p>
+        <button class="btn-glow" onclick="closeHideSuccessModal()">Awesome</button>
+    </div>
+</div>
 
+<div class="modal-overlay" id="second-wind-modal">
+    <div class="modal-card">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px;">🌍</span>
+        <h2 style="color: #38bdf8; font-size: 16pt; text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);">Discovery!</h2>
+        <p style="font-size: 11pt; color: #cbd5e1; line-height: 1.5; margin-top: 8px;">
+            You just found a veteran traveler! Previously known as <b id="sw-old-name" style="color: #f8fafc;"></b>, this penguin is ready for its next adventure with you.
+        </p>
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 12px; margin: 12px 0;">
+            <strong style="color: #94a3b8; font-size: 9pt; text-transform: uppercase;">Note from the hider:</strong>
+            <p id="sw-hide-note" style="font-size: 11pt; color: #e0f2fe; margin: 4px 0 0 0; font-style: italic;"></p>
+        </div>
+        <p style="font-size: 10pt; color: #94a3b8; margin-bottom: 8px;">Give it a new custom name below to officially start your leg of the journey.</p>
+        <input type="text" id="sw-new-name" class="modal-input" placeholder="New Custom Name">
+        <button class="btn-glow" onclick="saveSecondWindName(this)">Start Your Journey</button>
+    </div>
+</div>
+    
 <div class="modal-overlay" id="confirm-modal" style="z-index: 100005;">
     <div class="modal-card">
         <h2 style="color: #fca5a5; margin-bottom: 12px;">Confirm Action</h2>
@@ -605,7 +633,23 @@
                 <button class="page-arrow" id="leaderboard-next-btn" onclick="changeLeaderboardPage(1)">→</button>
             </div>
         </div>
-
+        
+        <div class="glass-card" id="hide-penguin-card" style="display: none;">
+            <h2>🗺️ Hide a Penguin</h2>
+            <p style="font-size: 10.5pt; color: #cbd5e1; margin-bottom: 12px; line-height: 1.5;">
+                The Adventure Continues! You can hold onto this penguin for future trips, or hide it for a stranger to discover. If you are ready to hide this penguin (or any others you've found), head to your chosen location, tap the scanner below, and officially release it back into the wild.
+            </p>
+            
+            <textarea id="community-hide-note" class="note-textarea" rows="2" placeholder="Write a message for whoever finds this penguin next! (Optional)" style="margin-bottom: 12px; height: 60px;"></textarea>
+            
+            <div id="hide-reader-container" style="display: none; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.4); margin-bottom: 12px;">
+                <div id="hide-reader" style="width: 100%;"></div>
+            </div>
+            
+            <button class="btn-glow" id="btn-start-hide-scan" onclick="startHideScanner()">📷 Scan to Hide Here</button>
+            <button class="btn-glow" id="btn-cancel-hide-scan" onclick="cancelHideScanner()" style="display: none; background: transparent; border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">Cancel Scan</button>
+        </div>
+        
         <div class="warning-badge" id="safety-disclaimer-notice" style="display: block;">
             <strong>⚠️ ADVENTURE SAFETY TIP:</strong> To keep everyone safe and preserve the fun of the game, please do not log locations matching your home or private properties. Only check in when you are out and about!
         </div>
@@ -936,12 +980,11 @@ async function loadPenguinHistory(targetId) {
         let totalDistance = 0;
         let lastLat = null;
         let lastLng = null;
-        let totalPebbles = 0; // Added missing pebble counter
+        let totalPebbles = 0; 
         
         let pathPoints = [];
         
         globalLogData.forEach(log => {
-            // Tally pebbles during the initial load loop
             totalPebbles += parsePebbles(log.stones_received).length;
 
             if (log.custom_name && log.custom_name !== targetId) {
@@ -970,7 +1013,6 @@ async function loadPenguinHistory(targetId) {
         
         document.getElementById("total-stops-counter").innerText = `${validStops} Adventure Stops Logged`;
         
-        // Push the calculated total to the profile card
         const totalPebblesEl = document.getElementById("total-pebbles-counter");
         if (totalPebblesEl) {
             totalPebblesEl.innerText = `${totalPebbles} Pebbles Collected`;
@@ -1003,15 +1045,53 @@ async function loadPenguinHistory(targetId) {
         const galleryBtn = document.getElementById('gallery-profile-btn');
         if (galleryBtn) galleryBtn.style.display = 'block';
 
-        if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId) && !isViewOnlyMode) {
-            document.getElementById('first-find-modal').style.display = 'flex';
-        } else if (globalLogData.length === 0 && !isViewOnlyMode) {
-            showWelcomeModal();
-        }
+        // ==========================================
+        // NEW: COMMUNITY HIDE DETECTION & MODAL LOGIC
+        // ==========================================
+        let isCommunityHide = false;
+        let hideNoteRaw = "";
         
+        // Check the very last log in the array to see if it was a Community Hide
+        if (globalLogData.length > 0) {
+            const lastLog = globalLogData[globalLogData.length - 1];
+            if (lastLog.finder_note && lastLog.finder_note.startsWith('[COMMUNITY HIDE]')) {
+                isCommunityHide = true;
+                hideNoteRaw = lastLog.finder_note.replace('[COMMUNITY HIDE]', '').trim();
+                if (!hideNoteRaw) hideNoteRaw = "Enjoy the adventure!";
+            }
+        }
+
+        if (!isViewOnlyMode) {
+            if (isCommunityHide && globalNamedEntry && globalNamedEntry !== targetId) {
+                // Penguin has history AND a custom name - trigger the Second Wind modal!
+                const secondWindModal = document.getElementById('second-wind-modal');
+                if (secondWindModal) {
+                    document.getElementById('sw-old-name').innerText = globalNamedEntry;
+                    document.getElementById('sw-hide-note').innerText = `"${hideNoteRaw}"`;
+                    secondWindModal.style.display = 'flex';
+                }
+            } else if (globalLogData.length > 0 && (!globalNamedEntry || globalNamedEntry === targetId)) {
+                // Penguin has logs but was never named (or is fresh from a community hide with no name)
+                document.getElementById('first-find-modal').style.display = 'flex';
+            } else if (globalLogData.length === 0) {
+                // Brand new, zero logs
+                if (typeof showWelcomeModal === 'function') {
+                    showWelcomeModal();
+                } else {
+                    document.getElementById('welcome-modal').style.display = 'flex';
+                }
+            }
+        }
+
+        // Reveal the "Hide a Penguin" card only to the active possessor
+        const hideCard = document.getElementById('hide-penguin-card');
+        if (hideCard) {
+            hideCard.style.display = isPrimaryControl ? 'block' : 'none';
+        }
+        // ==========================================
+
         renderFleetOnMap(map, historyLayerGroup, currentMainMode);
     }
-
     function renderSightingsTabs() {
         const tabsContainer = document.getElementById('sightings-tabs');
         if (!tabsContainer) return;
@@ -2409,6 +2489,137 @@ async function loadPenguinHistory(targetId) {
     }
 
     function changeLeaderboardPage(directionOffset) { activeLeaderboardPage += directionOffset; renderLeaderboardPage(); }
+    // ===================================================
+    // COMMUNITY HIDE & DISCOVERY ENGINE
+    // ===================================================
+    let hideQrScanner = null;
+
+    function startHideScanner() {
+        document.getElementById('hide-reader-container').style.display = 'block';
+        document.getElementById('btn-start-hide-scan').style.display = 'none';
+        document.getElementById('btn-cancel-hide-scan').style.display = 'block';
+
+        hideQrScanner = new Html5Qrcode("hide-reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        hideQrScanner.start({ facingMode: "environment" }, config, onHideScanSuccess)
+        .catch(err => {
+            showToast("Camera Access Denied", "error");
+            cancelHideScanner();
+        });
+    }
+
+    function cancelHideScanner() {
+        if (hideQrScanner && hideQrScanner.getState() !== 1) {
+            hideQrScanner.stop().then(() => {
+                hideQrScanner.clear();
+            }).catch(err => console.log(err));
+        }
+        document.getElementById('hide-reader-container').style.display = 'none';
+        document.getElementById('btn-start-hide-scan').style.display = 'block';
+        document.getElementById('btn-cancel-hide-scan').style.display = 'none';
+    }
+
+    async function onHideScanSuccess(decodedText, decodedResult) {
+        cancelHideScanner();
+        showToast("Tag Scanned! Locking GPS...", "info");
+
+        try {
+            const url = new URL(decodedText);
+            const pId = url.searchParams.get("id");
+            const tag = url.searchParams.get("tag");
+
+            if (pId && pId.startsWith("Penguin-")) {
+                processCommunityHide(pId, tag);
+            } else {
+                showToast("Invalid QR Code", "error");
+            }
+        } catch (e) {
+            showToast("Invalid QR Code Format", "error");
+        }
+    }
+
+    function processCommunityHide(pId, tag) {
+        if (!navigator.geolocation) {
+            showToast("GPS not supported by device.", "error");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            let noteInput = document.getElementById('community-hide-note').value.trim();
+            let finalNote = `[COMMUNITY HIDE] ${noteInput}`.trim();
+
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
+                penguin_id: pId,
+                secret_tag: tag, 
+                finder_note: finalNote,
+                latitude: lat,
+                longitude: lng,
+                custom_name: activeCustomName,
+                avatar_color: activeAvatarColor
+            }]);
+
+            if (error) {
+                showToast(`Database rejection: ${error.message}`, "error");
+            } else {
+                document.getElementById('community-hide-note').value = "";
+                document.getElementById('hide-success-modal').style.display = 'flex';
+            }
+        }, (error) => {
+            showToast("GPS Signal Lost. Ensure location services are enabled.", "error");
+        }, { enableHighAccuracy: true });
+    }
+
+    function closeHideSuccessModal() {
+        document.getElementById('hide-success-modal').style.display = 'none';
+    }
+
+    async function saveSecondWindName(buttonElement) {
+        const nameInput = document.getElementById('sw-new-name').value.trim();
+
+        if (!nameInput) {
+            showToast("Please enter a new name!", "error");
+            return;
+        }
+
+        const originalText = buttonElement.innerText;
+        buttonElement.innerText = "Saving...";
+        buttonElement.disabled = true;
+
+        try {
+            activeCustomName = nameInput;
+
+            // 1. Permanently overwrite the master name for all past logs to keep UI clean
+            await supabaseClient
+                .from('penguin_logs') 
+                .update({ custom_name: activeCustomName })
+                .eq('penguin_id', penguinId); 
+
+            // 2. Drop a "Hatched" log to clear the Community Hide status
+            const { error } = await supabaseClient
+                .from('penguin_logs')
+                .insert([{
+                    penguin_id: penguinId, 
+                    custom_name: activeCustomName, 
+                    avatar_color: activeAvatarColor,
+                    finder_note: 'Penguin Hatched! 🥚', 
+                    secret_tag: securityTagParam
+                }]);
+
+            if (error) throw error;
+
+            location.reload();
+
+        } catch (error) {
+            console.error("Error saving name:", error.message);
+            showToast("Failed to start new journey.", "error");
+            buttonElement.innerText = originalText;
+            buttonElement.disabled = false;
+        }
+    }
 </script>
 </body>
 </html>
