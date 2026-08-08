@@ -2545,7 +2545,7 @@ async function loadPenguinHistory(targetId) {
         }
     }
 
-    function processCommunityHide(pId, tag) {
+function processCommunityHide(pId, tag) {
         if (!navigator.geolocation) {
             showToast("GPS not supported by device.", "error");
             return;
@@ -2558,14 +2558,13 @@ async function loadPenguinHistory(targetId) {
             let noteInput = document.getElementById('community-hide-note').value.trim();
             let finalNote = `[COMMUNITY HIDE] ${noteInput}`.trim();
 
+            // Submit the log without attaching the current screen's custom_name or avatar_color
             const { error } = await supabaseClient.from('penguin_logs').insert([{
                 penguin_id: pId,
                 secret_tag: tag, 
                 finder_note: finalNote,
                 latitude: lat,
-                longitude: lng,
-                custom_name: activeCustomName,
-                avatar_color: activeAvatarColor
+                longitude: lng
             }]);
 
             if (error) {
