@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
         /* Base Setup & CSS Resets */
@@ -31,8 +32,6 @@
         h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
         h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
-
-        .app-header { margin-bottom: 16px; text-align: left; }
         
         /* App Mode Toggle */
         .mode-tabs {
@@ -66,6 +65,14 @@
         }
         .btn-inline-action:hover { background: rgba(0, 229, 255, 0.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.2); }
         .btn-inline-action.active-location { background: rgba(57, 255, 20, 0.15); border-color: rgba(57, 255, 20, 0.5); color: #39ff14; box-shadow: 0 0 8px rgba(57, 255, 20, 0.2); }
+
+        .btn-glow {
+            background: linear-gradient(135deg, rgba(56,189,248,0.2) 0%, rgba(2,6,13,0.8) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.5); color: #00e5ff; font-weight: bold; font-size: 11pt;
+            padding: 12px; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+            transition: all 0.2s; box-shadow: 0 0 15px rgba(56, 189, 248, 0.15); display: inline-block; text-align: center; width: 100%;
+        }
+        .btn-glow:hover { box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1); }
 
         /* Map Styling */
         #main-map {
@@ -191,12 +198,54 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="scan-action-modal" style="z-index: 10005;">
+    <div class="modal-card" style="height: auto; max-height: 90vh;">
+        <span style="font-size: 40pt; display: block; margin-bottom: 8px; text-align: center;">🎯</span>
+        <h2 style="color: #39ff14; font-size: 16pt; text-align: center; text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);">Penguin Scanned!</h2>
+        <p style="font-size: 11.5pt; color: #cbd5e1; margin-bottom: 24px; text-align: center; line-height: 1.5;">
+            You found <b id="scanned-penguin-id-display" style="color: #f8fafc;"></b>! Would you like to take this penguin with you, or put it back where you found it?
+        </p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn-glow" style="background: rgba(56,189,248,0.15); border-color: #38bdf8; color: #e0f2fe;" onclick="processScanAction('take')">
+                🎒 Taking This Penguin<br>
+                <span style="font-size: 8.5pt; font-weight: normal; color: #94a3b8;">Removes it from the public map</span>
+            </button>
+            <button class="btn-glow" style="background: rgba(57,255,20,0.15); border-color: #39ff14; color: #e0f2fe;" onclick="processScanAction('leave')">
+                📍 Putting It Back<br>
+                <span style="font-size: 8.5pt; font-weight: normal; color: #94a3b8;">Leaves it on the map for the next person</span>
+            </button>
+            <button class="btn-glow" style="background: transparent; border-color: rgba(239,68,68,0.4); color: #fca5a5; margin-top: 8px;" onclick="closeScanActionModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <div class="app-container">
     
-    <div class="app-header">
-        <div class="subtitle">The Traveling Penguin Game</div>
-        <h1>PENGUIN FINDER™</h1>
-        <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active rookery caches and potentially available hides in the wild.</p>
+    <!-- NEW DYNAMIC HEADER & SCANNER -->
+    <div id="context-header-container" class="glass-card" style="margin-bottom: 16px;">
+        
+        <div id="no-context-view" style="display: none; text-align: center;">
+            <span style="font-size: 30pt; margin-bottom: 8px; display: block;">🔍</span>
+            <p style="font-size: 10.5pt; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+                To start collecting penguin finds you must first find a penguin. If you already have a penguin, scan the QR code on the bottom. If you need to find a penguin, use the map below to find a penguin, then name it to start finding other penguins to add to your find history.
+            </p>
+        </div>
+        
+        <div id="active-context-view" style="display: none; text-align: center;">
+            <div style="width: 60px; height: 60px; margin: 0 auto 12px auto;" id="context-avatar-container"></div>
+            <h2 style="font-size: 11pt; color: #94a3b8; margin: 0 0 4px 0; letter-spacing: 0.5px;">FINDING PENGUINS AS</h2>
+            <h1 id="context-penguin-name" style="font-size: 18pt; margin-bottom: 8px; color: #f8fafc;"></h1>
+            <div style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px; padding: 6px 12px; display: inline-block; margin-bottom: 16px;">
+                <span id="context-find-count" style="color: #00e5ff; font-weight: bold; font-size: 11pt;"></span>
+            </div>
+        </div>
+
+        <div id="finder-reader-container" style="display: none; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.4); margin-bottom: 12px;">
+            <div id="finder-reader" style="width: 100%;"></div>
+        </div>
+        <button class="btn-glow" id="btn-start-finder-scan" onclick="startFinderScanner()" style="background: rgba(56, 189, 248, 0.15);">📷 Scan a Found Penguin</button>
+        <button class="btn-glow" id="btn-cancel-finder-scan" onclick="cancelFinderScanner()" style="display: none; background: transparent; border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">Cancel Scan</button>
     </div>
 
     <!-- Toggle Buttons -->
@@ -257,6 +306,15 @@
                 <span class="page-indicator" id="deploy-page-indicator">Page 1 of 1</span>
                 <button class="page-arrow" id="deploy-next-btn" onclick="changeListPage(1)">→</button>
             </div>
+        </div>
+
+        <div class="glass-card" id="found-penguins-card" style="display: none;">
+            <div class="card-header-flex">
+                <h2 style="margin: 0;">🤝 Penguins Found</h2>
+            </div>
+            <ul class="deployment-list" id="found-penguins-output">
+                <li style="text-align:center; color:#94a3b8; padding:20px;">Loading discoveries...</li>
+            </ul>
         </div>
 
     </div>
@@ -364,6 +422,9 @@
             if (data) globalStyles = data;
         }
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeReturnId = urlParams.get('returnId');
+
         let allLogs = [];
         let currentOffset = 0;
         const CHUNK_SIZE = 1000;
@@ -374,7 +435,7 @@
         while (fetching) {
             const { data: logs, error } = await supabaseClient
                 .from('penguin_logs')
-                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, style_id')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, style_id, found_by_penguin_id')
                 .order('created_at', { ascending: true })
                 .range(currentOffset, currentOffset + CHUNK_SIZE - 1);
 
@@ -384,15 +445,13 @@
             }
 
             allLogs = allLogs.concat(logs);
-            
-            if (logs.length === CHUNK_SIZE) {
-                currentOffset += CHUNK_SIZE;
-            } else {
-                fetching = false;
-            }
+            if (logs.length === CHUNK_SIZE) currentOffset += CHUNK_SIZE;
+            else fetching = false;
         }
 
         let penguinHistory = {};
+        let penguinsFoundByMe = [];
+        let myPenguinData = null;
 
         allLogs.forEach(log => {
             const pid = log.penguin_id;
@@ -401,17 +460,36 @@
             }
             penguinHistory[pid].logs.push(log);
             
-            if (log.custom_name && log.custom_name.trim() !== '') {
-                penguinHistory[pid].customName = log.custom_name;
-            }
-            if (log.style_id) {
-                penguinHistory[pid].styleId = log.style_id;
-            }
+            if (log.custom_name && log.custom_name.trim() !== '') penguinHistory[pid].customName = log.custom_name;
+            if (log.style_id) penguinHistory[pid].styleId = log.style_id;
             
             if (log.finder_note === '[ADMIN HIDE LOCATION]' || log.finder_note === '[ADMIN CACHE LOCATION]' || (log.finder_note && log.finder_note.startsWith('[COMMUNITY HIDE]'))) {
                 penguinHistory[pid].adminHide = log;
             }
+
+            if (activeReturnId && activeReturnId !== "Mystery Penguin") {
+                if (log.penguin_id === activeReturnId && log.custom_name) {
+                    myPenguinData = { name: log.custom_name, styleId: log.style_id };
+                }
+                if (log.found_by_penguin_id === activeReturnId) {
+                    if (!penguinsFoundByMe.includes(log.penguin_id)) penguinsFoundByMe.push(log.penguin_id);
+                }
+            }
         });
+
+        if (activeReturnId && activeReturnId !== "Mystery Penguin") {
+            document.getElementById('no-context-view').style.display = 'none';
+            document.getElementById('active-context-view').style.display = 'block';
+            document.getElementById('context-penguin-name').innerText = myPenguinData ? myPenguinData.name : activeReturnId;
+            document.getElementById('context-find-count').innerText = `${penguinsFoundByMe.length} Penguins Found`;
+            document.getElementById('context-avatar-container').innerHTML = renderPopupAvatar(myPenguinData ? myPenguinData.styleId : null);
+            document.getElementById('found-penguins-card').style.display = 'block';
+            renderFoundList(penguinsFoundByMe, penguinHistory);
+        } else {
+            document.getElementById('no-context-view').style.display = 'block';
+            document.getElementById('active-context-view').style.display = 'none';
+            document.getElementById('found-penguins-card').style.display = 'none';
+        }
 
         let caches = {}; 
         let parsedDeployments = [];
@@ -434,18 +512,12 @@
                 return new Date(l.created_at).getTime() > adminHideTime;
             });
             
-            // =====================================
-            // THE FIX: BYPASS NAME CHECK FOR COMMUNITY HIDES
-            // =====================================
             let isFound = false;
             if (isCommunityHide) {
-                // If it's a community hide, it ONLY counts as found if someone logged it AFTER the hide event.
                 isFound = subsequentLogs.length > 0;
             } else {
-                // Standard admin hides: it's found if it has a name OR subsequent logs.
                 isFound = (history.customName !== null) || (subsequentLogs.length > 0);
             }
-            // =====================================
 
             const isLikelyFound = !isFound && hasLikelyMissing;
 
@@ -453,38 +525,24 @@
                 const coordKey = `${history.adminHide.latitude}_${history.adminHide.longitude}`;
                 if (!caches[coordKey]) {
                     caches[coordKey] = {
-                        type: 'cache',
-                        lat: history.adminHide.latitude,
-                        lng: history.adminHide.longitude,
-                        date: history.adminHide.created_at,
-                        totalCount: 0, availableCount: 0, foundCount: 0
+                        type: 'cache', lat: history.adminHide.latitude, lng: history.adminHide.longitude,
+                        date: history.adminHide.created_at, totalCount: 0, availableCount: 0, foundCount: 0
                     };
                 }
                 caches[coordKey].totalCount++;
+                if (isFound || isLikelyFound) caches[coordKey].foundCount++;
+                else caches[coordKey].availableCount++;
                 
-                if (isFound || isLikelyFound) {
-                    caches[coordKey].foundCount++;
-                } else {
-                    caches[coordKey].availableCount++;
-                }
-                
-                if (adminHideTime > new Date(caches[coordKey].date).getTime()) {
-                    caches[coordKey].date = history.adminHide.created_at;
-                }
+                if (adminHideTime > new Date(caches[coordKey].date).getTime()) caches[coordKey].date = history.adminHide.created_at;
             } else {
                 let finalType = 'available';
                 if (isFound) finalType = 'found';
                 else if (isLikelyFound) finalType = 'likely_found';
                 
                 parsedDeployments.push({
-                    id: pid,
-                    logId: history.adminHide.id,
-                    type: finalType,
-                    lat: history.adminHide.latitude,
-                    lng: history.adminHide.longitude,
-                    date: history.adminHide.created_at,
-                    displayName: history.customName || pid,
-                    styleId: history.styleId
+                    id: pid, logId: history.adminHide.id, type: finalType,
+                    lat: history.adminHide.latitude, lng: history.adminHide.longitude,
+                    date: history.adminHide.created_at, displayName: history.customName || pid, styleId: history.styleId
                 });
             }
         });
@@ -495,7 +553,6 @@
         });
 
         parsedDeployments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
         mapData = parsedDeployments;
         listData = [...parsedDeployments];
 
@@ -818,6 +875,153 @@
         }, 300);
     }
 
+    // --- FOUND PENGUINS ENGINE ---
+    function renderFoundList(foundIds, historyObj) {
+        const out = document.getElementById('found-penguins-output');
+        if (foundIds.length === 0) {
+            out.innerHTML = `<li style="text-align:center; color:#94a3b8; padding:20px;">No penguins found yet. Explore the map to start your collection!</li>`;
+            return;
+        }
+        
+        out.innerHTML = '';
+        foundIds.forEach(pid => {
+            const history = historyObj[pid];
+            if (!history) return;
+            
+            const isNamed = history.customName !== null;
+            const displayName = history.customName || pid;
+            const lastLat = history.adminHide ? history.adminHide.latitude : null;
+            const lastLng = history.adminHide ? history.adminHide.longitude : null;
+            
+            let statusBadge = isNamed ? `<div class="d-status-badge badge-found">ADOPTED</div>` : `<div class="d-status-badge badge-available" style="border-color: rgba(57, 255, 20, 0.3);">WAITING IN FIELD</div>`;
+            
+            const li = document.createElement('li');
+            li.className = 'deployment-row';
+            li.onclick = () => {
+                if (isNamed) {
+                    window.location.href = `index.html?id=${pid}&viewer=true`;
+                } else if (lastLat && lastLng) {
+                    openFullscreenMapAt(lastLat, lastLng);
+                }
+            };
+            
+            li.innerHTML = `
+                <div>
+                    <div class="d-title">${displayName}</div>
+                    ${statusBadge}
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 14pt; color: #38bdf8; margin-top: 4px;">${isNamed ? '🗺️' : '🔍'}</div>
+                </div>
+            `;
+            out.appendChild(li);
+        });
+    }
+
+    // --- SCANNER & ACTION ENGINE ---
+    let finderQrScanner = null;
+    let scannedPenguinData = null;
+
+    function startFinderScanner() {
+        document.getElementById('finder-reader-container').style.display = 'block';
+        document.getElementById('btn-start-finder-scan').style.display = 'none';
+        document.getElementById('btn-cancel-finder-scan').style.display = 'block';
+
+        finderQrScanner = new Html5Qrcode("finder-reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        finderQrScanner.start({ facingMode: "environment" }, config, onFinderScanSuccess)
+        .catch(err => {
+            alert("Camera Access Denied");
+            cancelFinderScanner();
+        });
+    }
+
+    function cancelFinderScanner() {
+        if (finderQrScanner && finderQrScanner.getState() !== 1) {
+            finderQrScanner.stop().then(() => {
+                finderQrScanner.clear();
+            }).catch(err => console.log(err));
+        }
+        document.getElementById('finder-reader-container').style.display = 'none';
+        document.getElementById('btn-start-finder-scan').style.display = 'block';
+        document.getElementById('btn-cancel-finder-scan').style.display = 'none';
+    }
+
+    function onFinderScanSuccess(decodedText) {
+        cancelFinderScanner();
+        try {
+            const url = new URL(decodedText);
+            const pId = url.searchParams.get("id");
+            const tag = url.searchParams.get("tag") || url.searchParams.get("vtag");
+            
+            if (pId && pId.startsWith("Penguin-")) {
+                scannedPenguinData = { id: pId, tag: tag };
+                document.getElementById('scanned-penguin-id-display').innerText = pId;
+                document.getElementById('scan-action-modal').style.display = 'flex';
+            } else {
+                alert("Invalid QR Code: Doesn't appear to be a game tag.");
+            }
+        } catch (e) {
+            alert("Invalid QR Code Format");
+        }
+    }
+
+    function closeScanActionModal() {
+        document.getElementById('scan-action-modal').style.display = 'none';
+        scannedPenguinData = null;
+    }
+
+    async function processScanAction(actionType) {
+        if (!scannedPenguinData) return;
+        
+        const pId = scannedPenguinData.id;
+        const tag = scannedPenguinData.tag;
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeReturnId = urlParams.get('returnId');
+        const finderId = (activeReturnId && activeReturnId !== "Mystery Penguin") ? activeReturnId : null;
+        
+        closeScanActionModal();
+        
+        if (actionType === 'take') {
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
+                penguin_id: pId,
+                secret_tag: tag, 
+                finder_note: '[REMOVED FROM FIELD]',
+                found_by_penguin_id: finderId
+            }]);
+            
+            if (error) alert("Database Error: " + error.message);
+            else fetchAndProcessData();
+            
+        } else if (actionType === 'leave') {
+            const { data: logs, error: fetchErr } = await supabaseClient.from('penguin_logs')
+                .select('*')
+                .eq('penguin_id', pId)
+                .order('created_at', { ascending: false });
+                
+            if (fetchErr) { alert(fetchErr.message); return; }
+            
+            let lastHide = logs.find(l => l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]' || (l.finder_note && l.finder_note.startsWith('[COMMUNITY HIDE]')));
+            
+            if (!lastHide) {
+                alert("Could not determine original location to put it back.");
+                return;
+            }
+            
+            const { error } = await supabaseClient.from('penguin_logs').insert([{
+                penguin_id: pId,
+                secret_tag: tag, 
+                finder_note: lastHide.finder_note,
+                latitude: lastHide.latitude,
+                longitude: lastHide.longitude,
+                found_by_penguin_id: finderId
+            }]);
+            
+            if (error) alert("Database Error: " + error.message);
+            else fetchAndProcessData();
+        }
+    }
 </script>
 
 </body>
