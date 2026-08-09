@@ -1018,31 +1018,47 @@
             else fetchAndProcessData();
             
         } else if (actionType === 'leave') {
-            const { data: logs, error: fetchErr } = await supabaseClient.from('penguin_logs')
-                .select('*')
-                .eq('penguin_id', pId)
-                .order('created_at', { ascending: false });
-                
-            if (fetchErr) { alert(fetchErr.message); return; }
-            
-            let lastHide = logs.find(l => l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]' || (l.finder_note && l.finder_note.startsWith('[COMMUNITY HIDE]')));
-            
-            if (!lastHide) {
-                alert("Could not determine original location to put it back.");
+            if (!navigator.geolocation) {
+                alert("Location services are not supported by your browser.");
                 return;
             }
-            
-            const { error } = await supabaseClient.from('penguin_logs').insert([{
-                penguin_id: pId,
-                secret_tag: tag, 
-                finder_note: lastHide.finder_note,
-                latitude: lastHide.latitude,
-                longitude: lastHide.longitude,
-                found_by_penguin_id: finderId
-            }]);
-            
-            if (error) alert("Database Error: " + error.message);
-            else fetchAndProcessData();
+
+            // Grab the user's current physical location
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                // Pull the history just to preserve any fun custom notes, but don't fail if they don't exist
+                const { data: logs, error: fetchErr } = await supabaseClient.from('penguin_logs')
+                    .select('*')
+                    .eq('penguin_id', pId)
+                    .order('created_at', { ascending: false });
+                    
+                let noteToUse = '[COMMUNITY HIDE]';
+                
+                if (!fetchErr && logs) {
+                    let lastHide = logs.find(l => l.finder_note === '[ADMIN HIDE LOCATION]' || l.finder_note === '[ADMIN CACHE LOCATION]' || (l.finder_note && l.finder_note.startsWith('[COMMUNITY HIDE]')));
+                    if (lastHide && lastHide.finder_note) {
+                        noteToUse = lastHide.finder_note;
+                    }
+                }
+                
+                // Push the new log using the live GPS coordinates
+                const { error } = await supabaseClient.from('penguin_logs').insert([{
+                    penguin_id: pId,
+                    secret_tag: tag, 
+                    finder_note: noteToUse,
+                    latitude: userLat,
+                    longitude: userLng,
+                    found_by_penguin_id: finderId
+                }]);
+                
+                if (error) alert("Database Error: " + error.message);
+                else fetchAndProcessData();
+                
+            }, (error) => {
+                alert("Could not access location. Please ensure location permissions are granted.");
+            }, { enableHighAccuracy: true });
         }
     }
 </script>
