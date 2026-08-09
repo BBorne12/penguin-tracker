@@ -32,6 +32,8 @@
         h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
         h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
+
+        .app-header { margin-bottom: 16px; text-align: left; }
         
         /* App Mode Toggle */
         .mode-tabs {
@@ -222,7 +224,20 @@
 
 <div class="app-container">
     
-    <!-- NEW DYNAMIC HEADER & SCANNER -->
+    <!-- RESTORED APP HEADER -->
+    <div class="app-header">
+        <div class="subtitle">The Traveling Penguin Game</div>
+        <h1>PENGUIN FINDER™</h1>
+        <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active rookery caches and potentially available hides in the wild.</p>
+    </div>
+
+    <!-- TOGGLE BUTTONS -->
+    <div class="mode-tabs">
+        <button class="mode-tab" onclick="switchToTracker()">Penguin Tracker</button>
+        <button class="mode-tab active">Penguin Finder</button>
+    </div>
+
+    <!-- CONTEXT HEADER & SCANNER -->
     <div id="context-header-container" class="glass-card" style="margin-bottom: 16px;">
         
         <div id="no-context-view" style="display: none; text-align: center;">
@@ -232,12 +247,19 @@
             </p>
         </div>
         
-        <div id="active-context-view" style="display: none; text-align: center;">
-            <div style="width: 60px; height: 60px; margin: 0 auto 12px auto;" id="context-avatar-container"></div>
-            <h2 style="font-size: 11pt; color: #94a3b8; margin: 0 0 4px 0; letter-spacing: 0.5px;">FINDING PENGUINS AS</h2>
-            <h1 id="context-penguin-name" style="font-size: 18pt; margin-bottom: 8px; color: #f8fafc;"></h1>
-            <div style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px; padding: 6px 12px; display: inline-block; margin-bottom: 16px;">
-                <span id="context-find-count" style="color: #00e5ff; font-weight: bold; font-size: 11pt;"></span>
+        <div id="active-context-view" style="display: none;">
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px;">
+                <div style="width: 80px; height: 80px; flex-shrink: 0;" id="context-avatar-container"></div>
+                <div>
+                    <h1 id="context-penguin-name" style="font-size: 18pt; margin: 0 0 4px 0; color: #f8fafc;"></h1>
+                    <div style="color: #00e5ff; font-weight: bold; font-size: 10.5pt;" id="context-find-count"></div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <button class="btn-inline-action" style="flex: 1; justify-content: center;" onclick="switchToTracker()">👤 Edit</button>
+                <button class="btn-inline-action" style="flex: 1; justify-content: center;" onclick="switchToTracker()">🖼️ Gallery</button>
+                <button class="btn-inline-action" style="flex: 1; justify-content: center;" onclick="switchToTracker()">📤 Share</button>
             </div>
         </div>
 
@@ -246,12 +268,6 @@
         </div>
         <button class="btn-glow" id="btn-start-finder-scan" onclick="startFinderScanner()" style="background: rgba(56, 189, 248, 0.15);">📷 Scan a Found Penguin</button>
         <button class="btn-glow" id="btn-cancel-finder-scan" onclick="cancelFinderScanner()" style="display: none; background: transparent; border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">Cancel Scan</button>
-    </div>
-
-    <!-- Toggle Buttons -->
-    <div class="mode-tabs">
-        <button class="mode-tab" onclick="switchToTracker()">Penguin Tracker</button>
-        <button class="mode-tab active">Penguin Finder</button>
     </div>
 
     <div class="layout-section">
@@ -416,6 +432,20 @@
         return getPenguinSvg('#38bdf8');
     }
 
+    function renderProfileAvatar(data) {
+        if (data.customUrl) {
+            return `<img src="${data.customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:12px; border: 2px solid rgba(56, 189, 248, 0.5);">`;
+        }
+        if (data.styleId) {
+            const s = globalStyles.find(x => x.id === data.styleId);
+            if (s && s.image_url) {
+                return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px; border: 2px solid rgba(56, 189, 248, 0.5);">`;
+            }
+        }
+        const color = data.color || '#38bdf8';
+        return `<div style="width:100%; height:100%; border-radius:12px; overflow:hidden; border: 2px solid rgba(56, 189, 248, 0.5);">${getPenguinSvg(color)}</div>`;
+    }
+
     async function fetchAndProcessData() {
         if (globalStyles.length === 0) {
             const { data } = await supabaseClient.from('penguin_styles').select('*');
@@ -435,7 +465,7 @@
         while (fetching) {
             const { data: logs, error } = await supabaseClient
                 .from('penguin_logs')
-                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, style_id, found_by_penguin_id')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, style_id, found_by_penguin_id, avatar_color, custom_avatar_url')
                 .order('created_at', { ascending: true })
                 .range(currentOffset, currentOffset + CHUNK_SIZE - 1);
 
@@ -451,7 +481,7 @@
 
         let penguinHistory = {};
         let penguinsFoundByMe = [];
-        let myPenguinData = null;
+        let myPenguinData = { name: activeReturnId, styleId: null, color: null, customUrl: null };
 
         allLogs.forEach(log => {
             const pid = log.penguin_id;
@@ -468,8 +498,11 @@
             }
 
             if (activeReturnId && activeReturnId !== "Mystery Penguin") {
-                if (log.penguin_id === activeReturnId && log.custom_name) {
-                    myPenguinData = { name: log.custom_name, styleId: log.style_id };
+                if (log.penguin_id === activeReturnId) {
+                    if (log.custom_name) myPenguinData.name = log.custom_name;
+                    if (log.style_id) myPenguinData.styleId = log.style_id;
+                    if (log.avatar_color) myPenguinData.color = log.avatar_color;
+                    if (log.custom_avatar_url) myPenguinData.customUrl = log.custom_avatar_url;
                 }
                 if (log.found_by_penguin_id === activeReturnId) {
                     if (!penguinsFoundByMe.includes(log.penguin_id)) penguinsFoundByMe.push(log.penguin_id);
@@ -480,9 +513,9 @@
         if (activeReturnId && activeReturnId !== "Mystery Penguin") {
             document.getElementById('no-context-view').style.display = 'none';
             document.getElementById('active-context-view').style.display = 'block';
-            document.getElementById('context-penguin-name').innerText = myPenguinData ? myPenguinData.name : activeReturnId;
+            document.getElementById('context-penguin-name').innerText = myPenguinData.name;
             document.getElementById('context-find-count').innerText = `${penguinsFoundByMe.length} Penguins Found`;
-            document.getElementById('context-avatar-container').innerHTML = renderPopupAvatar(myPenguinData ? myPenguinData.styleId : null);
+            document.getElementById('context-avatar-container').innerHTML = renderProfileAvatar(myPenguinData);
             document.getElementById('found-penguins-card').style.display = 'block';
             renderFoundList(penguinsFoundByMe, penguinHistory);
         } else {
