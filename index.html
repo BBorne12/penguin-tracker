@@ -486,9 +486,15 @@
 </div>
 
 <div class="app-container">
+
+    <!-- TOP TABS NAVIGATION -->
+    <div class="top-tabs-container">
+        <button class="top-tab active">🐧 Penguin Tracker</button>
+        <button class="top-tab" onclick="switchToFinder()">🔍 Penguin Finder</button>
+    </div>
     
     <div id="back-to-my-penguin-container" style="display:none; margin-bottom: 12px;">
-        <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border-color:rgba(56, 189, 248, 0.5); font-size: 10.5pt;">🔙 Return to My Penguin</button>
+        <button class="btn-inline-refresh" onclick="goBackToMyPenguin()" style="width:100%; padding:10px; background:rgba(56, 189, 248, 0.15); color:#e0f2fe; border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 8px; font-size: 10.5pt; cursor: pointer;">🔙 Return to My Penguin</button>
     </div>
 
     <div class="app-header" style="position: relative; padding-right: 40px;">
@@ -500,13 +506,6 @@
             <span class="status-badge" id="penguin-id-display">Detecting Tag...</span>
         </div>
         <button id="help-btn" onclick="document.getElementById('welcome-modal').style.display='flex';" style="position: absolute; top: 0; right: 0; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16pt; transition: all 0.2s ease;" title="About This Project">?</button>
-    </div>
-<div class="app-container">
-    
-    <!-- TOP TABS NAVIGATION -->
-    <div class="top-tabs-container">
-        <button class="top-tab active">🐧 Penguin Tracker</button>
-        <button class="top-tab" onclick="switchToFinder()">🔍 Penguin Finder</button>
     </div>
 
     <!-- ... rest of your index.html content (app-header, etc.) ... -->
