@@ -28,27 +28,56 @@
             min-height: 100vh; display: flex; flex-direction: column;
         }
 
+        /* Top Navigation Tabs */
+        .top-tabs-container {
+            display: flex;
+            border-bottom: 2px solid rgba(56, 189, 248, 0.4);
+            margin: -16px -16px 20px -16px; 
+            padding: 16px 16px 0 16px;
+            background: rgba(0, 0, 0, 0.2);
+            gap: 6px;
+        }
+
+        .top-tab {
+            padding: 12px 24px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 10.5pt;
+            cursor: pointer;
+            position: relative;
+            bottom: -2px; 
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .top-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
+        }
+
+        .top-tab.active {
+            background: #0f243b; 
+            color: #00e5ff;
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            border-bottom: 2px solid #0f243b; 
+            box-shadow: 0 -4px 15px rgba(56, 189, 248, 0.15);
+            z-index: 2;
+        }
+
         h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: 0.5px; }
         h1 { font-size: 20pt; color: #e0f2fe; text-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
         h2 { font-size: 14pt; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         .subtitle { color: #7dd3fc; font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; opacity: 0.8; }
 
         .app-header { margin-bottom: 16px; text-align: left; }
-        
-        /* App Mode Toggle */
-        .mode-tabs {
-            display: flex; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(56, 189, 248, 0.3);
-            border-radius: 8px; overflow: hidden; margin-bottom: 20px;
-        }
-        .mode-tab {
-            flex: 1; padding: 12px; background: transparent; border: none; color: #94a3b8;
-            font-weight: 600; font-size: 9pt; text-transform: uppercase; cursor: pointer;
-            transition: all 0.2s ease; border-right: 1px solid rgba(56, 189, 248, 0.2);
-            letter-spacing: 0.5px;
-        }
-        .mode-tab:last-child { border-right: none; }
-        .mode-tab:hover:not(.active) { background: rgba(255, 255, 255, 0.05); }
-        .mode-tab.active { background: rgba(56, 189, 248, 0.15); color: #e0f2fe; text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
 
         .layout-section { width: 100%; flex: 1; display: flex; flex-direction: column; gap: 16px; }
 
@@ -224,17 +253,17 @@
 
 <div class="app-container">
     
-    <!-- RESTORED APP HEADER -->
+    <!-- TOP TABS NAVIGATION -->
+    <div class="top-tabs-container">
+        <button class="top-tab" onclick="switchToTracker()">🐧 Penguin Tracker</button>
+        <button class="top-tab active">🔍 Penguin Finder</button>
+    </div>
+
+    <!-- APP HEADER -->
     <div class="app-header">
         <div class="subtitle">The Traveling Penguin Game</div>
         <h1>PENGUIN FINDER™</h1>
         <p style="font-size: 10pt; color: #94a3b8; margin: 4px 0 0 0;">Locate active rookery caches and potentially available hides in the wild.</p>
-    </div>
-
-    <!-- TOGGLE BUTTONS -->
-    <div class="mode-tabs">
-        <button class="mode-tab" onclick="switchToTracker()">Penguin Tracker</button>
-        <button class="mode-tab active">Penguin Finder</button>
     </div>
 
     <!-- CONTEXT HEADER & SCANNER -->
@@ -424,16 +453,16 @@
 
     function renderProfileAvatar(data) {
         if (data.customUrl) {
-            return `<img src="${data.customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:20px;">`;
+            return `<img src="${data.customUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
         }
         if (data.styleId) {
             const s = globalStyles.find(x => x.id === data.styleId);
             if (s && s.image_url) {
-                return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:20px;">`;
+                return `<img src="${s.image_url}" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">`;
             }
         }
         const color = data.color || '#38bdf8';
-        return `<div style="width:100%; height:100%; border-radius:20px; overflow:hidden;">${getPenguinSvg(color)}</div>`;
+        return `<div style="width:100%; height:100%; border-radius:16px; overflow:hidden;">${getPenguinSvg(color)}</div>`;
     }
 
     async function fetchAndProcessData() {
@@ -1023,12 +1052,10 @@
                 return;
             }
 
-            // Grab the user's current physical location
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const userLat = position.coords.latitude;
                 const userLng = position.coords.longitude;
 
-                // Pull the history just to preserve any fun custom notes, but don't fail if they don't exist
                 const { data: logs, error: fetchErr } = await supabaseClient.from('penguin_logs')
                     .select('*')
                     .eq('penguin_id', pId)
@@ -1043,7 +1070,6 @@
                     }
                 }
                 
-                // Push the new log using the live GPS coordinates
                 const { error } = await supabaseClient.from('penguin_logs').insert([{
                     penguin_id: pId,
                     secret_tag: tag, 
