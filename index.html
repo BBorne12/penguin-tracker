@@ -698,21 +698,22 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --- APP SWITCHING LOGIC ---
+// --- APP SWITCHING LOGIC ---
     function switchToFinder() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentId = urlParams.get('id');
-        const currentTag = urlParams.get('tag');
-        const currentViewer = urlParams.get('viewer');
-        const currentVtag = urlParams.get('vtag');
-
-        // Package up the current state to send to finder.html
         let destUrl = 'finder.html';
         let params = new URLSearchParams();
         
-        if (currentId) params.append('returnId', currentId);
-        if (currentTag) params.append('returnTag', currentTag);
-        if (currentViewer) params.append('returnViewer', currentViewer);
-        if (currentVtag) params.append('returnVtag', currentVtag);
+        // Grab the user's actual authenticated ID, whether they are the primary or a viewer
+        if (activeUserId && activeUserId !== "Mystery Penguin") {
+            params.append('returnId', activeUserId);
+            
+            // Pass the correct tag depending on which role they are currently in
+            if (activeUserId === penguinId && securityTagParam) {
+                params.append('returnTag', securityTagParam);
+            } else if (activeUserId === viewerId && viewerTagParam) {
+                params.append('returnTag', viewerTagParam);
+            }
+        }
 
         let paramString = params.toString();
         window.location.href = paramString ? `${destUrl}?${paramString}` : destUrl;
