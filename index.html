@@ -853,6 +853,7 @@ async function saveCustomNameFromModal(buttonElement) {
     // --- BULLETPROOF FILTERS ---
     const isFactoryLog = (note) => note && (note.toLowerCase().includes('initial factory registration') || note.toLowerCase().includes('penguin hatched'));
     const isAdminHideLog = (note) => note && note.includes('[ADMIN HIDE LOCATION]');
+    const isCommunityHideLog = (note) => note && note.startsWith('[COMMUNITY HIDE]');
 
     function showWelcomeModal() {
         document.getElementById('welcome-modal').style.display = 'flex';
@@ -1034,7 +1035,7 @@ async function loadPenguinHistory(targetId) {
             if (log.custom_avatar_url) activeCustomAvatarUrl = log.custom_avatar_url;
             if (log.style_id) activeStyleId = log.style_id;
             
-            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+            if (log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note) && !isCommunityHideLog(log.finder_note)) {
                 validStops++;
                 pathPoints.push(L.latLng(log.latitude, log.longitude));
                 lastLat = log.latitude;
@@ -1245,7 +1246,7 @@ async function loadPenguinHistory(targetId) {
         }
 
         const validPhotos = logsToProcess
-            .filter(l => l.photo_url && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note))
+            .filter(l => l.photo_url && !isFactoryLog(l.finder_note) && !isAdminHideLog(l.finder_note) && !isCommunityHideLog(l.finder_note))
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
             .slice(0, 15); 
 
@@ -1540,7 +1541,7 @@ async function loadPenguinHistory(targetId) {
         }
 
         globalGalleryImages = logsToProcess
-            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note))
+            .filter(log => log.photo_url && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note) && !isCommunityHideLog(log.finder_note))
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
@@ -1742,7 +1743,7 @@ async function loadPenguinHistory(targetId) {
 
         const tracks = {};
         logsToProcess.forEach(log => {
-            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note) || isCommunityHideLog(log.finder_note)) return;
             if (!tracks[log.penguin_id]) tracks[log.penguin_id] = [];
             tracks[log.penguin_id].push(log);
         });
@@ -1834,7 +1835,7 @@ async function loadPenguinHistory(targetId) {
 
         let stopCounter = 1;
         globalLogData.forEach((log) => {
-            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if(!log.latitude || !log.longitude || isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note) || isCommunityHideLog(log.finder_note)) return;
             const logLatLng = [log.latitude, log.longitude];
             pathCoords.push(logLatLng);
 
@@ -1927,7 +1928,7 @@ async function loadPenguinHistory(targetId) {
                     if(log.custom_avatar_url) colonyStats[log.penguin_id].customAvatar = log.custom_avatar_url;
                     if(log.style_id) colonyStats[log.penguin_id].styleId = log.style_id;
 
-                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note)) {
+                    if(log.latitude && log.longitude && !isFactoryLog(log.finder_note) && !isAdminHideLog(log.finder_note) && !isCommunityHideLog(log.finder_note)) {
                         colonyStats[log.penguin_id].points.push(L.latLng(log.latitude, log.longitude));
                     }
                 }
@@ -2197,7 +2198,7 @@ async function loadPenguinHistory(targetId) {
         for (let i = 0; i < logs.length; i++) {
             const entry = logs[i];
             
-            if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note) || !entry.latitude || !entry.longitude) continue;
+            if(isFactoryLog(entry.finder_note) || isAdminHideLog(entry.finder_note) || isCommunityHideLog(entry.finder_note) || !entry.latitude || !entry.longitude) continue;
             
             let cleanNote = entry.finder_note || "";
             if (cleanNote.includes('[Tagged at Monument:')) cleanNote = cleanNote.replace(/\[Tagged at Monument:\s*[^\]]+\]/, '').trim();
@@ -2412,7 +2413,7 @@ async function loadPenguinHistory(targetId) {
         });
 
         allLogs.forEach(log => {
-            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note)) return;
+            if (isFactoryLog(log.finder_note) || isAdminHideLog(log.finder_note) || isCommunityHideLog(log.finder_note)) return;
             if (log.penguin_id) {
                 if (!tracks[log.penguin_id]) { tracks[log.penguin_id] = []; }
                 if (log.latitude && log.longitude) tracks[log.penguin_id].push(L.latLng(log.latitude, log.longitude));
