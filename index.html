@@ -650,10 +650,12 @@
             
             <input type="text" id="leaderboard-search-input" class="note-textarea" style="height: 40px; margin-bottom: 12px; padding: 8px 12px; font-size: 11pt;" placeholder="🔍 Search penguins by name or ID..." oninput="handleLeaderboardSearch()">
 
-            <div class="tab-bar">
-                <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🌐 Distance</button>
-                <button class="tab-btn" id="tab-pebbles" onclick="switchLeaderboardTab('pebbles')">🪨 Pebbles</button>
-            </div>
+        <div class="tab-bar" style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <button class="tab-btn active" id="tab-distance" onclick="switchLeaderboardTab('distance')">🗺️ Distance</button>
+            <button class="tab-btn" id="tab-pebbles" onclick="switchLeaderboardTab('pebbles')">🧡 Pebbles</button>
+            <!-- ADD THIS NEW BUTTON -->
+            <button class="tab-btn" id="tab-found" onclick="switchLeaderboardTab('found')">🤝 Found</button>
+        </div>
 
             <ul class="leaderboard-list" id="leaderboard-output">
                 <li style="text-align:center; color:#94a3b8; padding:15px; font-size:11pt;">Calculating distances...</li>
@@ -2360,6 +2362,10 @@ async function loadPenguinHistory(targetId) {
         if (activeTab === tabName) return; activeTab = tabName;
         document.getElementById('tab-distance').classList.toggle('active', tabName === 'distance');
         document.getElementById('tab-pebbles').classList.toggle('active', tabName === 'pebbles');
+        
+        const tabFound = document.getElementById('tab-found');
+        if (tabFound) tabFound.classList.toggle('active', tabName === 'found');
+        
         activeLeaderboardPage = 1; buildLeaderboard();
     }
 
@@ -2378,7 +2384,7 @@ async function loadPenguinHistory(targetId) {
 
         while (fetchMore) {
             const { data, error } = await supabaseClient.from('penguin_logs')
-                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received')
+                .select('id, penguin_id, latitude, longitude, created_at, custom_name, finder_note, avatar_color, custom_avatar_url, style_id, photo_url, stones_received, found_by_penguin_id')
                 .order('created_at', { ascending: true })
                 .range(startRow, startRow + rowLimit);
                 
@@ -2401,6 +2407,7 @@ async function loadPenguinHistory(targetId) {
         
         const tracks = {}; const namesMap = {}; const logsCountMap = {}; 
         const pebblesCountMap = {}; const avatarMap = {}; const styleMap = {}; const customAvatarMap = {};
+        const foundCountMap = {}; 
 
         allLogs.forEach(log => {
             if (!globalFleetProfiles[log.penguin_id]) globalFleetProfiles[log.penguin_id] = {};
@@ -2411,6 +2418,11 @@ async function loadPenguinHistory(targetId) {
             if (log.avatar_color) globalFleetProfiles[log.penguin_id].color = log.avatar_color;
             if (log.custom_avatar_url) globalFleetProfiles[log.penguin_id].customAvatar = log.custom_avatar_url;
             if (log.style_id) globalFleetProfiles[log.penguin_id].styleId = log.style_id;
+
+            if (log.found_by_penguin_id && log.found_by_penguin_id.startsWith('Penguin-')) {
+                if (!foundCountMap[log.found_by_penguin_id]) foundCountMap[log.found_by_penguin_id] = new Set();
+                foundCountMap[log.found_by_penguin_id].add(log.penguin_id);
+            }
         });
 
         allLogs.forEach(log => {
@@ -2436,8 +2448,12 @@ async function loadPenguinHistory(targetId) {
         });
 
         const leaderboardData = [];
-        Object.keys(tracks).forEach(id => {
-            let totalDistanceMeters = 0; const points = tracks[id];
+        
+        const allUniqueIds = new Set(Object.keys(tracks));
+        Object.keys(foundCountMap).forEach(id => allUniqueIds.add(id));
+
+        allUniqueIds.forEach(id => {
+            let totalDistanceMeters = 0; const points = tracks[id] || [];
             for (let i = 0; i < points.length - 1; i++) { totalDistanceMeters += points[i].distanceTo(points[i+1]); }
             const totalMiles = totalDistanceMeters * 0.000621371; 
             
@@ -2445,8 +2461,9 @@ async function loadPenguinHistory(targetId) {
                 id: id, 
                 displayName: namesMap[id] ? `${namesMap[id]}` : id, 
                 miles: totalMiles, 
-                stopsCount: logsCountMap[id] || 1, 
+                stopsCount: logsCountMap[id] || 0, 
                 pebblesCount: pebblesCountMap[id] || 0,
+                foundCount: foundCountMap[id] ? foundCountMap[id].size : 0,
                 avatarColor: avatarMap[id],
                 customAvatar: customAvatarMap[id],
                 styleId: styleMap[id]
@@ -2455,6 +2472,7 @@ async function loadPenguinHistory(targetId) {
 
         if (activeTab === "distance") { leaderboardData.sort((a, b) => b.miles - a.miles); } 
         else if (activeTab === "pebbles") { leaderboardData.sort((a, b) => b.pebblesCount - a.pebblesCount || b.miles - a.miles); }
+        else if (activeTab === "found") { leaderboardData.sort((a, b) => b.foundCount - a.foundCount || b.miles - a.miles); }
 
         leaderboardData.forEach((item, index) => { item.originalRank = index + 1; });
 
@@ -2511,8 +2529,10 @@ async function loadPenguinHistory(targetId) {
             let rightSideValueMetricsHTML = "";
             if (activeTab === "distance") { 
                 rightSideValueMetricsHTML = `<span class="p-dist ${rankClass}">${item.miles.toFixed(1)} miles</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
-            } else {
+            } else if (activeTab === "pebbles") {
                 rightSideValueMetricsHTML = `<span class="p-dist" style="color:#f97316; text-shadow:0 0 8px rgba(249, 115, 22, 0.4);">${getPebbleSvg(true)} ${item.pebblesCount}</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
+            } else if (activeTab === "found") {
+                rightSideValueMetricsHTML = `<span class="p-dist ${rankClass}" style="color:#39ff14; text-shadow:0 0 8px rgba(57, 255, 20, 0.4);">🤝 ${item.foundCount} Found</span><span class="stat-subtext">${item.stopsCount} Logs</span>`;
             }
 
             li.innerHTML = `
