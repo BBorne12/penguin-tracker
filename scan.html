@@ -47,8 +47,8 @@
             border-radius: 8px 8px 0 0; border-bottom: none; overflow: hidden;
         }
         .mode-tab {
-            flex: 1; padding: 10px; background: transparent; border: none; color: #94a3b8;
-            font-weight: 600; font-size: 9pt; text-transform: uppercase; cursor: pointer;
+            flex: 1; padding: 10px 4px; background: transparent; border: none; color: #94a3b8;
+            font-weight: 600; font-size: 8.5pt; text-transform: uppercase; cursor: pointer;
             transition: all 0.2s ease; border-right: 1px solid rgba(217, 70, 239, 0.2);
         }
         .mode-tab:last-child { border-right: none; }
@@ -78,8 +78,8 @@
             background: rgba(0,0,0,0.8); z-index: 50; padding: 20px; text-align: center;
         }
 
-        /* Prep Overlay Control */
-        #prep-controls {
+        /* Prep & Style Overlay Controls */
+        #prep-controls, #style-controls {
             position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
             background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(8px);
             border: 1px solid rgba(217, 70, 239, 0.4); border-radius: 12px;
@@ -157,9 +157,10 @@
         <button class="map-toggle-btn" onclick="openHideMap()">🗺️ Map</button>
         
         <div class="mode-tabs">
-            <button class="mode-tab active" id="tab-single" onclick="setMode('single')">Single Hide</button>
-            <button class="mode-tab" id="tab-prep" onclick="setMode('prep')">Rookery Prep</button>
-            <button class="mode-tab" id="tab-deploy" onclick="setMode('deploy')">Deploy Rookery</button>
+            <button class="mode-tab active" id="tab-single" onclick="setMode('single')">Hide</button>
+            <button class="mode-tab" id="tab-prep" onclick="setMode('prep')">Prep</button>
+            <button class="mode-tab" id="tab-deploy" onclick="setMode('deploy')">Deploy</button>
+            <button class="mode-tab" id="tab-style" onclick="setMode('style')">Style</button>
         </div>
     </div>
 
@@ -169,6 +170,13 @@
         <div id="prep-controls">
             <label style="color:#d946ef; font-size:9pt; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Assigning to Batch:</label>
             <input type="text" id="batch-id-input" class="prep-input" value="Batch 01" placeholder="e.g. Batch 01">
+        </div>
+
+        <div id="style-controls">
+            <label style="color:#00e5ff; font-size:9pt; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Assigning Style:</label>
+            <select id="style-select" class="prep-input" style="color: #00e5ff; font-weight: bold; appearance: none; text-align: center;">
+                <option value="">Querying database...</option>
+            </select>
         </div>
 
         <div id="start-overlay" class="overlay-ui">
@@ -221,7 +229,7 @@
     let hideLayerGroup = null;
     let globalStyles = [];
     
-    let currentMode = 'single'; // 'single', 'prep', 'deploy'
+    let currentMode = 'single'; // 'single', 'prep', 'deploy', 'style'
     let preppedBatchesData = {}; 
 
     // --- BULLETPROOF FILTERS ---
@@ -236,8 +244,10 @@
         document.getElementById('tab-single').classList.toggle('active', mode === 'single');
         document.getElementById('tab-prep').classList.toggle('active', mode === 'prep');
         document.getElementById('tab-deploy').classList.toggle('active', mode === 'deploy');
+        document.getElementById('tab-style').classList.toggle('active', mode === 'style');
 
         document.getElementById('prep-controls').style.display = (mode === 'prep') ? 'block' : 'none';
+        document.getElementById('style-controls').style.display = (mode === 'style') ? 'block' : 'none';
         
         if (mode === 'deploy') {
             document.getElementById('deploy-overlay').style.display = 'flex';
@@ -293,9 +303,63 @@
                     await processHideLocation(pId, tag);
                 } else if (currentMode === 'prep') {
                     await processCachePrep(pId, tag);
+                } else if (currentMode === 'style') {
+                    await processStyleAssignment(pId, tag);
                 }
             }
         } catch (e) {}
+    }
+
+    // --- STYLE ASSIGNMENT LOGIC ---
+    async function fetchStylesForDropdown() {
+        const { data, error } = await supabaseClient.from('penguin_styles').select('id, style_name').order('style_name', { ascending: true });
+        if (!error && data) {
+            const selectEl = document.getElementById('style-select');
+            selectEl.innerHTML = '<option value="">-- Select a Style --</option>';
+            data.forEach(style => {
+                const opt = document.createElement('option');
+                opt.value = style.id;
+                opt.innerText = style.style_name;
+                selectEl.appendChild(opt);
+            });
+        }
+    }
+    // Pull down the active styles immediately upon loading the page
+    fetchStylesForDropdown();
+
+    async function processStyleAssignment(pId, tag) {
+        const selectEl = document.getElementById('style-select');
+        const styleId = selectEl.value;
+        
+        if (!styleId) {
+            triggerError("Please select a style from the dropdown first!");
+            return;
+        }
+
+        const styleName = selectEl.options[selectEl.selectedIndex].text;
+        updateStatus('working', '🎨', `Styling ${pId}...`, `Assigning: ${styleName}`);
+
+        // Insert a factory log to establish the style permanently, even before it hits the field
+        const { error: insertErr } = await supabaseClient.from('penguin_logs').insert([{
+            penguin_id: pId,
+            secret_tag: tag, 
+            finder_note: '[INITIAL FACTORY REGISTRATION]',
+            style_id: styleId,
+            latitude: null,
+            longitude: null
+        }]);
+
+        if (insertErr) {
+            triggerError(`Database rejection: ${insertErr.message}`);
+            return;
+        }
+
+        // Retroactively update any other existing logs for this penguin to ensure consistency
+        await supabaseClient.from('penguin_logs').update({ style_id: styleId }).eq('penguin_id', pId);
+
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
+        updateStatus('success', '✅', 'Style Assigned!', `${pId} is now ${styleName}`);
+        resetScanner();
     }
 
     async function processCachePrep(pId, tag) {
